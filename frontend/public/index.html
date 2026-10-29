@@ -8,6 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- AG Grid Enterprise/Community CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-quartz.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
         body {
@@ -326,43 +331,66 @@
             </div>
         </section>
 
-        <!-- Comprehensive Side-by-Side Comparison Matrix -->
+        <!-- AG Grid Powered Swarm Comparison Matrix (Sponsor Category: Best Use of AG Grid) -->
         <section id="matrix-section" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-xl hidden space-y-4">
-            <div class="flex items-center justify-between">
+            <!-- Header with AG Grid Sponsor Badge & Action Controls -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-800">
                 <div>
-                    <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
                         <i data-lucide="table-2" class="w-5 h-5 text-indigo-400"></i>
-                        <span>Comprehensive Side-by-Side Comparison Matrix</span>
-                    </h3>
-                    <p class="text-xs text-gray-400">Compare delivery times, COD, open box inspection, warranties, restocking fees, and PayPal benefits across all scouted listings.</p>
+                        <h3 class="text-lg font-bold text-white tracking-tight">AG Grid E-Commerce Swarm Matrix</h3>
+                        <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-gradient-to-r from-red-600/30 to-amber-600/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1 shadow-sm">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <span>Sponsor: Best Use of AG Grid</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">High-performance comparison grid with custom cell renderers, multi-column sorting & filtering, pinned store/action columns, and CSV export.</p>
+                </div>
+
+                <!-- Controls: Quick Search & Export -->
+                <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5"></i>
+                        <input 
+                            type="text" 
+                            id="grid-search-input" 
+                            placeholder="Filter in AG Grid..." 
+                            class="pl-8 pr-3 py-1.5 bg-gray-800/90 border border-gray-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500 w-44 sm:w-56"
+                        />
+                    </div>
+                    <button 
+                        id="btn-export-csv" 
+                        class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold rounded-lg flex items-center space-x-1.5 transition shadow-sm"
+                        title="Export Comparison Audit to CSV using AG Grid native API"
+                    >
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>Export CSV</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Responsive Table Container -->
-            <div class="overflow-x-auto custom-scrollbar border border-gray-800 rounded-xl">
-                <table class="w-full text-left text-xs text-gray-300">
-                    <thead class="bg-gray-850 text-gray-400 uppercase text-[11px] font-semibold border-b border-gray-800">
-                        <tr>
-                            <th class="px-4 py-3">Merchant / Store</th>
-                            <th class="px-3 py-3">Condition</th>
-                            <th class="px-3 py-3">Landed Price</th>
-                            <th class="px-3 py-3">Risk-Adjusted TCO</th>
-                            <th class="px-3 py-3">Estimated Delivery</th>
-                            <th class="px-3 py-3">Cash on Delivery</th>
-                            <th class="px-3 py-3">Open Box Delivery</th>
-                            <th class="px-3 py-3">Warranty & ADP</th>
-                            <th class="px-3 py-3">Return Policy</th>
-                            <th class="px-3 py-3">Exchange Offer</th>
-                            <th class="px-3 py-3">Import Duty</th>
-                            <th class="px-3 py-3">PayPal Protection</th>
-                            <th class="px-3 py-3">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="matrix-tbody" class="divide-y divide-gray-800 bg-gray-950/60 font-mono text-[11px]">
-                        <!-- Populated dynamically -->
-                    </tbody>
-                </table>
+            <!-- AG Grid Quick KPI / Summary Ribbon -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">Audited Listings:</span>
+                    <span id="grid-stat-count" class="font-bold text-white font-mono">0</span>
+                </div>
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">Lowest TCO:</span>
+                    <span id="grid-stat-lowest-tco" class="font-bold text-emerald-400 font-mono">-</span>
+                </div>
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">COD Available:</span>
+                    <span id="grid-stat-cod" class="font-bold text-amber-300 font-mono">-</span>
+                </div>
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">Open Box Inspection:</span>
+                    <span id="grid-stat-openbox" class="font-bold text-indigo-300 font-mono">-</span>
+                </div>
             </div>
+
+            <!-- The AG Grid Component -->
+            <div id="comparison-ag-grid" class="ag-theme-quartz-dark w-full h-[380px] rounded-xl overflow-hidden border border-gray-800 shadow-inner"></div>
         </section>
 
     </main>
@@ -967,55 +995,235 @@
             lucide.createIcons();
         }
 
-        // Render Comprehensive Side-by-Side Comparison Matrix
+        // AG Grid Instance & Config (Sponsor Category: Best Use of AG Grid)
+        let comparisonGridApi = null;
+
         function renderComparisonMatrix(matrix) {
             if (!matrix || matrix.length === 0) {
                 matrixSection.classList.add('hidden');
                 return;
             }
             matrixSection.classList.remove('hidden');
-            matrixTbody.innerHTML = '';
 
-            matrix.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-900 transition border-b border-gray-800/60';
+            // 1. Update KPI Summary Ribbon
+            document.getElementById('grid-stat-count').textContent = matrix.length;
+            
+            const codCount = matrix.filter(r => r.cod_available).length;
+            document.getElementById('grid-stat-cod').textContent = `${codCount} of ${matrix.length} Sellers`;
 
-                tr.innerHTML = `
-                    <td class="px-4 py-3 font-semibold text-white">
-                        <div>${row.merchant}</div>
-                        <div class="text-[10px] text-gray-500 font-normal">${row.domain} (${row.origin_country})</div>
-                    </td>
-                    <td class="px-3 py-3 text-gray-300">${row.condition}</td>
-                    <td class="px-3 py-3 font-bold text-white">${row.sticker_price_conv}</td>
-                    <td class="px-3 py-3 font-bold text-emerald-400">${row.tco_conv}</td>
-                    <td class="px-3 py-3 text-gray-300">${row.estimated_delivery}</td>
-                    <td class="px-3 py-3 ${row.cod_available ? 'text-emerald-400 font-bold' : 'text-gray-500'}">
-                        ${row.cod_available ? '✅ Yes' : '❌ Prepaid'}
-                    </td>
-                    <td class="px-3 py-3 ${row.open_box_delivery ? 'text-emerald-400 font-bold' : 'text-gray-500'}">
-                        ${row.open_box_delivery ? '✅ OTP Verified' : '❌ Sealed'}
-                    </td>
-                    <td class="px-3 py-3 text-gray-300">
-                        <div>${row.warranty_months}</div>
-                        <div class="text-[10px] text-gray-400">ADP: ${row.has_adp ? `Yes (${row.adp_deductible})` : 'No'}</div>
-                    </td>
-                    <td class="px-3 py-3 text-gray-300">${row.return_window}</td>
-                    <td class="px-3 py-3 ${row.exchange_offer.includes('✅') ? 'text-purple-300 font-semibold' : 'text-gray-500'}">
-                        ${row.exchange_offer}
-                    </td>
-                    <td class="px-3 py-3 ${row.is_cross_border ? 'text-amber-400' : 'text-gray-500'}">
-                        ${row.import_duty}
-                    </td>
-                    <td class="px-3 py-3 text-blue-300">${row.paypal_protection}</td>
-                    <td class="px-3 py-3">
-                        <button onclick="openCheckoutModal('${row.id}')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-[10px] transition">
-                            Checkout
-                        </button>
-                    </td>
-                `;
+            const openBoxCount = matrix.filter(r => r.open_box_delivery).length;
+            document.getElementById('grid-stat-openbox').textContent = `${openBoxCount} of ${matrix.length} Verified`;
 
-                matrixTbody.appendChild(tr);
-            });
+            const lowestTcoRow = [...matrix].sort((a,b) => {
+                const parseNum = str => parseFloat(String(str).replace(/[^0-9.]/g, '')) || 0;
+                return parseNum(a.tco_conv) - parseNum(b.tco_conv);
+            })[0];
+            if (lowestTcoRow) {
+                document.getElementById('grid-stat-lowest-tco').textContent = `${lowestTcoRow.tco_conv} (${lowestTcoRow.merchant})`;
+            }
+
+            // 2. Initialize or Update AG Grid
+            const gridDiv = document.getElementById('comparison-ag-grid');
+
+            if (!comparisonGridApi) {
+                const gridOptions = {
+                    rowData: matrix,
+                    columnDefs: [
+                        {
+                            field: 'merchant',
+                            headerName: 'Store & Merchant',
+                            pinned: 'left',
+                            minWidth: 175,
+                            cellRenderer: (params) => {
+                                const d = params.data;
+                                if (!d) return '';
+                                return `
+                                    <div class="py-1">
+                                        <div class="font-bold text-white flex items-center space-x-1.5 leading-snug">
+                                            <span>${d.merchant}</span>
+                                            <span class="text-[9px] px-1 py-0.2 rounded bg-gray-800 text-gray-300 border border-gray-700">${d.origin_country}</span>
+                                        </div>
+                                        <div class="text-[10px] text-gray-400 truncate">${d.domain}</div>
+                                    </div>
+                                `;
+                            }
+                        },
+                        {
+                            field: 'condition',
+                            headerName: 'Condition',
+                            width: 125,
+                            cellRenderer: (params) => {
+                                const c = params.value || '';
+                                let bg = 'bg-gray-800 text-gray-300 border-gray-700';
+                                if (c.includes('Brand New')) bg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+                                if (c.includes('Open Box')) bg = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                                if (c.includes('Refurbished')) bg = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+                                return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${bg}">${c}</span>`;
+                            }
+                        },
+                        {
+                            field: 'sticker_price_conv',
+                            headerName: 'Landed Price',
+                            width: 130,
+                            sortable: true,
+                            cellRenderer: (params) => `<span class="font-bold text-white font-mono">${params.value || ''}</span>`
+                        },
+                        {
+                            field: 'tco_conv',
+                            headerName: 'Risk-Adjusted TCO',
+                            width: 160,
+                            sortable: true,
+                            cellRenderer: (params) => {
+                                return `<span class="font-black text-emerald-400 font-mono text-xs px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/50">${params.value || ''}</span>`;
+                            }
+                        },
+                        {
+                            field: 'trust_score',
+                            headerName: 'Merchant Trust',
+                            width: 145,
+                            cellRenderer: (params) => {
+                                const val = params.value || '';
+                                let color = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+                                if (val.includes('Caution') || val.includes('Standard')) color = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+                                if (val.includes('High Risk')) color = 'text-red-400 bg-red-500/10 border-red-500/30';
+                                return `<span class="px-2 py-0.5 rounded font-bold text-[10px] border ${color}">${val}</span>`;
+                            }
+                        },
+                        {
+                            field: 'estimated_delivery',
+                            headerName: 'Delivery Speed',
+                            width: 175,
+                            cellRenderer: (params) => {
+                                const val = params.value || '';
+                                const isCross = val.includes('Cross-Border');
+                                return `<span class="text-xs ${isCross ? 'text-amber-300' : 'text-gray-200'}">${isCross ? '✈️' : '🚚'} ${val}</span>`;
+                            }
+                        },
+                        {
+                            field: 'cod_available',
+                            headerName: 'Cash on Delivery',
+                            width: 145,
+                            cellRenderer: (params) => {
+                                return params.value 
+                                    ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">✅ COD Available</span>`
+                                    : `<span class="px-2 py-0.5 rounded text-[10px] text-gray-500 border border-gray-800">❌ Prepaid Only</span>`;
+                            }
+                        },
+                        {
+                            field: 'open_box_delivery',
+                            headerName: 'Open Box Inspection',
+                            width: 165,
+                            cellRenderer: (params) => {
+                                return params.value
+                                    ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">📦 OTP Verified</span>`
+                                    : `<span class="px-2 py-0.5 rounded text-[10px] text-gray-500 border border-gray-800">❌ Sealed Courier</span>`;
+                            }
+                        },
+                        {
+                            field: 'warranty_months',
+                            headerName: 'Warranty & ADP',
+                            width: 180,
+                            cellRenderer: (params) => {
+                                const d = params.data || {};
+                                return `
+                                    <div class="py-1">
+                                        <div class="text-gray-200 font-semibold leading-tight">${d.warranty_months || ''}</div>
+                                        <div class="text-[10px] text-gray-400">ADP: ${d.has_adp ? `<strong class="text-emerald-400">Yes (${d.adp_deductible})</strong>` : 'None'}</div>
+                                    </div>
+                                `;
+                            }
+                        },
+                        {
+                            field: 'return_window',
+                            headerName: 'Return Policy',
+                            width: 165,
+                            cellRenderer: (params) => `<span class="text-gray-300 text-xs">${params.value || ''}</span>`
+                        },
+                        {
+                            field: 'exchange_offer',
+                            headerName: 'Trade-In / Exchange',
+                            width: 170,
+                            cellRenderer: (params) => {
+                                const val = params.value || '';
+                                return val.includes('✅') 
+                                    ? `<span class="text-purple-300 font-semibold text-[10px]">${val}</span>`
+                                    : `<span class="text-gray-500 text-[10px]">None</span>`;
+                            }
+                        },
+                        {
+                            field: 'import_duty',
+                            headerName: 'Customs Duty & FX',
+                            width: 165,
+                            cellRenderer: (params) => {
+                                const isCross = params.data?.is_cross_border;
+                                return `<span class="${isCross ? 'text-amber-400 font-bold' : 'text-gray-400'} text-[10px]">${params.value || '0% (Domestic)'}</span>`;
+                            }
+                        },
+                        {
+                            field: 'paypal_protection',
+                            headerName: 'PayPal Shield',
+                            width: 180,
+                            cellRenderer: (params) => {
+                                return `
+                                    <div class="flex items-center space-x-1 text-blue-300 text-[11px] font-semibold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                        <span>${params.value || 'Active'}</span>
+                                    </div>
+                                `;
+                            }
+                        },
+                        {
+                            headerName: 'Action',
+                            pinned: 'right',
+                            width: 120,
+                            cellRenderer: (params) => {
+                                const id = params.data?.id;
+                                return `
+                                    <button onclick="window.openCheckoutModal('${id}')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[10px] shadow transition">
+                                        PayPal Checkout
+                                    </button>
+                                `;
+                            }
+                        }
+                    ],
+                    defaultColDef: {
+                        sortable: true,
+                        filter: true,
+                        resizable: true
+                    },
+                    rowHeight: 46,
+                    headerHeight: 38,
+                    animateRows: true,
+                    rowSelection: 'single',
+                    onRowClicked: (event) => {
+                        if (event.data?.id) {
+                            window.openCheckoutModal(event.data.id);
+                        }
+                    }
+                };
+
+                comparisonGridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+                // Attach Quick Filter search
+                const searchInputEl = document.getElementById('grid-search-input');
+                if (searchInputEl) {
+                    searchInputEl.addEventListener('input', (e) => {
+                        comparisonGridApi.setGridOption('quickFilterText', e.target.value);
+                    });
+                }
+
+                // Attach CSV Export
+                const exportBtn = document.getElementById('btn-export-csv');
+                if (exportBtn) {
+                    exportBtn.addEventListener('click', () => {
+                        comparisonGridApi.exportDataAsCsv({
+                            fileName: `ProductFind_Swarm_Audit_${new Date().toISOString().split('T')[0]}.csv`
+                        });
+                    });
+                }
+            } else {
+                comparisonGridApi.setGridOption('rowData', matrix);
+            }
 
             lucide.createIcons();
         }

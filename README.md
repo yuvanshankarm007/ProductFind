@@ -111,9 +111,14 @@ flowchart TB
   - **Credit / Debit Card** (Warns on international 3.5% foreign transaction bank surcharges)
   - **UPI / Net Banking** (Regional instant payments)
 
-### 9. Comprehensive Side-by-Side Comparison Matrix
-- An interactive, full-width comparison matrix displaying all listings side by side across:
-  - Merchant, Condition, Landed Price, Risk-Adjusted TCO, Estimated Delivery, COD, Open Box Delivery, Warranty/ADP Deductible, Return Policy, Trade-In Discount, Import Duty, and PayPal Protection.
+### 9. AG Grid E-Commerce Swarm Matrix (🏆 Sponsor: Best Use of AG Grid)
+- An enterprise-grade, high-performance data grid powered by **AG Grid (Quartz Dark Theme)**:
+  - **Custom Cell Renderers:** Renders store branding, origin country, condition pills, landed prices, Risk-Adjusted TCO, COD & Open Box badges, and embedded 1-click PayPal checkout triggers directly inside cells.
+  - **Pinned Columns:** Store & Merchant pinned to the left; PayPal Action button pinned to the right for seamless horizontal exploration.
+  - **Multi-Column Sorting & Filtering:** Sort by TCO, Landed Price, or Trust Score with instant interactive response.
+  - **Live Quick Search:** Filter across every policy term simultaneously.
+  - **One-Click Native CSV Export:** Download full comparison audits locally using AG Grid's native `gridApi.exportDataAsCsv()`.
+  - **KPI Summary Ribbon:** Real-time statistics on total listings audited, lowest TCO, and COD/Open Box availability counts.
 
 ### 10. 90-Day Price History Trajectory
 - Tracks historical price movements across 90-day intervals.
