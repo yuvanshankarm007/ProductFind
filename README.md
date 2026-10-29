@@ -1,4 +1,4 @@
-# ProductFinds 🛡️
+# ProductFind 🛡️
 ### Bidirectional Multi-Agent Commerce Agent with PayPal Buyer Protection & Pay Later Integration
 *Built for the [PayPal AI Hackathon on Devpost](https://paypalaihackathon.devpost.com/)*
 
@@ -12,7 +12,7 @@ Shopping online based solely on "sticker price" is a consumer trap. The cheapest
 - **Hidden high-deductible Accidental Damage Protection (ADP)** clauses
 - **Unreliable third-party sellers** with poor dispute records
 
-**ProductFinds** solves this with a **Bidirectional Multi-Agent Swarm (Blackboard Architecture)** that scours listings, interrogates fine-print terms, audits merchant trust, and calculates a **Risk-Adjusted Total Cost of Ownership (TCO)**—while natively recommending and executing **PayPal Buyer Protection** and **PayPal Pay in 4** checkout.
+**ProductFind** solves this with a **Bidirectional Multi-Agent Swarm (Blackboard Architecture)** that scours listings, interrogates fine-print terms, audits merchant trust, and calculates a **Risk-Adjusted Total Cost of Ownership (TCO)**—while natively recommending and executing **PayPal Buyer Protection** and **PayPal Pay in 4** checkout.
 
 ---
 
@@ -96,8 +96,8 @@ flowchart TB
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/yuvanshankarm007/ProductFinds.git
-cd ProductFinds
+git clone https://github.com/yuvanshankarm007/ProductFind.git
+cd ProductFind
 ```
 
 ### 2. Install Dependencies

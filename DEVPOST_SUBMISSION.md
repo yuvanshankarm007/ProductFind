@@ -1,4 +1,4 @@
-# Devpost Submission: ProductFinds
+# Devpost Submission: ProductFind
 
 **Tagline:** Bidirectional Multi-Agent Commerce Swarm that analyzes warranty, accidental damage protection (ADP), and merchant reliability to compute True Cost of Ownership—backed by PayPal Buyer Protection and Pay Later.
 
@@ -15,7 +15,7 @@ We realized that price comparison engines are fundamentally flawed because they 
 ---
 
 ## 🧠 What it Does
-**ProductFinds** is an autonomous, bidirectional multi-agent commerce application. When a user queries a product, a swarm of specialized AI agents collaborate over a shared blackboard:
+**ProductFind** is an autonomous, bidirectional multi-agent commerce application. When a user queries a product, a swarm of specialized AI agents collaborate over a shared blackboard:
 
 1. **Scout Swarm (Tier 1):** Concurrently gathers listings across multiple retail ecosystems (Amazon, Best Buy, Walmart, Flipkart, Refurbished Outlets).
 2. **Specialist Processing Swarm (Tier 2):**
@@ -57,7 +57,7 @@ Most AI applications follow brittle linear pipelines (`Input -> Step 1 -> Step 2
 
 ---
 
-## 🔮 What's Next for ProductFinds
+## 🔮 What's Next for ProductFind
 - Direct integration with PayPal Fastlane for 1-click accelerated checkout.
 - Automated agentic dispute filing through PayPal's Resolution Center API if delivery delays occur.
 - Expanding real-time crawling to global regional marketplaces.
