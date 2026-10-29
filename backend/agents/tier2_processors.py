@@ -1,6 +1,7 @@
 """
 Tier 2: Processing Specialists Swarm.
-Processes pricing, warranty/ADP fine print, merchant trust/reliability, and PayPal risk mitigation.
+Processes pricing, warranty/ADP fine print, merchant trust/reliability,
+live FX & import duties, COD & Open Box delivery audit, and PayPal risk mitigation.
 Features active bidirectional feedback loops with Tier 1 and horizontal cross-agent negotiations.
 """
 
@@ -10,26 +11,30 @@ from ..core.state import (
     ScrapedListing,
     WarrantyAdpAnalysis,
     MerchantTrustRating,
-    PayPalProtectionAssessment
+    PayPalProtectionAssessment,
+    CrossBorderFxDutyAnalysis,
+    UserPreferences
 )
 from ..core.bus import EventBus
+from ..core.i18n import translate
 from .tier1_scouts import ScoutSwarm
+from .fx_service import FXService
 from ..paypal_service import PayPalService
 
 class ProcessingSwarm:
-    def __init__(self, bus: EventBus, scouts: ScoutSwarm, paypal_svc: PayPalService):
+    def __init__(self, bus: EventBus, scouts: ScoutSwarm, fx_svc: FXService, paypal_svc: PayPalService):
         self.bus = bus
         self.scouts = scouts
+        self.fx = fx_svc
         self.paypal = paypal_svc
 
-    async def analyze_warranty_and_adp(self, listing: ScrapedListing) -> WarrantyAdpAnalysis:
+    async def analyze_warranty_and_adp(self, listing: ScrapedListing, language: str = "en") -> WarrantyAdpAnalysis:
         """
         Parses warranty & accidental damage protection (ADP).
         If fine print is incomplete, executes a BIDIRECTIONAL back-propagation loop to ScoutSwarm.
         """
         text = (listing.raw_warranty_text + " " + listing.raw_adp_text).lower()
         
-        # Initial parsing
         oem_months = 12
         if "90-day" in text:
             oem_months = 3
@@ -75,7 +80,7 @@ class ProcessingSwarm:
             needs_deep_scrape=(confidence < 0.8)
         )
 
-        # BIDIRECTIONAL FEEDBACK LOOP:
+        # BIDIRECTIONAL FEEDBACK LOOP
         if analysis.needs_deep_scrape:
             await self.bus.emit(
                 source="WarrantyAdpAgent",
@@ -85,8 +90,8 @@ class ProcessingSwarm:
                 payload={"listing_id": listing.id}
             )
             
-            # Call back to Tier 1 Scout to resolve the ambiguity
-            resolved = await self.scouts.deep_scrape(listing.id, "adp_deductibles_and_restocking")
+            # Call back to Tier 1 Scout to resolve ambiguity
+            resolved = await self.scouts.deep_scrape(listing.id, "adp_deductibles_and_restocking", language=language)
             analysis.deductible_per_claim = resolved.get("adp_deductible", 0.0)
             analysis.confidence_score = 1.0
             analysis.needs_deep_scrape = False
@@ -109,14 +114,12 @@ class ProcessingSwarm:
 
         return analysis
 
-    async def evaluate_merchant_trust(self, listing: ScrapedListing) -> MerchantTrustRating:
+    async def evaluate_merchant_trust(self, listing: ScrapedListing, language: str = "en") -> MerchantTrustRating:
         """
         Rates merchant reliability, review consensus, return friction, and risk of fraud/counterfeit.
         """
-        text = listing.raw_return_policy.lower()
         domain = listing.merchant_domain.lower()
 
-        # Deterministic scoring model based on known merchant footprints
         if "bestbuy" in domain:
             score = 94
             tier = "Verified Trusted"
@@ -126,7 +129,7 @@ class ProcessingSwarm:
             return_days = 15
             restocking_fee = 0.0
             dispute_risk = "Low"
-            highlights = ["Authorized direct distributor", "Free in-store returns", "Zero restocking fee"]
+            highlights = ["Authorized direct distributor", "Free in-store returns", "Zero restocking fee", "Geek Squad In-Store Inspection"]
             complaints = ["Strict 15-day window for non-members"]
         elif "amazon" in domain and listing.is_third_party:
             score = 76
@@ -137,7 +140,7 @@ class ProcessingSwarm:
             return_days = 30
             restocking_fee = 15.0
             dispute_risk = "Moderate"
-            highlights = ["A-to-z standard return coverage", "Fast Prime delivery"]
+            highlights = ["A-to-z return coverage", "Fast Prime delivery"]
             complaints = ["15% restocking fee on opened electronics", "Customer pays return postage"]
         elif "walmart" in domain and listing.is_third_party:
             score = 56
@@ -149,17 +152,17 @@ class ProcessingSwarm:
             restocking_fee = 20.0
             dispute_risk = "High"
             highlights = ["Lowest upfront cash price"]
-            complaints = ["Grey market imported SKU", "Manufacturer warranty denied by Sony USA", "20% restocking fee penalty"]
+            complaints = ["Grey market imported SKU", "Manufacturer warranty denied in domestic centers", "20% restocking fee penalty", "Cross-border carrier dispute friction"]
         elif "flipkart" in domain:
-            score = 82
+            score = 86
             tier = "Reliable"
-            public_rating = 4.3
+            public_rating = 4.4
             review_count = 21000
             authorized = True
             return_days = 7
             restocking_fee = 0.0
-            dispute_risk = "Moderate"
-            highlights = ["Flipkart Assured seller verification", "Direct domestic brand warranty"]
+            dispute_risk = "Low"
+            highlights = ["Flipkart Assured seller verification", "Doorstep Open Box Delivery Verified", "Direct domestic brand warranty", "Cash on Delivery Available"]
             complaints = ["7-day replacement only (no refund to bank)"]
         elif "backmarket" in domain:
             score = 88
@@ -198,34 +201,96 @@ class ProcessingSwarm:
             positive_highlights=highlights
         )
 
+        cod_str = "Available" if listing.cod_available else "No"
+        open_box_str = "Yes (Doorstep Inspection)" if listing.open_box_delivery else "No"
+
         await self.bus.emit(
             source="MerchantTrustSentinel",
             target="PayPalProtectionAgent",
             event_type="DISPATCH",
-            content=f"Merchant [{listing.merchant}] Trust Rating: {score}/100 ({tier}). Restocking fee: {restocking_fee}%, Dispute Risk: {dispute_risk}.",
-            payload={"merchant": listing.merchant, "trust_score": score, "dispute_risk": dispute_risk}
+            content=translate(
+                "trust_rating",
+                lang=language,
+                merchant=listing.merchant,
+                score=score,
+                tier=tier,
+                fee=restocking_fee,
+                cod=cod_str,
+                open_box=open_box_str
+            ),
+            payload={
+                "merchant": listing.merchant,
+                "trust_score": score,
+                "dispute_risk": dispute_risk,
+                "cod_available": listing.cod_available,
+                "open_box_delivery": listing.open_box_delivery
+            }
         )
 
         return rating
+
+    async def evaluate_cross_border_fx_and_duties(
+        self,
+        listing: ScrapedListing,
+        preferences: UserPreferences
+    ) -> CrossBorderFxDutyAnalysis:
+        """
+        For international merchants, checks live FX rates, factors in potential import duties
+        and compares credit card foreign transaction fees (3.5%) vs PayPal's native currency conversion.
+        """
+        analysis = self.fx.calculate_cross_border_analysis(
+            base_price=listing.base_price,
+            merchant_country=listing.origin_country,
+            destination_country=preferences.country,
+            original_currency=listing.currency,
+            target_currency=preferences.currency
+        )
+
+        if analysis.is_cross_border:
+            await self.bus.emit(
+                source="CurrencyFxDutyAgent",
+                target="CompilerSwarm",
+                event_type="FX_DUTY",
+                content=translate(
+                    "cross_border_detected",
+                    lang=preferences.language,
+                    origin=listing.origin_country,
+                    dest=preferences.country,
+                    orig_curr=listing.currency,
+                    rate=analysis.fx_rate,
+                    dest_curr=preferences.currency,
+                    duty=analysis.estimated_import_duty_pct
+                ),
+                payload=analysis.model_dump()
+            )
+
+        return analysis
 
     async def evaluate_paypal_synergy(
         self,
         listing: ScrapedListing,
         warranty: WarrantyAdpAnalysis,
-        trust: MerchantTrustRating
+        trust: MerchantTrustRating,
+        cross_border: CrossBorderFxDutyAnalysis,
+        preferences: UserPreferences
     ) -> PayPalProtectionAssessment:
         """
-        Synthesizes Merchant Trust, Warranty limitations, and calculates
-        PayPal Buyer Protection Shield and Pay in 4 terms.
+        Synthesizes Merchant Trust, Warranty limitations, cross-border status,
+        and calculates PayPal Buyer Protection Shield and Pay in 4 terms in target currency.
         """
+        converted_base = self.fx.convert_amount(listing.base_price, listing.currency, preferences.currency)
+        converted_adp = self.fx.convert_amount(warranty.adp_addon_price, listing.currency, preferences.currency)
+
         synergy_data = self.paypal.evaluate_protection_synergy(
-            base_price=listing.base_price,
-            adp_price=warranty.adp_addon_price,
+            base_price=converted_base,
+            adp_price=converted_adp,
             merchant_trust_score=trust.overall_score,
             return_window_days=trust.return_window_days,
             restocking_fee_pct=trust.restocking_fee_pct,
             is_third_party=listing.is_third_party,
-            has_adp=warranty.has_adp
+            has_adp=warranty.has_adp,
+            is_cross_border=cross_border.is_cross_border,
+            currency=preferences.currency
         )
 
         assessment = PayPalProtectionAssessment(
@@ -237,15 +302,23 @@ class ProcessingSwarm:
             mitigated_risks=synergy_data["mitigated_risks"],
             pay_later_eligible=synergy_data["pay_later_eligible"],
             pay_in_4_biweekly=synergy_data["pay_in_4_biweekly"],
-            total_financed_with_adp=synergy_data["total_financed_with_adp"]
+            total_financed_with_adp=synergy_data["total_financed_with_adp"],
+            currency=preferences.currency
         )
 
-        # Emit notice of PayPal protection alignment
+        pay_in_4_formatted = self.fx.format_price(assessment.pay_in_4_biweekly, preferences.currency)
+
         await self.bus.emit(
             source="PayPalProtectionAgent",
             target="CompilerSwarm",
             event_type="SYNTHESIZED",
-            content=f"PayPal Protection Shield configured for [{listing.id}]: {assessment.headline}. Pay in 4 = ${assessment.pay_in_4_biweekly:.2f}/biweekly.",
+            content=translate(
+                "paypal_synergy",
+                lang=preferences.language,
+                id=listing.id,
+                headline=assessment.headline,
+                pay_in_4=pay_in_4_formatted
+            ),
             payload={"listing_id": listing.id, "headline": assessment.headline}
         )
 

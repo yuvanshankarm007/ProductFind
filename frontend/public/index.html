@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProductFind - Bidirectional Commerce Agent & PayPal Shield</title>
+    <title>ProductFind - Multi-Agent Commerce Swarm & PayPal Protection</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -26,6 +26,7 @@
         }
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: #111827;
@@ -46,8 +47,8 @@
 <body class="min-h-screen flex flex-col custom-scrollbar">
 
     <!-- Top Navigation -->
-    <header class="border-b border-gray-800 bg-gray-900/60 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+    <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                     <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
@@ -55,24 +56,83 @@
                 <div>
                     <div class="flex items-center space-x-2">
                         <span class="font-bold text-lg tracking-tight text-white">Product<span class="text-blue-400">Find</span></span>
-                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">PayPal Hackathon</span>
+                        <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">PayPal Hackathon</span>
+                        <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">v2.0 Swarm</span>
                     </div>
-                    <p class="text-xs text-gray-400">Bidirectional Multi-Agent Commerce & Protection Graph</p>
+                    <p class="text-xs text-gray-400">Bidirectional Commerce Graph • FX & Duties • COD • Open Box • Price Prediction</p>
                 </div>
             </div>
 
-            <div class="flex items-center space-x-4">
-                <div class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700 text-xs">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-live"></span>
-                    <span class="text-gray-300">Swarm Event Bus: <strong class="text-emerald-400">Connected</strong></span>
+            <!-- Global Preferences Switchers -->
+            <div class="flex items-center space-x-2 flex-wrap gap-y-1.5 text-xs">
+                <!-- Language Selector -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="globe" class="w-3.5 h-3.5 text-gray-400 mr-1.5"></i>
+                    <select id="pref-language" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="en" class="bg-gray-800">English 🇺🇸</option>
+                        <option value="hi" class="bg-gray-800">हिंदी (Hindi) 🇮🇳</option>
+                        <option value="es" class="bg-gray-800">Español 🇪🇸</option>
+                        <option value="de" class="bg-gray-800">Deutsch 🇩🇪</option>
+                        <option value="fr" class="bg-gray-800">Français 🇫🇷</option>
+                        <option value="ja" class="bg-gray-800">日本語 🇯🇵</option>
+                    </select>
                 </div>
-                <div class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-blue-950/60 border border-blue-800/60 text-xs text-blue-300">
-                    <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>
-                    <span>PayPal Sandbox API: <strong>v2 Ready</strong></span>
+
+                <!-- Destination Country -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400 mr-1.5"></i>
+                    <select id="pref-country" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="US" class="bg-gray-800">United States 🇺🇸</option>
+                        <option value="IN" class="bg-gray-800">India 🇮🇳</option>
+                        <option value="GB" class="bg-gray-800">United Kingdom 🇬🇧</option>
+                        <option value="DE" class="bg-gray-800">Germany 🇩🇪</option>
+                        <option value="CA" class="bg-gray-800">Canada 🇨🇦</option>
+                        <option value="JP" class="bg-gray-800">Japan 🇯🇵</option>
+                        <option value="AU" class="bg-gray-800">Australia 🇦🇺</option>
+                    </select>
+                </div>
+
+                <!-- Preferred Currency -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="coins" class="w-3.5 h-3.5 text-amber-400 mr-1.5"></i>
+                    <select id="pref-currency" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="USD" class="bg-gray-800">USD ($)</option>
+                        <option value="INR" class="bg-gray-800">INR (₹)</option>
+                        <option value="EUR" class="bg-gray-800">EUR (€)</option>
+                        <option value="GBP" class="bg-gray-800">GBP (£)</option>
+                        <option value="CAD" class="bg-gray-800">CAD (CA$)</option>
+                        <option value="JPY" class="bg-gray-800">JPY (¥)</option>
+                        <option value="AUD" class="bg-gray-800">AUD (A$)</option>
+                    </select>
+                </div>
+
+                <!-- Preferred Payment -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5 text-emerald-400 mr-1.5"></i>
+                    <select id="pref-payment" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="all" class="bg-gray-800">All Payments</option>
+                        <option value="paypal" class="bg-gray-800">PayPal & Pay in 4</option>
+                        <option value="cod" class="bg-gray-800">Cash on Delivery (COD)</option>
+                        <option value="card" class="bg-gray-800">Credit / Debit Card</option>
+                        <option value="upi" class="bg-gray-800">UPI / Net Banking</option>
+                    </select>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- First-Time Onboarding Banner (Dismissible) -->
+    <div id="onboarding-banner" class="bg-gradient-to-r from-blue-950/80 via-indigo-950/70 to-gray-900 border-b border-blue-800/40 px-4 py-2 text-xs">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2 text-blue-200">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                <span id="onboarding-text"><strong>Welcome!</strong> Select your language, target delivery country, preferred currency, and payment method above. ProductFind's agent swarm personalizes delivery times, COD, customs duties, and live FX conversions automatically.</span>
+            </div>
+            <button id="dismiss-banner-btn" class="text-blue-300 hover:text-white ml-2">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Main Content Area -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -82,11 +142,11 @@
             <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
             
             <div class="max-w-3xl">
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                    Risk-Adjusted Price & Protection Finder
+                <h1 id="hero-title" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                    Multi-Agent Commerce Sentinel & Risk Analyzer
                 </h1>
-                <p class="text-sm text-gray-400 mt-1">
-                    Deploy autonomous search, warranty, and reputation agents to uncover hidden ADP terms, restocking fees, and merchant risks—backed by PayPal Buyer Protection.
+                <p id="hero-subtitle" class="text-sm text-gray-400 mt-1">
+                    Audits fine-print warranties, delivery speeds, Cash on Delivery (COD), Open Box verification, exchange offers, and cross-border import duties—backed by PayPal Buyer Protection.
                 </p>
 
                 <!-- Query Input -->
@@ -98,7 +158,7 @@
                             id="search-input" 
                             value="Sony WH-1000XM5 Noise Canceling Headphones"
                             class="w-full pl-10 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-500"
-                            placeholder="Enter any product (e.g., MacBook Air M3, Sony XM5)..."
+                            placeholder="Search products (e.g., Sony WH-1000XM5, MacBook Air M3)..."
                         />
                     </div>
                     <button 
@@ -107,11 +167,11 @@
                         class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 transition duration-150"
                     >
                         <i data-lucide="cpu" class="w-4 h-4"></i>
-                        <span>Deploy Agent Swarm</span>
+                        <span id="btn-deploy-text">Deploy Agent Swarm</span>
                     </button>
                 </form>
 
-                <!-- Preset Queries -->
+                <!-- Quick Presets -->
                 <div class="flex items-center space-x-2 mt-3 text-xs text-gray-400 flex-wrap gap-y-1">
                     <span class="text-gray-500">Quick Test Samples:</span>
                     <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Sony WH-1000XM5 Noise Canceling Headphones">
@@ -124,7 +184,7 @@
             </div>
         </section>
 
-        <!-- Live Bidirectional Agent Negotiation Terminal (Accordion or Split View) -->
+        <!-- Live Bidirectional Agent Negotiation Terminal -->
         <section class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
             <div class="px-5 py-3.5 bg-gray-850 border-b border-gray-800 flex items-center justify-between">
                 <div class="flex items-center space-x-2.5">
@@ -133,10 +193,10 @@
                         <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
                         <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
                     </div>
-                    <span class="text-xs font-semibold text-gray-300 mono-font">LIVE_AGENT_STREAM // Bidirectional Negotiation Bus</span>
+                    <span class="text-xs font-semibold text-gray-300 mono-font">LIVE_AGENT_STREAM // Swarm Negotiation & Cross-Border Bus</span>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <span id="agent-count-badge" class="px-2 py-0.5 text-xs rounded bg-gray-800 text-gray-400 border border-gray-700 mono-font">8 Active Agents</span>
+                    <span id="agent-count-badge" class="px-2 py-0.5 text-xs rounded bg-gray-800 text-gray-400 border border-gray-700 mono-font">10 Specialized Agents</span>
                     <button id="toggle-terminal-btn" class="text-xs text-blue-400 hover:text-blue-300 transition flex items-center space-x-1">
                         <span id="toggle-text">Collapse</span>
                         <i data-lucide="chevron-up" id="toggle-icon" class="w-3.5 h-3.5"></i>
@@ -148,7 +208,94 @@
             <div id="terminal-body" class="p-4 bg-gray-950 max-h-60 overflow-y-auto custom-scrollbar mono-font text-xs space-y-2 border-b border-gray-800/80">
                 <div class="text-gray-500 flex items-center space-x-2">
                     <span class="text-blue-400">system:</span>
-                    <span>Ready. Awaiting query to launch Tier 1 Scouts & Tier 2 Specialist Swarm...</span>
+                    <span>Ready. Awaiting query to launch Tier 1 Scouts, FX Duty Inspector, and Tier 2 Specialist Swarm...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Price History & AI Price Prediction Section -->
+        <section id="price-analytics-section" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-xl hidden">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+                        <h2 class="text-lg font-bold text-white tracking-tight">Price History & 14-Day AI Price Prediction</h2>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-0.5">Historical price trend analysis, volatility modeling, and predictive purchasing recommendation</p>
+                </div>
+                <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+                    <div id="buy-verdict-badge" class="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span id="buy-verdict-text">BUY NOW</span>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-xl text-xs bg-gray-800 border border-gray-700 text-gray-300 flex items-center space-x-1.5">
+                        <i data-lucide="target" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span id="prediction-confidence-text">Confidence: 88%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                <!-- Metrics -->
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">All-Time Low (ATL)</div>
+                    <div id="stat-atl" class="text-lg font-bold text-emerald-400 mt-1">$0.00</div>
+                    <div class="text-[10px] text-gray-500">90-Day Best Recorded</div>
+                </div>
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">All-Time High (ATH)</div>
+                    <div id="stat-ath" class="text-lg font-bold text-amber-400 mt-1">$0.00</div>
+                    <div class="text-[10px] text-gray-500">Peak MSRP Window</div>
+                </div>
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">90-Day Moving Average</div>
+                    <div id="stat-avg" class="text-lg font-bold text-white mt-1">$0.00</div>
+                    <div class="text-[10px] text-gray-500">Benchmark Mean</div>
+                </div>
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">14-Day Price Forecast</div>
+                    <div id="stat-forecast" class="text-lg font-bold text-blue-400 mt-1">Stable</div>
+                    <div id="stat-delta" class="text-[10px] text-gray-400">Estimated Delta: 0%</div>
+                </div>
+            </div>
+
+            <!-- Price History Chart & Explanation -->
+            <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="lg:col-span-2 bg-gray-950/80 p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+                    <div class="text-xs font-semibold text-gray-400 mb-2 flex items-center justify-between">
+                        <span>90-DAY PRICE TRAJECTORY</span>
+                        <span class="text-[11px] text-gray-500 font-mono">X-Axis: Days Ago &bull; Y-Axis: Price</span>
+                    </div>
+                    <!-- SVG Chart Container -->
+                    <div id="chart-container" class="w-full h-36 flex items-end">
+                        <svg id="price-svg" class="w-full h-full" viewBox="0 0 600 120" preserveAspectRatio="none"></svg>
+                    </div>
+                    <!-- Chart X-Axis Labels -->
+                    <div id="chart-labels" class="flex justify-between text-[10px] text-gray-500 mt-2 font-mono px-1">
+                        <span>-90d</span>
+                        <span>-60d</span>
+                        <span>-45d</span>
+                        <span>-30d</span>
+                        <span>-15d</span>
+                        <span>-7d</span>
+                        <span class="text-emerald-400 font-bold">Today</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-gray-300 flex items-center space-x-1.5 mb-2">
+                            <i data-lucide="bot" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Agent Forecast Analysis</span>
+                        </div>
+                        <p id="prediction-explanation-text" class="text-xs text-gray-300 leading-relaxed">
+                            Analyzing seasonal sales cycles, manufacturer release patterns, and inventory volume...
+                        </p>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 flex items-center justify-between">
+                        <span>Predicted Price Target:</span>
+                        <span id="predicted-price-target" class="font-bold text-white">$0.00</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -161,22 +308,60 @@
                         <i data-lucide="layers" class="w-5 h-5 text-blue-400"></i>
                         <span>Synthesized Options & Risk Breakdown</span>
                     </h2>
-                    <p class="text-xs text-gray-400">Formulated by Strategy Compilers with Risk-Adjusted Total Cost of Ownership (TCO)</p>
+                    <p class="text-xs text-gray-400">Formulated with multi-currency FX, delivery estimates, COD, open box delivery, and trade-in deductions</p>
                 </div>
                 <div class="hidden sm:flex items-center space-x-3 text-xs text-gray-400">
                     <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Optimal Value</span></span>
                     <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span><span>Max ADP Coverage</span></span>
-                    <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Budget (Risk Mitigated)</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Budget Sticker</span></span>
                 </div>
             </div>
 
             <!-- The Cards Grid -->
             <div id="cards-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Skeleton / Placeholder State -->
                 <div class="p-8 text-center text-gray-500 col-span-3 border border-dashed border-gray-800 rounded-2xl bg-gray-900/40">
                     <i data-lucide="compass" class="w-8 h-8 mx-auto mb-2 text-gray-600 animate-spin"></i>
-                    <p class="text-sm">Click "Deploy Agent Swarm" above to trigger real-time multi-agent negotiation.</p>
+                    <p class="text-sm">Click "Deploy Agent Swarm" to run multi-agent search, live FX analysis, and risk arbitration.</p>
                 </div>
+            </div>
+        </section>
+
+        <!-- Comprehensive Side-by-Side Comparison Matrix -->
+        <section id="matrix-section" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-xl hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i data-lucide="table-2" class="w-5 h-5 text-indigo-400"></i>
+                        <span>Comprehensive Side-by-Side Comparison Matrix</span>
+                    </h3>
+                    <p class="text-xs text-gray-400">Compare delivery times, COD, open box inspection, warranties, restocking fees, and PayPal benefits across all scouted listings.</p>
+                </div>
+            </div>
+
+            <!-- Responsive Table Container -->
+            <div class="overflow-x-auto custom-scrollbar border border-gray-800 rounded-xl">
+                <table class="w-full text-left text-xs text-gray-300">
+                    <thead class="bg-gray-850 text-gray-400 uppercase text-[11px] font-semibold border-b border-gray-800">
+                        <tr>
+                            <th class="px-4 py-3">Merchant / Store</th>
+                            <th class="px-3 py-3">Condition</th>
+                            <th class="px-3 py-3">Landed Price</th>
+                            <th class="px-3 py-3">Risk-Adjusted TCO</th>
+                            <th class="px-3 py-3">Estimated Delivery</th>
+                            <th class="px-3 py-3">Cash on Delivery</th>
+                            <th class="px-3 py-3">Open Box Delivery</th>
+                            <th class="px-3 py-3">Warranty & ADP</th>
+                            <th class="px-3 py-3">Return Policy</th>
+                            <th class="px-3 py-3">Exchange Offer</th>
+                            <th class="px-3 py-3">Import Duty</th>
+                            <th class="px-3 py-3">PayPal Protection</th>
+                            <th class="px-3 py-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-tbody" class="divide-y divide-gray-800 bg-gray-950/60 font-mono text-[11px]">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
             </div>
         </section>
 
@@ -185,13 +370,15 @@
     <!-- Footer -->
     <footer class="border-t border-gray-800 py-4 mt-8 bg-gray-950/70 text-xs text-gray-500">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <span>PayPal AI Hackathon Submission • Powered by Bidirectional Multi-Agent Graph</span>
+            <span>ProductFind • PayPal AI Hackathon Submission • Bidirectional Multi-Agent Commerce Swarm</span>
             <div class="flex items-center space-x-4">
-                <span>PayPal Orders v2</span>
+                <span>Multi-Currency FX</span>
                 <span>•</span>
-                <span>PayPal Pay Later / Pay in 4</span>
+                <span>Open Box Delivery</span>
                 <span>•</span>
-                <span>PayPal Buyer Protection Shield</span>
+                <span>PayPal Orders v2 API</span>
+                <span>•</span>
+                <span>180-Day Protection Shield</span>
             </div>
         </div>
     </footer>
@@ -209,7 +396,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-white text-base">PayPal Checkout Sandbox</h3>
-                    <p class="text-xs text-gray-400">Simulated Secure Payment & Buyer Protection</p>
+                    <p class="text-xs text-gray-400">Multi-Currency Payment & 180-Day Buyer Protection</p>
                 </div>
             </div>
 
@@ -223,7 +410,15 @@
                     <span id="modal-merchant" class="text-gray-200">Store</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-400">Base Price + Tax:</span>
+                    <span class="text-gray-400">Estimated Delivery:</span>
+                    <span id="modal-delivery" class="text-gray-200">2-3 Days</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Open Box Inspection:</span>
+                    <span id="modal-openbox" class="text-emerald-400 font-semibold">Verified</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Base Price + Tax / Duty:</span>
                     <span id="modal-base-price" class="text-gray-200">$0.00</span>
                 </div>
                 <div class="flex justify-between">
@@ -237,7 +432,7 @@
             </div>
 
             <div class="bg-blue-950/40 border border-blue-800/50 rounded-xl p-3 mb-5 text-xs text-blue-200 flex items-start space-x-2">
-                <i data-lucide="shield-alert" class="w-4 h-4 text-blue-400 shrink-0 mt-0.5"></i>
+                <i data-lucide="shield-check" class="w-4 h-4 text-blue-400 shrink-0 mt-0.5"></i>
                 <span id="modal-protection-reason">PayPal Buyer Protection is automatically attached to this transaction.</span>
             </div>
 
@@ -249,7 +444,7 @@
                 </button>
                 <button id="modal-confirm-paylater" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white font-medium rounded-xl text-xs flex items-center justify-center space-x-1.5 transition">
                     <i data-lucide="clock" class="w-3.5 h-3.5 text-blue-400"></i>
-                    <span>Split into 4 Interest-Free Payments with <strong>Pay in 4</strong></span>
+                    <span id="modal-paylater-btn-text">Split into 4 Interest-Free Payments with <strong>Pay in 4</strong></span>
                 </button>
             </div>
             
@@ -271,18 +466,35 @@
         let socket = null;
         let activeOptions = [];
         let selectedOption = null;
+        let currentCurrency = "USD";
 
+        // DOM elements
         const terminalBody = document.getElementById('terminal-body');
         const cardsGrid = document.getElementById('cards-grid');
         const searchForm = document.getElementById('search-form');
         const searchInput = document.getElementById('search-input');
         const submitBtn = document.getElementById('submit-btn');
+        const matrixSection = document.getElementById('matrix-section');
+        const matrixTbody = document.getElementById('matrix-tbody');
+        const priceAnalyticsSection = document.getElementById('price-analytics-section');
+
+        // Preference Selectors
+        const prefLanguage = document.getElementById('pref-language');
+        const prefCountry = document.getElementById('pref-country');
+        const prefCurrency = document.getElementById('pref-currency');
+        const prefPayment = document.getElementById('pref-payment');
+
+        // Onboarding Banner
+        const onboardingBanner = document.getElementById('onboarding-banner');
+        const dismissBannerBtn = document.getElementById('dismiss-banner-btn');
 
         // Modal elements
         const checkoutModal = document.getElementById('checkout-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
         const modalProductTitle = document.getElementById('modal-product-title');
         const modalMerchant = document.getElementById('modal-merchant');
+        const modalDelivery = document.getElementById('modal-delivery');
+        const modalOpenbox = document.getElementById('modal-openbox');
         const modalBasePrice = document.getElementById('modal-base-price');
         const modalAdpPrice = document.getElementById('modal-adp-price');
         const modalTotalPrice = document.getElementById('modal-total-price');
@@ -291,6 +503,44 @@
         const modalConfirmPaylater = document.getElementById('modal-confirm-paylater');
         const modalReceipt = document.getElementById('modal-receipt');
         const modalOrderId = document.getElementById('modal-order-id');
+
+        // Currency formatting helper
+        function formatMoney(amount, currency) {
+            const curr = (currency || currentCurrency).toUpperCase();
+            const symMap = {
+                USD: '$', INR: '₹', EUR: '€', GBP: '£', CAD: 'CA$', JPY: '¥', AUD: 'A$'
+            };
+            const sym = symMap[curr] || '$';
+            if (curr === 'INR' || curr === 'JPY') {
+                return `${sym}${Number(amount).toLocaleString('en-US', { minimumFractionDigits: curr === 'JPY' ? 0 : 2, maximumFractionDigits: 2 })}`;
+            }
+            return `${sym}${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Restore preferences from localStorage if saved
+        if (localStorage.getItem('pf_language')) prefLanguage.value = localStorage.getItem('pf_language');
+        if (localStorage.getItem('pf_country')) prefCountry.value = localStorage.getItem('pf_country');
+        if (localStorage.getItem('pf_currency')) prefCurrency.value = localStorage.getItem('pf_currency');
+        if (localStorage.getItem('pf_payment')) prefPayment.value = localStorage.getItem('pf_payment');
+
+        // Save on change and trigger re-search
+        [prefLanguage, prefCountry, prefCurrency, prefPayment].forEach(el => {
+            el.addEventListener('change', () => {
+                localStorage.setItem('pf_language', prefLanguage.value);
+                localStorage.setItem('pf_country', prefCountry.value);
+                localStorage.setItem('pf_currency', prefCurrency.value);
+                localStorage.setItem('pf_payment', prefPayment.value);
+                currentCurrency = prefCurrency.value;
+                const query = searchInput.value.trim();
+                if (query) triggerSearch(query);
+            });
+        });
+
+        if (dismissBannerBtn) {
+            dismissBannerBtn.addEventListener('click', () => {
+                onboardingBanner.classList.add('hidden');
+            });
+        }
 
         // Toggle terminal
         const toggleBtn = document.getElementById('toggle-terminal-btn');
@@ -320,7 +570,7 @@
             });
         });
 
-        // Initialize WebSocket
+        // WebSocket initialization
         function initWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/negotiate`;
@@ -337,7 +587,11 @@
                         const ev = data.event;
                         appendTerminalLog(ev.source_agent, ev.target_agent, ev.event_type, ev.content);
                     } else if (data.type === 'FINAL_RESULT') {
-                        renderResults(data.state.final_options);
+                        const state = data.state;
+                        currentCurrency = state.user_preferences?.currency || prefCurrency.value;
+                        renderPriceAnalytics(state.price_analytics);
+                        renderResults(state.final_options);
+                        renderComparisonMatrix(state.comparison_matrix);
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
                         lucide.createIcons();
@@ -370,9 +624,15 @@
             } else if (eventType === 'SYNTHESIZED') {
                 badgeBg = 'bg-blue-500/20 text-blue-300 border border-blue-500/40';
                 tagColor = 'text-blue-400 font-bold';
+            } else if (eventType === 'FX_DUTY') {
+                badgeBg = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+                tagColor = 'text-amber-400 font-bold';
+            } else if (eventType === 'PRICE_PREDICT') {
+                badgeBg = 'bg-purple-500/20 text-purple-300 border border-purple-500/40';
+                tagColor = 'text-purple-400 font-bold';
             } else if (source.includes('Scout')) {
-                badgeBg = 'bg-purple-500/20 text-purple-300';
-                tagColor = 'text-purple-400';
+                badgeBg = 'bg-cyan-500/20 text-cyan-300';
+                tagColor = 'text-cyan-400';
             }
 
             row.innerHTML = `
@@ -396,24 +656,35 @@
             cardsGrid.innerHTML = `
                 <div class="p-8 text-center text-gray-400 col-span-3 border border-gray-800 rounded-2xl bg-gray-900/60 flex flex-col items-center justify-center space-y-3">
                     <i data-lucide="refresh-cw" class="w-8 h-8 text-blue-400 animate-spin"></i>
-                    <p class="text-sm font-medium">Scouts & Processing Agents actively negotiating across retailers...</p>
-                    <span class="text-xs text-gray-500">Checking fine-print return policies, calculating ADP deductibles, and auditing merchant trust...</span>
+                    <p class="text-sm font-medium">Scouts & Processing Specialists actively negotiating...</p>
+                    <span class="text-xs text-gray-500">Checking delivery windows, verifying COD & Open Box inspection, auditing cross-border duties, and calculating price predictions...</span>
                 </div>
             `;
             lucide.createIcons();
 
+            const payload = {
+                action: 'search',
+                query: query,
+                language: prefLanguage.value,
+                country: prefCountry.value,
+                currency: prefCurrency.value,
+                preferred_payment: prefPayment.value
+            };
+
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ action: 'search', query: query }));
+                socket.send(JSON.stringify(payload));
             } else {
-                // Fallback to REST API
                 fetch('/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
+                    body: JSON.stringify(payload)
                 })
                 .then(r => r.json())
                 .then(state => {
+                    currentCurrency = state.user_preferences?.currency || prefCurrency.value;
+                    renderPriceAnalytics(state.price_analytics);
                     renderResults(state.final_options);
+                    renderComparisonMatrix(state.comparison_matrix);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
                     lucide.createIcons();
@@ -427,7 +698,76 @@
             if (query) triggerSearch(query);
         });
 
-        // Render final options
+        // Render Price History and Prediction
+        function renderPriceAnalytics(analytics) {
+            if (!analytics) {
+                priceAnalyticsSection.classList.add('hidden');
+                return;
+            }
+            priceAnalyticsSection.classList.remove('hidden');
+
+            const curr = analytics.target_currency || currentCurrency;
+            document.getElementById('stat-atl').textContent = formatMoney(analytics.all_time_low, curr);
+            document.getElementById('stat-ath').textContent = formatMoney(analytics.all_time_high, curr);
+            document.getElementById('stat-avg').textContent = formatMoney(analytics.avg_90d_price, curr);
+            document.getElementById('stat-forecast').textContent = analytics.price_prediction_14d;
+            document.getElementById('stat-delta').textContent = `Predicted Movement: ${analytics.prediction_delta_pct > 0 ? '+' : ''}${analytics.prediction_delta_pct}%`;
+            document.getElementById('buy-verdict-text').textContent = analytics.buy_verdict;
+            document.getElementById('prediction-confidence-text').textContent = `Confidence: ${analytics.prediction_confidence}%`;
+            document.getElementById('prediction-explanation-text').textContent = analytics.prediction_explanation;
+            document.getElementById('predicted-price-target').textContent = formatMoney(analytics.predicted_price, curr);
+
+            // Verdict badge color
+            const verdictBadge = document.getElementById('buy-verdict-badge');
+            if (analytics.buy_verdict.includes('BUY NOW')) {
+                verdictBadge.className = 'px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+            } else if (analytics.buy_verdict.includes('WAIT')) {
+                verdictBadge.className = 'px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40';
+            } else {
+                verdictBadge.className = 'px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40';
+            }
+
+            // Draw SVG sparkline
+            const svg = document.getElementById('price-svg');
+            const points = analytics.history_points || [];
+            if (points.length >= 2) {
+                const prices = points.map(p => p.price);
+                const minP = Math.min(...prices) * 0.96;
+                const maxP = Math.max(...prices) * 1.04;
+                const range = maxP - minP || 1;
+
+                const width = 600;
+                const height = 110;
+                const step = width / (points.length - 1);
+
+                const coords = points.map((p, i) => {
+                    const x = i * step;
+                    const y = height - ((p.price - minP) / range) * (height - 20) - 10;
+                    return { x, y, price: p.price, date: p.date, label: p.event_label };
+                });
+
+                const polyPoints = coords.map(c => `${c.x},${c.y}`).join(' ');
+                const fillPath = `M ${coords[0].x},${coords[0].y} ` + coords.map(c => `L ${c.x},${c.y}`).join(' ') + ` L ${coords[coords.length-1].x},${height} L ${coords[0].x},${height} Z`;
+
+                svg.innerHTML = `
+                    <defs>
+                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="${fillPath}" fill="url(#chartGradient)"/>
+                    <polyline fill="none" stroke="#60a5fa" stroke-width="2.5" points="${polyPoints}"/>
+                    ${coords.map(c => `
+                        <circle cx="${c.x}" cy="${c.y}" r="4" fill="#93c5fd" stroke="#1e3a8a" stroke-width="2">
+                            <title>${c.date}: ${formatMoney(c.price, curr)} (${c.label || ''})</title>
+                        </circle>
+                    `).join('')}
+                `;
+            }
+        }
+
+        // Render Curated Strategy Cards
         function renderResults(options) {
             activeOptions = options;
             cardsGrid.innerHTML = '';
@@ -457,38 +797,87 @@
 
                 // Trust Score Color
                 let trustColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-                if (opt.trust.overall_score < 70) {
-                    trustColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
-                }
-                if (opt.trust.overall_score < 60) {
-                    trustColor = 'text-red-400 bg-red-500/10 border-red-500/30';
-                }
+                if (opt.trust.overall_score < 70) trustColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+                if (opt.trust.overall_score < 60) trustColor = 'text-red-400 bg-red-500/10 border-red-500/30';
+
+                // Display currencies
+                const displayCurr = opt.display_currency || currentCurrency;
+                const convertedPriceStr = formatMoney(opt.converted_cash_outlay, displayCurr);
+                const tcoStr = formatMoney(opt.risk_adjusted_tco, displayCurr);
 
                 const card = document.createElement('div');
                 card.className = `bg-gray-900 border ${borderClass} rounded-2xl flex flex-col justify-between overflow-hidden shadow-xl transition hover:-translate-y-1 duration-200`;
 
                 card.innerHTML = `
                     <div>
-                        <!-- Header & Tier Badge -->
+                        <!-- Header & Badges -->
                         <div class="p-5 ${headerBg} border-b border-gray-800">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="font-bold text-gray-300 text-sm tracking-wide uppercase">${opt.listing.merchant}</span>
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-bold text-gray-300 text-sm tracking-wide uppercase">${opt.listing.merchant}</span>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">${opt.listing.origin_country}</span>
+                                </div>
                                 ${badgeHtml}
                             </div>
                             <h3 class="font-bold text-white text-base leading-snug line-clamp-2">${opt.listing.product_title}</h3>
-                            <div class="mt-2 flex items-baseline space-x-2">
-                                <span class="text-2xl font-black text-white">$${opt.listing.base_price.toFixed(2)}</span>
-                                <span class="text-xs text-gray-400">Sticker Price</span>
-                                <span class="ml-auto text-xs text-gray-400">Risk-Adjusted TCO: <strong class="text-gray-200">$${opt.risk_adjusted_tco.toFixed(2)}</strong></span>
+                            <div class="mt-2.5 flex items-baseline space-x-2">
+                                <span class="text-2xl font-black text-white">${convertedPriceStr}</span>
+                                <span class="text-xs text-gray-400">Landed (${displayCurr})</span>
+                                <span class="ml-auto text-xs text-gray-400">Risk-Adjusted TCO: <strong class="text-emerald-400 font-bold">${tcoStr}</strong></span>
                             </div>
+                            ${opt.listing.currency !== displayCurr ? `
+                            <div class="mt-1 text-[11px] text-gray-400 font-mono">
+                                Original: ${formatMoney(opt.listing.base_price, opt.listing.currency)} &bull; FX Rate: 1 ${opt.listing.currency} = ${opt.exchange_rate} ${displayCurr}
+                            </div>` : ''}
                         </div>
 
                         <!-- Details Body -->
-                        <div class="p-5 space-y-4 text-xs">
+                        <div class="p-5 space-y-3.5 text-xs">
                             
+                            <!-- Key Delivery, COD & Open Box Assurance Strip -->
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="truck" class="w-3.5 h-3.5 text-blue-400"></i>
+                                        <span>Est. Delivery:</span>
+                                    </span>
+                                    <span class="font-bold text-gray-200 mt-1">${opt.listing.estimated_delivery_text}</span>
+                                </div>
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                        <span>Open Box Delivery:</span>
+                                    </span>
+                                    <span class="font-bold ${opt.listing.open_box_delivery ? 'text-emerald-400' : 'text-gray-400'} mt-1">
+                                        ${opt.listing.open_box_delivery ? '✅ Doorstep OTP Verify' : '❌ Standard Sealed'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="banknote" class="w-3.5 h-3.5 text-amber-400"></i>
+                                        <span>Cash on Delivery:</span>
+                                    </span>
+                                    <span class="font-bold ${opt.listing.cod_available ? 'text-emerald-400' : 'text-gray-400'} mt-1">
+                                        ${opt.listing.cod_available ? '✅ Available' : '❌ Online Prepaid Only'}
+                                    </span>
+                                </div>
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-purple-400"></i>
+                                        <span>Trade-In Offer:</span>
+                                    </span>
+                                    <span class="font-bold ${opt.listing.exchange_offer_available ? 'text-purple-300' : 'text-gray-400'} mt-1 truncate">
+                                        ${opt.listing.exchange_offer_available ? `Up to ${formatMoney(opt.listing.exchange_max_discount * opt.exchange_rate, displayCurr)} off` : 'None'}
+                                    </span>
+                                </div>
+                            </div>
+
                             <!-- Merchant Trust Index -->
                             <div class="bg-gray-800/60 rounded-xl p-3 border border-gray-700/60">
-                                <div class="flex items-center justify-between mb-1.5">
+                                <div class="flex items-center justify-between mb-1">
                                     <span class="text-gray-400 font-medium flex items-center space-x-1">
                                         <i data-lucide="store" class="w-3.5 h-3.5 text-gray-400"></i>
                                         <span>Merchant Trust Index:</span>
@@ -503,8 +892,25 @@
                                 </div>
                             </div>
 
-                            <!-- Warranty & ADP Breakdown -->
-                            <div class="bg-gray-800/60 rounded-xl p-3 border border-gray-700/60 space-y-1.5">
+                            <!-- Cross-Border FX & Import Duty Inspector (if international) -->
+                            ${opt.cross_border && opt.cross_border.is_cross_border ? `
+                            <div class="bg-amber-950/30 rounded-xl p-3 border border-amber-800/50 space-y-1.5">
+                                <div class="flex items-center justify-between text-amber-300 font-semibold text-[11px]">
+                                    <span class="flex items-center space-x-1">
+                                        <i data-lucide="plane" class="w-3.5 h-3.5"></i>
+                                        <span>Cross-Border International Merchant (${opt.cross_border.merchant_country} &rarr; ${opt.cross_border.destination_country})</span>
+                                    </span>
+                                    <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30">+${opt.cross_border.estimated_import_duty_pct}% Customs Duty</span>
+                                </div>
+                                <div class="text-[11px] text-amber-200/80 leading-relaxed space-y-0.5">
+                                    <p>• Estimated Duty: <strong>${formatMoney(opt.cross_border.estimated_import_duty_amount, displayCurr)}</strong></p>
+                                    <p>• Card Foreign Fee: <strong>${formatMoney(opt.cross_border.card_foreign_fee_amount, displayCurr)}</strong> (3.5% Bank Surcharge with zero overseas dispute recourse)</p>
+                                    <p class="text-emerald-400 font-semibold">• PayPal Native Conversion: Locks rate upfront & includes 180-day cross-border protection.</p>
+                                </div>
+                            </div>` : ''}
+
+                            <!-- Warranty & Damage Protection -->
+                            <div class="bg-gray-800/60 rounded-xl p-3 border border-gray-700/60 space-y-1">
                                 <div class="flex items-center justify-between">
                                     <span class="text-gray-400 font-medium flex items-center space-x-1">
                                         <i data-lucide="wrench" class="w-3.5 h-3.5 text-gray-400"></i>
@@ -512,15 +918,9 @@
                                     </span>
                                     <span class="text-gray-300 font-bold">${opt.warranty.oem_warranty_months} Mo. Warranty</span>
                                 </div>
-                                <div class="text-[11px] text-gray-400 space-y-1">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-1.5 h-1.5 rounded-full ${opt.warranty.covers_drops ? 'bg-emerald-400' : 'bg-gray-600'}"></span>
-                                        <span>Accidental Drops/Spills (ADP): <strong class="${opt.warranty.has_adp ? 'text-emerald-400' : 'text-gray-400'}">${opt.warranty.has_adp ? `Included/Available (+$${opt.warranty.adp_addon_price.toFixed(2)})` : 'None'}</strong></span>
-                                    </div>
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-1.5 h-1.5 rounded-full ${opt.warranty.deductible_per_claim === 0 ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
-                                        <span>Claim Deductible: <strong>$${opt.warranty.deductible_per_claim.toFixed(2)}</strong></span>
-                                    </div>
+                                <div class="text-[11px] text-gray-400 space-y-0.5">
+                                    <p>• Accidental Drops/Spills (ADP): <strong class="${opt.warranty.has_adp ? 'text-emerald-400' : 'text-gray-400'}">${opt.warranty.has_adp ? `Included/Available (+${formatMoney(opt.warranty.adp_addon_price * opt.exchange_rate, displayCurr)})` : 'None'}</strong></p>
+                                    <p>• Claim Deductible: <strong>${formatMoney(opt.warranty.deductible_per_claim * opt.exchange_rate, displayCurr)}</strong></p>
                                 </div>
                             </div>
 
@@ -536,9 +936,15 @@
                                 ${opt.paypal.pay_later_eligible ? `
                                 <div class="pt-1 border-t border-blue-900/60 flex items-center justify-between text-[11px]">
                                     <span class="text-gray-400">PayPal Pay in 4:</span>
-                                    <span class="font-bold text-white">4 payments of $${opt.paypal.pay_in_4_biweekly.toFixed(2)} / biweekly</span>
+                                    <span class="font-bold text-white">4 payments of ${formatMoney(opt.paypal.pay_in_4_biweekly, displayCurr)} / biweekly</span>
                                 </div>` : ''}
                             </div>
+
+                            ${opt.payment_match_badge ? `
+                            <div class="px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-[11px] flex items-center space-x-1.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                <span>${opt.payment_match_badge}</span>
+                            </div>` : ''}
 
                         </div>
                     </div>
@@ -561,19 +967,82 @@
             lucide.createIcons();
         }
 
+        // Render Comprehensive Side-by-Side Comparison Matrix
+        function renderComparisonMatrix(matrix) {
+            if (!matrix || matrix.length === 0) {
+                matrixSection.classList.add('hidden');
+                return;
+            }
+            matrixSection.classList.remove('hidden');
+            matrixTbody.innerHTML = '';
+
+            matrix.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-900 transition border-b border-gray-800/60';
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-white">
+                        <div>${row.merchant}</div>
+                        <div class="text-[10px] text-gray-500 font-normal">${row.domain} (${row.origin_country})</div>
+                    </td>
+                    <td class="px-3 py-3 text-gray-300">${row.condition}</td>
+                    <td class="px-3 py-3 font-bold text-white">${row.sticker_price_conv}</td>
+                    <td class="px-3 py-3 font-bold text-emerald-400">${row.tco_conv}</td>
+                    <td class="px-3 py-3 text-gray-300">${row.estimated_delivery}</td>
+                    <td class="px-3 py-3 ${row.cod_available ? 'text-emerald-400 font-bold' : 'text-gray-500'}">
+                        ${row.cod_available ? '✅ Yes' : '❌ Prepaid'}
+                    </td>
+                    <td class="px-3 py-3 ${row.open_box_delivery ? 'text-emerald-400 font-bold' : 'text-gray-500'}">
+                        ${row.open_box_delivery ? '✅ OTP Verified' : '❌ Sealed'}
+                    </td>
+                    <td class="px-3 py-3 text-gray-300">
+                        <div>${row.warranty_months}</div>
+                        <div class="text-[10px] text-gray-400">ADP: ${row.has_adp ? `Yes (${row.adp_deductible})` : 'No'}</div>
+                    </td>
+                    <td class="px-3 py-3 text-gray-300">${row.return_window}</td>
+                    <td class="px-3 py-3 ${row.exchange_offer.includes('✅') ? 'text-purple-300 font-semibold' : 'text-gray-500'}">
+                        ${row.exchange_offer}
+                    </td>
+                    <td class="px-3 py-3 ${row.is_cross_border ? 'text-amber-400' : 'text-gray-500'}">
+                        ${row.import_duty}
+                    </td>
+                    <td class="px-3 py-3 text-blue-300">${row.paypal_protection}</td>
+                    <td class="px-3 py-3">
+                        <button onclick="openCheckoutModal('${row.id}')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-[10px] transition">
+                            Checkout
+                        </button>
+                    </td>
+                `;
+
+                matrixTbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
         // Open checkout modal
         window.openCheckoutModal = function(optionId) {
             selectedOption = activeOptions.find(o => o.id === optionId);
             if (!selectedOption) return;
 
+            const curr = selectedOption.display_currency || currentCurrency;
             modalProductTitle.textContent = selectedOption.listing.product_title;
-            modalMerchant.textContent = selectedOption.listing.merchant;
-            modalBasePrice.textContent = `$${(selectedOption.listing.base_price + selectedOption.listing.estimated_tax).toFixed(2)}`;
-            modalAdpPrice.textContent = selectedOption.warranty.has_adp ? `$${selectedOption.warranty.adp_addon_price.toFixed(2)}` : '$0.00';
+            modalMerchant.textContent = `${selectedOption.listing.merchant} (${selectedOption.listing.origin_country})`;
+            modalDelivery.textContent = selectedOption.listing.estimated_delivery_text;
+            modalOpenbox.textContent = selectedOption.listing.open_box_delivery ? 'Verified (OTP Inspection at Doorstep)' : 'Standard Sealed Delivery';
+            modalOpenbox.className = selectedOption.listing.open_box_delivery ? 'text-emerald-400 font-semibold' : 'text-gray-400 font-normal';
+
+            const baseWithTax = selectedOption.converted_cash_outlay;
+            modalBasePrice.textContent = formatMoney(baseWithTax, curr);
+
+            const adpCost = selectedOption.warranty.has_adp ? (selectedOption.warranty.adp_addon_price * selectedOption.exchange_rate) : 0.0;
+            modalAdpPrice.textContent = selectedOption.warranty.has_adp ? formatMoney(adpCost, curr) : formatMoney(0.0, curr);
             
-            const total = selectedOption.listing.base_price + selectedOption.listing.estimated_tax + (selectedOption.warranty.has_adp ? selectedOption.warranty.adp_addon_price : 0.0);
-            modalTotalPrice.textContent = `$${total.toFixed(2)}`;
+            const total = baseWithTax + adpCost;
+            modalTotalPrice.textContent = formatMoney(total, curr);
             modalProtectionReason.textContent = selectedOption.paypal.explanation;
+
+            document.getElementById('modal-paylater-btn-text').innerHTML = `Split into 4 Interest-Free Payments of <strong>${formatMoney(total / 4.0, curr)}</strong>`;
 
             modalReceipt.classList.add('hidden');
             checkoutModal.classList.remove('hidden');
@@ -586,10 +1055,13 @@
         // Trigger PayPal Checkout simulation via API
         modalConfirmPaypal.addEventListener('click', async () => {
             if (!selectedOption) return;
-            const total = selectedOption.listing.base_price + selectedOption.listing.estimated_tax + (selectedOption.warranty.has_adp ? selectedOption.warranty.adp_addon_price : 0.0);
+            const curr = selectedOption.display_currency || currentCurrency;
+            const baseWithTax = selectedOption.converted_cash_outlay;
+            const adpCost = selectedOption.warranty.has_adp ? (selectedOption.warranty.adp_addon_price * selectedOption.exchange_rate) : 0.0;
+            const total = baseWithTax + adpCost;
             
             modalConfirmPaypal.disabled = true;
-            modalConfirmPaypal.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-gray-900"></i><span>Creating PayPal Order...</span>`;
+            modalConfirmPaypal.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-gray-900"></i><span>Creating PayPal Order (${curr})...</span>`;
             lucide.createIcons();
 
             try {
@@ -597,7 +1069,11 @@
                 const res = await fetch('/api/paypal/create-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: total, item_name: selectedOption.listing.product_title })
+                    body: JSON.stringify({ 
+                        amount: total, 
+                        item_name: selectedOption.listing.product_title,
+                        currency: curr
+                    })
                 });
                 const orderData = await res.json();
 
@@ -610,7 +1086,7 @@
                 const capData = await capRes.json();
 
                 modalReceipt.classList.remove('hidden');
-                modalOrderId.textContent = `PayPal Order ID: ${capData.id} (Status: ${capData.status})`;
+                modalOrderId.textContent = `PayPal Order ID: ${capData.id} (${curr} ${total.toFixed(2)}) &bull; Status: ${capData.status}`;
             } catch (err) {
                 console.error(err);
             } finally {
@@ -623,10 +1099,10 @@
             modalConfirmPaypal.click();
         });
 
-        // Trigger initial demo search
+        // Initial launch
         setTimeout(() => {
-            triggerSearch("Sony WH-1000XM5 Noise Canceling Headphones");
-        }, 800);
+            triggerSearch(searchInput.value.trim());
+        }, 500);
     </script>
 </body>
 </html>

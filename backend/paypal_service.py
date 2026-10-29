@@ -1,6 +1,7 @@
 """
 PayPal Sandbox Service and Protection Engine.
-Integrates PayPal Orders v2 API, Pay in 4 calculation, and Buyer Protection risk analysis.
+Integrates PayPal Orders v2 API, multi-currency conversion, Pay in 4 calculation,
+and Cross-Border Buyer Protection risk analysis.
 """
 
 import os
@@ -10,7 +11,6 @@ from typing import Dict, Any, Optional
 
 class PayPalService:
     def __init__(self):
-        # Default to standard PayPal sandbox client credentials or environment variables
         self.client_id = os.getenv("PAYPAL_CLIENT_ID", "sb-sandbox-client-id-demo")
         self.client_secret = os.getenv("PAYPAL_CLIENT_SECRET", "sb-sandbox-secret-demo")
         self.base_url = "https://api-m.sandbox.paypal.com"
@@ -48,12 +48,13 @@ class PayPalService:
         return "A21AA_DEMO_SANDBOX_ACCESS_TOKEN"
 
     async def create_order(self, amount: float, item_name: str, currency: str = "USD") -> Dict[str, Any]:
-        """Create a PayPal v2 order for standard checkout or Pay Later."""
+        """Create a PayPal v2 order with multi-currency support."""
         token = await self.get_access_token()
-        
+        currency_code = currency.upper()
+
         # If simulated demo mode
         if "DEMO" in token:
-            order_id = f"ORDER-PP-{int(amount*100)}-SANDBOX"
+            order_id = f"ORDER-PP-{int(amount*100)}-{currency_code}"
             return {
                 "id": order_id,
                 "status": "CREATED",
@@ -63,7 +64,7 @@ class PayPalService:
                 "details": {
                     "item": item_name,
                     "amount": round(amount, 2),
-                    "currency": currency,
+                    "currency": currency_code,
                     "pay_in_4_biweekly": round(amount / 4.0, 2)
                 }
             }
@@ -78,13 +79,13 @@ class PayPalService:
                 {
                     "description": item_name,
                     "amount": {
-                        "currency_code": currency,
+                        "currency_code": currency_code,
                         "value": f"{amount:.2f}"
                     }
                 }
             ],
             "application_context": {
-                "brand_name": "PayPal Sentinel AI",
+                "brand_name": "ProductFind Sentinel AI",
                 "landing_page": "NO_PREFERENCE",
                 "user_action": "PAY_NOW",
                 "return_url": "http://localhost:8000/api/paypal/success",
@@ -131,11 +132,13 @@ class PayPalService:
         return_window_days: int,
         restocking_fee_pct: float,
         is_third_party: bool,
-        has_adp: bool
+        has_adp: bool,
+        is_cross_border: bool = False,
+        currency: str = "USD"
     ) -> Dict[str, Any]:
         """
         Dynamically calculates why PayPal Buyer Protection & Pay in 4 are recommended.
-        Directly links merchant risks to PayPal protections.
+        Directly links domestic & cross-border merchant risks to PayPal protections.
         """
         total_bundle = round(base_price + adp_price, 2)
         pay_in_4_rate = round(total_bundle / 4.0, 2)
@@ -143,28 +146,59 @@ class PayPalService:
         mitigated_risks = []
         recommend = True
 
+        if is_cross_border:
+            mitigated_risks.append(
+                "International Cross-Border Merchant: PayPal Buyer Protection shields your funds against lost overseas cargo, "
+                "customs clearance impounds, and provides dispute arbitration without foreign currency conversion loss."
+            )
+
         if merchant_trust_score < 75:
-            mitigated_risks.append(f"Merchant Trust is Low/Fair ({merchant_trust_score}/100). PayPal Buyer Protection guarantees 180-day refund mediation if order is disputed.")
+            mitigated_risks.append(
+                f"Merchant Trust is Low/Fair ({merchant_trust_score}/100). PayPal Buyer Protection guarantees 180-day refund mediation if order is disputed."
+            )
         
         if is_third_party:
-            mitigated_risks.append("Marketplace 3rd-party seller. PayPal shields transactions against 'Item Significantly Not As Described' or unauthorized chargebacks.")
+            mitigated_risks.append(
+                "Marketplace 3rd-party seller. PayPal shields transactions against 'Item Significantly Not As Described' or unauthorized seller debiting."
+            )
             
         if restocking_fee_pct > 0:
-            mitigated_risks.append(f"Merchant charges a punitive {restocking_fee_pct}% restocking fee. PayPal Dispute Center offers full mediation for damaged/defective merchandise without merchant deductibles.")
+            mitigated_risks.append(
+                f"Merchant charges a punitive {restocking_fee_pct}% restocking fee. PayPal Resolution Center mediates damaged/defective merchandise without merchant restocking deductions."
+            )
 
         if return_window_days <= 14:
-            mitigated_risks.append(f"Restrictive {return_window_days}-day return window. PayPal provides an extended 180-day window to file claims for defective hardware.")
+            mitigated_risks.append(
+                f"Restrictive {return_window_days}-day return window. PayPal provides an extended 180-day window to file claims for defective hardware."
+            )
 
         if not mitigated_risks:
-            mitigated_risks.append("Verified authorized merchant: PayPal Pay in 4 provides 0% APR installment financing and secure one-touch checkout.")
+            mitigated_risks.append(
+                "Verified authorized merchant: PayPal Pay in 4 provides 0% APR installment financing and secure one-touch checkout."
+            )
+
+        tier = "Full Restocking & Defect Shield"
+        if is_cross_border:
+            tier = "Cross-Border International Shield"
+        elif restocking_fee_pct > 0:
+            tier = "Restocking & Return Penalty Shield"
+
+        headline = "PayPal 180-Day Buyer Protection Active"
+        if is_cross_border:
+            headline = "PayPal Cross-Border Protection Shield Activated"
+        elif merchant_trust_score < 85:
+            headline = "PayPal Buyer Protection Shield Activated"
+        else:
+            headline = "PayPal Pay Later Financing Recommended"
 
         return {
             "recommend_paypal": recommend,
-            "headline": "PayPal Buyer Protection Shield Activated" if merchant_trust_score < 85 else "PayPal Pay Later Financing Recommended",
+            "headline": headline,
             "explanation": " ".join(mitigated_risks),
-            "buyer_protection_tier": "Full Restocking & Defect Shield" if restocking_fee_pct > 0 else "Comprehensive Buyer Protection",
+            "buyer_protection_tier": tier,
             "mitigated_risks": mitigated_risks,
-            "pay_later_eligible": total_bundle >= 30.0 and total_bundle <= 1500.0,
+            "pay_later_eligible": total_bundle >= 30.0 and total_bundle <= 2500.0,
             "pay_in_4_biweekly": pay_in_4_rate,
-            "total_financed_with_adp": total_bundle
+            "total_financed_with_adp": total_bundle,
+            "currency": currency
         }

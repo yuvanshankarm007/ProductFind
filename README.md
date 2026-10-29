@@ -11,80 +11,132 @@ Shopping online based solely on "sticker price" is a consumer trap. The cheapest
 - **Deceptive 20% restocking fees** on opened returns
 - **Hidden high-deductible Accidental Damage Protection (ADP)** clauses
 - **Unreliable third-party sellers** with poor dispute records
+- **Hidden cross-border import duties and 3.5% foreign transaction bank surcharges**
+- **Missing Cash on Delivery or fraudulent empty box shipments lacking Open Box inspection**
 
-**ProductFind** solves this with a **Bidirectional Multi-Agent Swarm (Blackboard Architecture)** that scours listings, interrogates fine-print terms, audits merchant trust, and calculates a **Risk-Adjusted Total Cost of Ownership (TCO)**—while natively recommending and executing **PayPal Buyer Protection** and **PayPal Pay in 4** checkout.
+**ProductFind** solves this with a **Bidirectional Multi-Agent Swarm (Blackboard Architecture)** that scours listings, interrogates fine-print terms, audits merchant trust, evaluates delivery speeds and COD/Open Box availability, forecasts price trajectories, calculates a **Risk-Adjusted Total Cost of Ownership (TCO)**, and compares foreign credit card fees against **PayPal Native Currency Conversion** and **180-Day PayPal Buyer Protection**.
 
 ---
 
 ## 🏗️ Architecture: Bidirectional Multi-Agent Swarm
 
-Unlike traditional linear pipelines (`Scrape -> Prompt -> Output`), PayPal Sentinel uses a cyclic state graph with active backward feedback loops:
+Unlike traditional linear pipelines (`Scrape -> Prompt -> Output`), ProductFind uses a cyclic state graph with active backward feedback loops, specialized cross-border engines, and multi-language support:
 
 ```mermaid
 flowchart TB
     subgraph Client ["Client & Transport Layer (Full Duplex)"]
-        UI["Modern Dashboard<br/>(Live Agent Negotiation Visualizer)"]
+        UI["Modern Dashboard<br/>(Language, Country, Currency & Payment Selectors)"]
         WS["WebSocket Event Bus (/ws/negotiate)"]
         UI <--> WS
     end
 
     subgraph Blackboard ["Shared Blackboard State & Event Bus"]
-        State[("Active Purchase State Matrix<br/>• Raw Merchant Scrapes<br/>• Clause Verifications<br/>• Merchant Trust Index (0-100)<br/>• PayPal Protection Alignment")]
+        State[("Active Purchase State Matrix<br/>• Raw Multi-Retailer Scrapes<br/>• Fine-Print ADP Verifications<br/>• Merchant Trust Index (0-100)<br/>• Cross-Border FX & Customs Duties<br/>• Price History & 14-Day Prediction<br/>• Side-by-Side Comparison Matrix<br/>• PayPal Buyer Protection Alignment")]
     end
 
     WS <--> Blackboard
 
     subgraph Tier1 ["Tier 1: Scout Swarm"]
-        S1["Amazon Scout"]
-        S2["Best Buy Scout"]
-        S3["Walmart Scout"]
-        S4["Flipkart Scout"]
+        S1["Amazon Scout (Domestic & Global)"]
+        S2["Best Buy Scout (In-Store Inspection)"]
+        S3["Walmart Scout (Cross-Border Importer)"]
+        S4["Flipkart Scout (COD & Open Box)"]
     end
 
     subgraph Tier2 ["Tier 2: Processing Specialists"]
         P1["Price & Landed Cost Agent"]
         P2["Warranty & ADP Policy Agent"]
         P3["Merchant Trust & Reputation Sentinel"]
-        P4["PayPal Protection & Financing Agent"]
+        P4["Currency FX & Customs Duty Inspector"]
+        P5["Price History & Predictive Forecasting Agent"]
+        P6["PayPal Protection & Financing Agent"]
     end
 
     subgraph Tier3 ["Tier 3: Compiler & Strategy Swarm"]
-        C1["Risk-Adjusted TCO Calculator"]
-        C2["Option Synthesizer (3 Strategic Deals)"]
+        C1["Risk-Adjusted TCO Calculator (Multi-Currency)"]
+        C2["Payment Method Matcher (COD / PayPal / UPI)"]
+        C3["Option Synthesizer (3 Strategic Deals)"]
+        C4["Side-by-Side Comparison Matrix Builder"]
     end
 
-    Tier1 <-->|Scrapes / Re-crawls| Blackboard
-    Tier2 <-->|Analysis / Feedback Loops| Blackboard
+    Tier1 <-->|Scrapes / Delivery / COD / Open Box| Blackboard
+    Tier2 <-->|Analysis / Feedback Loops / FX & Duties| Blackboard
     Tier3 <-->|Arbitration & Final Curation| Blackboard
 
     %% Inter-Agent Bidirectional Loops
     P2 -.->|"BACKPROPAGATION: Resolve Ambiguous Deductible"| Tier1
-    P3 -.->|"Signal High Dispute Risk"| P4
-    P4 -.->|"Activate Buyer Protection & Pay in 4"| C2
+    P4 -.->|"Audit 3.5% Card Fee vs PayPal Native Shield"| P6
+    P3 -.->|"Signal High Dispute Risk / Restocking Fee"| P6
+    P6 -.->|"Activate 180-Day Shield & Pay in 4"| C3
 ```
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Fine-Print Warranty & ADP Extractor
-- Analyzes OEM warranty duration (3 mo vs 12 mo vs 24 mo).
-- Detects drops, liquid spills, and power surge coverage.
-- Verifies deductible amounts per claim (e.g., $0 vs $25 vs $99).
-- **Bidirectional Trigger:** If terms are vague, the Warranty Agent halts and instructs the Scout to deep-scrape the terms modal before proceeding.
+### 1. Multilingual Natural Language Support (i18n)
+- **Select Preferred Language:** English 🇺🇸, Hindi (हिंदी) 🇮🇳, Spanish (Español) 🇪🇸, German (Deutsch) 🇩🇪, French (Français) 🇫🇷, and Japanese (日本語) 🇯🇵.
+- Agent thoughts, status logs, deal cards, and checkout alerts translate dynamically into the user's preferred language.
 
-### 2. Merchant Trust & Reputation Sentinel (0–100 Score)
-- Audits merchant reliability, return windows, and restocking penalties.
-- Flags grey-market parallel importers vs. authorized brand distributors.
-- Extracts recurring dispute patterns (*"refused refund"*, *"slow RMA"*, *"counterfeit risk"*).
+### 2. Destination Country & Merchant Origin Auditing
+- Select destination country (United States 🇺🇸, India 🇮🇳, United Kingdom 🇬🇧, Germany 🇩🇪, Canada 🇨🇦, Japan 🇯🇵, Australia 🇦🇺).
+- Dynamically audits domestic vs. international listings.
+- Recalculates estimated delivery windows based on route distance (e.g., 1-2 day domestic express vs 7-12 day cross-border air freight).
 
-### 3. Native PayPal Integration (Hackathon Core)
-- **PayPal Buyer Protection Recommendation Engine:** Automatically assesses merchant risks. When a seller has a strict return window or restocking fee, Sentinel displays a dedicated protection alert explaining how PayPal Buyer Protection covers the buyer up to 180 days.
-- **PayPal Pay in 4 (BNPL):** Dynamically calculates bi-weekly split payments including optional ADP protection bundles.
-- **PayPal Orders v2 API:** Seamlessly creates (`/v2/checkout/orders`) and captures sandbox payments directly within the app.
+### 3. Multi-Currency Engine & Live FX Rates
+- Converts prices and risk-adjusted TCO seamlessly across USD (`$`), INR (`₹`), EUR (`€`), GBP (`£`), CAD (`CA$`), JPY (`¥`), and AUD (`A$`).
+- Displays both original merchant currency and converted preferred currency.
 
-### 4. Live Full-Duplex Agent Thought Visualizer
-- The web dashboard connects via WebSockets (`/ws/negotiate`) to display live agent-to-agent negotiations, back-propagation requests, and resolutions in real time.
+### 4. Estimated Delivery Time & Shipping Speed Tiers
+- Audits merchant shipping methods: Next-Day Curbside, 2-Day Express, Standard Ground, and Cross-Border Air Freight.
+- Displays realistic delivery estimates prominently on each deal card and comparison row.
+
+### 5. Cash on Delivery (COD) Availability & Fee Auditor
+- Detects if Cash on Delivery (COD) is available (e.g., Flipkart / domestic couriers) or if the transaction requires advance digital payment.
+- Audits COD handling fees and doorstep terms.
+
+### 6. Open Box Delivery Verification
+- Inspects whether the merchant provides **Open Box Delivery** (where the courier opens the seal and inspects the physical device/IMEI in front of the buyer before accepting the OTP).
+- Protects buyers against empty box/brick scams; factors into the mathematical Risk-Adjusted TCO formula.
+
+### 7. Return & Exchange / Trade-In Offers
+- Audits return window length (7-day replacement vs 14-day vs 30-day refund) and restocking penalty fees.
+- Evaluates manufacturer trade-in and exchange offers (e.g., up to $120 / ₹10,000 credit on trading in an old device).
+
+### 8. Preferred Payment Alignment & Highlighting
+- Filter or sort recommendations based on user's preferred payment method:
+  - **All Payments**
+  - **PayPal & Pay in 4** (Highlights 180-day Buyer Protection & 0% APR biweekly financing)
+  - **Cash on Delivery (COD)** (Highlights doorstep cash/UPI acceptance)
+  - **Credit / Debit Card** (Warns on international 3.5% foreign transaction bank surcharges)
+  - **UPI / Net Banking** (Regional instant payments)
+
+### 9. Comprehensive Side-by-Side Comparison Matrix
+- An interactive, full-width comparison matrix displaying all listings side by side across:
+  - Merchant, Condition, Landed Price, Risk-Adjusted TCO, Estimated Delivery, COD, Open Box Delivery, Warranty/ADP Deductible, Return Policy, Trade-In Discount, Import Duty, and PayPal Protection.
+
+### 10. 90-Day Price History Trajectory
+- Tracks historical price movements across 90-day intervals.
+- Computes **All-Time Low (ATL)**, **All-Time High (ATH)**, and **90-Day Moving Average** with an interactive SVG chart.
+
+### 11. AI Price Prediction Engine
+- Statistical & market cycle forecasting for 14-day price movements.
+- Delivers an actionable **Buy Verdict**:
+  - 🟢 **BUY NOW (Near All-Time Low)**
+  - 🟡 **WAIT (Flash Sale / Cyclical Drop Expected)**
+  - 🔵 **FAIR VALUE**
+- Provides prediction confidence score (e.g. 88%) and detailed market explanation.
+
+### 12. Cross-Border FX, Import Duties & Bank Card Fee vs PayPal Native Conversion
+- For international merchants, checks live FX rates and calculates:
+  - Estimated **Import Customs Duties** (e.g., 18.5% for electronics US → IN).
+  - Standard **Credit Card Foreign Transaction Fee** (3.5% bank surcharge with zero cross-border dispute protection).
+  - Versus **PayPal Native Currency Conversion**: Transparent exchange rate locked upfront with **180-Day Cross-Border PayPal Buyer Protection** covering lost overseas freight, customs seizures, and international seller dispute mediation.
+
+### 13. Native PayPal Integration (Hackathon Core)
+- **PayPal Buyer Protection Recommendation Engine:** Directly assesses seller risks (restocking fee, third-party seller, short return window, cross-border freight) and activates tailored protection shield alerts.
+- **PayPal Pay in 4 (BNPL):** Dynamically calculates bi-weekly split payments in the user's preferred currency.
+- **PayPal Orders v2 API:** Seamlessly creates (`/v2/checkout/orders`) and captures sandbox payments directly in the selected currency.
 
 ---
 
@@ -102,7 +154,7 @@ cd ProductFind
 
 ### 2. Install Dependencies
 ```bash
-pip install fastapi uvicorn websockets pydantic httpx
+pip install fastapi uvicorn websockets pydantic httpx pytest
 ```
 
 ### 3. (Optional) Configure PayPal Sandbox Keys
@@ -111,14 +163,13 @@ Create a `.env` file or export your credentials:
 export PAYPAL_CLIENT_ID="your-paypal-sandbox-client-id"
 export PAYPAL_CLIENT_SECRET="your-paypal-sandbox-client-secret"
 ```
-*(If omitted, Sentinel defaults to automated sandbox simulation mode for instant evaluation without requiring keys).*
+*(If omitted, ProductFind defaults to automated sandbox simulation mode for instant evaluation without requiring keys)*.
 
 ### 4. Run the Full-Stack Application
 ```bash
 python -m uvicorn backend.server:app --port 8000 --reload
 ```
-
-Open your browser to: **`http://localhost:8000`**
+Open your browser to: **http://localhost:8000**
 
 ---
 
@@ -129,16 +180,25 @@ Run the built-in end-to-end verification suite:
 python test_sentinel.py
 ```
 
+Run the server endpoint tests:
+```bash
+python test_server_routes.py
+```
+
 Expected output:
 ```
-=== STARTING PAYPAL SENTINEL VERIFICATION TEST ===
+=== STARTING PRODUCTFIND SENTINEL VERIFICATION TEST ===
  [x] EventBus Pub/Sub operational.
  [x] Tier 1 Scouts collected 4 merchant listings.
  [x] Bidirectional Feedback Loops triggered: 1 back-propagation queries resolved.
- [x] Tier 2 Merchant Trust Scores calculated.
+ [x] Tier 2 Merchant Audit (Trust, Delivery, COD & Open Box) verified.
+ [x] Cross-Border FX & Import Duty Inspector: FX rate, duties, and card 3.5% fee vs PayPal shield.
+ [x] Price History & AI Prediction Agent: ATL, ATH, 90d Avg, and 14d Forecast verdict verified.
  [x] Tier 3 Strategy Options Curated: Optimal Value, Max Protection, Budget Sticker.
- [x] PayPal Orders API v2 createOrder successful.
- [x] PayPal Orders API v2 captureOrder successful.
+ [x] Comparison Matrix Generated with 4 rows.
+ [x] Localized Hindi events generated: 12 events matched.
+ [x] PayPal Orders API v2 createOrder successful for INR.
+ [x] PayPal Orders API v2 captureOrder successful for INR.
 === ALL SYSTEMS OPERATIONAL AND VERIFIED ===
 ```
 
