@@ -1,4 +1,4 @@
-# PayPal Sentinel AI 🛡️
+# ProductFinds 🛡️
 ### Bidirectional Multi-Agent Commerce Agent with PayPal Buyer Protection & Pay Later Integration
 *Built for the [PayPal AI Hackathon on Devpost](https://paypalaihackathon.devpost.com/)*
 
@@ -12,7 +12,7 @@ Shopping online based solely on "sticker price" is a consumer trap. The cheapest
 - **Hidden high-deductible Accidental Damage Protection (ADP)** clauses
 - **Unreliable third-party sellers** with poor dispute records
 
-**PayPal Sentinel AI** solves this with a **Bidirectional Multi-Agent Swarm (Blackboard Architecture)** that scours listings, interrogates fine-print terms, audits merchant trust, and calculates a **Risk-Adjusted Total Cost of Ownership (TCO)**—while natively recommending and executing **PayPal Buyer Protection** and **PayPal Pay in 4** checkout.
+**ProductFinds** solves this with a **Bidirectional Multi-Agent Swarm (Blackboard Architecture)** that scours listings, interrogates fine-print terms, audits merchant trust, and calculates a **Risk-Adjusted Total Cost of Ownership (TCO)**—while natively recommending and executing **PayPal Buyer Protection** and **PayPal Pay in 4** checkout.
 
 ---
 
@@ -96,8 +96,8 @@ flowchart TB
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/your-username/paypal-sentinel.git
-cd paypal-sentinel
+git clone https://github.com/yuvanshankarm007/ProductFinds.git
+cd ProductFinds
 ```
 
 ### 2. Install Dependencies
@@ -145,4 +145,4 @@ Expected output:
 ---
 
 ## 📄 License
-MIT License. Open-source for the PayPal AI Hackathon 2026.
+PolyForm Noncommercial License 1.0.0. Free for noncommercial and educational use; commercial use requires permission from Yuvan Shankar.
