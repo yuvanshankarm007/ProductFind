@@ -173,15 +173,15 @@
                         <input 
                             type="text" 
                             id="search-input" 
-                            value="Sony WH-1000XM5 Noise Canceling Headphones"
-                            class="w-full pl-10 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-500"
-                            placeholder="Search products (e.g., Sony WH-1000XM5, MacBook Air M3)..."
+                            value=""
+                            class="w-full pl-10 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 font-medium"
+                            placeholder="Search ANY product across the web (e.g. Samsung A17, iPhone 16, PS5, Shoes, Laptop)..."
                         />
                     </div>
                     <button 
                         type="submit" 
                         id="submit-btn"
-                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 transition duration-150"
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 transition duration-150 cursor-pointer"
                     >
                         <i data-lucide="cpu" class="w-4 h-4"></i>
                         <span id="btn-deploy-text">Deploy Agent Swarm</span>
@@ -190,12 +190,21 @@
 
                 <!-- Quick Presets -->
                 <div class="flex items-center space-x-2 mt-3 text-xs text-gray-400 flex-wrap gap-y-1">
-                    <span class="text-gray-500">Quick Test Samples:</span>
-                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Sony WH-1000XM5 Noise Canceling Headphones">
-                        🎧 Sony WH-1000XM5
+                    <span class="text-gray-500">Popular Searches:</span>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Samsung Galaxy A17">
+                        📱 Samsung A17
                     </button>
-                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Apple MacBook Air 13-inch M3">
-                        💻 MacBook Air M3
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="iPhone 16">
+                        📱 iPhone 16
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="PlayStation 5 Slim">
+                        🎮 PS5 Slim
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Nike Running Shoes">
+                        👟 Nike Shoes
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Wireless Earbuds">
+                        🎧 Earbuds
                     </button>
                 </div>
             </div>
@@ -652,21 +661,20 @@
                         <input 
                             type="text" 
                             id="wizard-product-input" 
-                            placeholder="Enter ANY product (e.g., iPhone 16 Pro, PS5, Sony XM5, Dyson V15, Air Jordan)..."
-                            value="iPhone 16 Pro Max"
-                            class="w-full pl-4 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-500 font-medium"
+                            placeholder="Enter ANY product across the web (e.g., Samsung A17, iPhone 16, PS5, Shoes)..."
+                            value="Samsung Galaxy A17"
+                            class="w-full pl-4 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 font-medium"
                         />
                     </div>
                     <!-- Quick Trending Pills -->
                     <div class="flex items-center space-x-1.5 mt-2 flex-wrap gap-y-1 text-[11px] text-gray-400">
                         <span class="text-gray-500">Popular:</span>
-                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="iPhone 16 Pro Max">📱 iPhone 16 Pro</button>
-                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Sony WH-1000XM5 Noise Canceling Headphones">🎧 Sony XM5</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Samsung Galaxy A17">📱 Samsung A17</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="iPhone 16">📱 iPhone 16</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="PlayStation 5 Slim">🎮 PS5 Slim</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Nike Running Shoes">👟 Nike Shoes</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Wireless Earbuds">🎧 Earbuds</button>
                         <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Apple MacBook Air 13-inch M3">💻 MacBook M3</button>
-                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="PlayStation 5 Pro">🎮 PS5 Pro</button>
-                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Apple Watch Ultra 2">⌚ Apple Watch</button>
-                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Nike Air Jordan 1 Retro">👟 Air Jordan</button>
-                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Dyson V15 Detect Vacuum">🧹 Dyson V15</button>
                     </div>
                 </div>
 
@@ -1629,7 +1637,7 @@
             activeWizardCountry = prefCountry.value || 'IN';
             activeWizardCurr = prefCurrency.value || 'INR';
             activeWizardPay = prefPayment.value || 'all';
-            wizardProductInput.value = searchInput.value || "Sony WH-1000XM5 Noise Canceling Headphones";
+            wizardProductInput.value = searchInput.value || "Samsung Galaxy A17";
             syncWizardPillsUI();
             wizardModal.classList.remove('hidden');
             lucide.createIcons();
@@ -1643,7 +1651,7 @@
         closeWizardBtn.addEventListener('click', () => {
             closePreferenceWizard();
             if (!activeOptions || activeOptions.length === 0) {
-                const initialQuery = searchInput.value.trim() || "Sony WH-1000XM5 Noise Canceling Headphones";
+                const initialQuery = searchInput.value.trim() || "Samsung Galaxy A17";
                 triggerSearch(initialQuery);
             }
         });
@@ -1651,7 +1659,7 @@
         // Wizard Form Submission
         wizardForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const chosenQuery = wizardProductInput.value.trim() || searchInput.value.trim() || "Sony WH-1000XM5 Noise Canceling Headphones";
+            const chosenQuery = wizardProductInput.value.trim() || searchInput.value.trim() || "Samsung Galaxy A17";
             
             // Sync all header controls
             prefLanguage.value = activeWizardLang;
