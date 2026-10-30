@@ -68,8 +68,19 @@
                 </div>
             </div>
 
-            <!-- Global Preferences Switchers -->
+            <!-- Global Preferences Switchers & Wizard Launcher -->
             <div class="flex items-center space-x-2 flex-wrap gap-y-1.5 text-xs">
+                <!-- Open Preference Wizard Button -->
+                <button 
+                    id="btn-open-pref-wizard" 
+                    type="button"
+                    class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-blue-500/20 transition cursor-pointer"
+                    title="Customize Language, Country, Currency & Payment method"
+                >
+                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-blue-200"></i>
+                    <span id="wizard-badge-text">Preferences & Location</span>
+                </button>
+
                 <!-- Language Selector -->
                 <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
                     <i data-lucide="globe" class="w-3.5 h-3.5 text-gray-400 mr-1.5"></i>
@@ -123,6 +134,7 @@
                     </select>
                 </div>
             </div>
+
         </div>
     </header>
 
@@ -486,6 +498,193 @@
             </div>
         </div>
     </div>
+
+    <!-- Interactive Onboarding & Shopping Preference Wizard Modal -->
+    <div id="preference-wizard-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto custom-scrollbar hidden">
+        <div class="bg-gray-900 border border-blue-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl relative my-auto">
+            <!-- Close button -->
+            <button id="close-wizard-btn" class="absolute right-4 top-4 text-gray-400 hover:text-white transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Header -->
+            <div class="mb-5">
+                <div class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-[11px] font-semibold mb-2">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Personalized Commerce Swarm Setup</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Configure Your Shopping Copilot</h2>
+                <p class="text-xs text-gray-400 mt-1">
+                    Tell us your preferred language, delivery country, currency, and payment method so our agents can audit COD, Open Box inspection, customs duties, and live FX conversions.
+                </p>
+            </div>
+
+            <!-- Wizard Form -->
+            <form id="wizard-form" class="space-y-4">
+                <!-- 1. Preferred Language -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="globe" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>1. Preferred Language</span>
+                    </label>
+                    <div id="wizard-lang-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="en">
+                            <span>🇺🇸</span><span>English</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="hi">
+                            <span>🇮🇳</span><span>हिंदी (Hindi)</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="es">
+                            <span>🇪🇸</span><span>Español</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="de">
+                            <span>🇩🇪</span><span>Deutsch</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="fr">
+                            <span>🇫🇷</span><span>Français</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="ja">
+                            <span>🇯🇵</span><span>日本語</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Delivery Destination Country -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-400"></i>
+                        <span>2. Delivery Destination Country</span>
+                    </label>
+                    <div id="wizard-country-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="US" data-currency="USD">
+                            <span>🇺🇸</span><span>United States</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="IN" data-currency="INR">
+                            <span>🇮🇳</span><span>India</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="GB" data-currency="GBP">
+                            <span>🇬🇧</span><span>United Kingdom</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="DE" data-currency="EUR">
+                            <span>🇩🇪</span><span>Germany</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="CA" data-currency="CAD">
+                            <span>🇨🇦</span><span>Canada</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="JP" data-currency="JPY">
+                            <span>🇯🇵</span><span>Japan</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="AU" data-currency="AUD">
+                            <span>🇦🇺</span><span>Australia</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Preferred Currency -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="coins" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>3. Preferred Currency</span>
+                    </label>
+                    <div id="wizard-curr-grid" class="flex flex-wrap gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="USD">USD ($)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="INR">INR (₹)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="EUR">EUR (€)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="GBP">GBP (£)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="CAD">CAD (CA$)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="JPY">JPY (¥)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="AUD">AUD (A$)</button>
+                    </div>
+                </div>
+
+                <!-- 4. Preferred Payment Method -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="credit-card" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>4. Preferred Payment Method</span>
+                    </label>
+                    <div id="wizard-payment-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="paypal">
+                            <span class="w-7 h-7 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold shrink-0">P</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">PayPal & Pay in 4</div>
+                                <div class="text-[10px] text-gray-400">180-Day Protection & Biweekly Installments</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="cod">
+                            <span class="w-7 h-7 rounded-lg bg-amber-600/30 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0">💵</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">Cash on Delivery (COD)</div>
+                                <div class="text-[10px] text-gray-400">Pay Cash or UPI at Doorstep</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="upi">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0">⚡</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">UPI / Net Banking</div>
+                                <div class="text-[10px] text-gray-400">Instant Doorstep or Online Transfer</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="card">
+                            <span class="w-7 h-7 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold shrink-0">💳</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">Credit / Debit Card</div>
+                                <div class="text-[10px] text-gray-400">Standard Card Checkout</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn sm:col-span-2 p-2 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="all">
+                            <span class="w-7 h-7 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-300 font-bold shrink-0">🌐</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">All Payment Methods</div>
+                                <div class="text-[10px] text-gray-400">Compare all available payment options across all stores</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. What Product Are You Looking For? -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>5. What product are you shopping for?</span>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="wizard-product-input" 
+                            placeholder="Enter ANY product (e.g., iPhone 16 Pro, PS5, Sony XM5, Dyson V15, Air Jordan)..."
+                            value="iPhone 16 Pro Max"
+                            class="w-full pl-4 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-500 font-medium"
+                        />
+                    </div>
+                    <!-- Quick Trending Pills -->
+                    <div class="flex items-center space-x-1.5 mt-2 flex-wrap gap-y-1 text-[11px] text-gray-400">
+                        <span class="text-gray-500">Popular:</span>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="iPhone 16 Pro Max">📱 iPhone 16 Pro</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Sony WH-1000XM5 Noise Canceling Headphones">🎧 Sony XM5</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Apple MacBook Air 13-inch M3">💻 MacBook M3</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="PlayStation 5 Pro">🎮 PS5 Pro</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Apple Watch Ultra 2">⌚ Apple Watch</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Nike Air Jordan 1 Retro">👟 Air Jordan</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Dyson V15 Detect Vacuum">🧹 Dyson V15</button>
+                    </div>
+                </div>
+
+                <!-- Launch Button -->
+                <div class="pt-2">
+                    <button 
+                        type="submit" 
+                        id="wizard-submit-btn" 
+                        class="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-sm rounded-xl shadow-xl shadow-blue-500/25 flex items-center justify-center space-x-2 transition transform active:scale-[0.99] cursor-pointer"
+                    >
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>Launch Multi-Agent Swarm with My Preferences</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Frontend Script -->
     <script>
@@ -1307,10 +1506,170 @@
             modalConfirmPaypal.click();
         });
 
-        // Initial launch
-        setTimeout(() => {
-            triggerSearch(searchInput.value.trim());
-        }, 500);
+        // ==========================================
+        // Interactive Onboarding & Preference Wizard
+        // ==========================================
+        const wizardModal = document.getElementById('preference-wizard-modal');
+        const openWizardBtn = document.getElementById('btn-open-pref-wizard');
+        const closeWizardBtn = document.getElementById('close-wizard-btn');
+        const wizardForm = document.getElementById('wizard-form');
+        const wizardProductInput = document.getElementById('wizard-product-input');
+        const wizardBadgeText = document.getElementById('wizard-badge-text');
+
+        let activeWizardLang = prefLanguage.value || 'en';
+        let activeWizardCountry = prefCountry.value || 'US';
+        let activeWizardCurr = prefCurrency.value || 'USD';
+        let activeWizardPay = prefPayment.value || 'all';
+
+        function syncWizardPillsUI() {
+            // Language pills
+            document.querySelectorAll('.wizard-lang-btn').forEach(btn => {
+                if (btn.dataset.value === activeWizardLang) {
+                    btn.className = 'wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-blue-400 bg-blue-600/30 text-white font-bold text-left transition flex items-center space-x-2 ring-1 ring-blue-500 shadow-sm';
+                } else {
+                    btn.className = 'wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-300 font-medium text-left transition flex items-center space-x-2';
+                }
+            });
+
+            // Country pills
+            document.querySelectorAll('.wizard-country-btn').forEach(btn => {
+                if (btn.dataset.value === activeWizardCountry) {
+                    btn.className = 'wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-blue-400 bg-blue-600/30 text-white font-bold text-left transition flex items-center space-x-1.5 ring-1 ring-blue-500 shadow-sm';
+                } else {
+                    btn.className = 'wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-300 font-medium text-left transition flex items-center space-x-1.5';
+                }
+            });
+
+            // Currency pills
+            document.querySelectorAll('.wizard-curr-btn').forEach(btn => {
+                if (btn.dataset.value === activeWizardCurr) {
+                    btn.className = 'wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-amber-400 bg-amber-500/20 text-amber-200 font-bold font-mono transition ring-1 ring-amber-500 shadow-sm';
+                } else {
+                    btn.className = 'wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-400 font-mono transition hover:bg-gray-750';
+                }
+            });
+
+            // Payment pills
+            document.querySelectorAll('.wizard-pay-btn').forEach(btn => {
+                const isAll = btn.dataset.value === 'all';
+                const colSpan = isAll ? 'sm:col-span-2 p-2' : 'p-2.5';
+                if (btn.dataset.value === activeWizardPay) {
+                    btn.className = `wizard-pill wizard-pay-btn ${colSpan} rounded-xl border border-blue-400 bg-blue-600/25 text-left transition flex items-center space-x-2 ring-1 ring-blue-500 shadow-sm`;
+                } else {
+                    btn.className = `wizard-pill wizard-pay-btn ${colSpan} rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2 hover:bg-gray-750`;
+                }
+            });
+
+            // Update Header Navigation Badge
+            const flagMap = { US: '🇺🇸', IN: '🇮🇳', GB: '🇬🇧', DE: '🇩🇪', CA: '🇨🇦', JP: '🇯🇵', AU: '🇦🇺' };
+            const flag = flagMap[activeWizardCountry] || '🌐';
+            wizardBadgeText.textContent = `${flag} ${activeWizardCountry} • ${activeWizardCurr} • ${activeWizardLang.toUpperCase()}`;
+        }
+
+        // Attach listeners for language pills
+        document.querySelectorAll('.wizard-lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardLang = btn.dataset.value;
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for country pills (auto-pairs currency)
+        document.querySelectorAll('.wizard-country-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardCountry = btn.dataset.value;
+                if (btn.dataset.currency) {
+                    activeWizardCurr = btn.dataset.currency;
+                }
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for currency pills
+        document.querySelectorAll('.wizard-curr-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardCurr = btn.dataset.value;
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for payment pills
+        document.querySelectorAll('.wizard-pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardPay = btn.dataset.value;
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for preset trending product pills
+        document.querySelectorAll('.wizard-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                wizardProductInput.value = btn.dataset.query;
+            });
+        });
+
+        // Open and close wizard modal
+        function openPreferenceWizard() {
+            activeWizardLang = prefLanguage.value;
+            activeWizardCountry = prefCountry.value;
+            activeWizardCurr = prefCurrency.value;
+            activeWizardPay = prefPayment.value;
+            wizardProductInput.value = searchInput.value || "iPhone 16 Pro Max";
+            syncWizardPillsUI();
+            wizardModal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closePreferenceWizard() {
+            wizardModal.classList.add('hidden');
+        }
+
+        openWizardBtn.addEventListener('click', openPreferenceWizard);
+        closeWizardBtn.addEventListener('click', closePreferenceWizard);
+
+        // Wizard Form Submission
+        wizardForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const chosenQuery = wizardProductInput.value.trim() || searchInput.value.trim() || "iPhone 16 Pro Max";
+            
+            // Sync all header controls
+            prefLanguage.value = activeWizardLang;
+            prefCountry.value = activeWizardCountry;
+            prefCurrency.value = activeWizardCurr;
+            prefPayment.value = activeWizardPay;
+            searchInput.value = chosenQuery;
+            currentCurrency = activeWizardCurr;
+
+            // Save preferences
+            localStorage.setItem('pf_language', activeWizardLang);
+            localStorage.setItem('pf_country', activeWizardCountry);
+            localStorage.setItem('pf_currency', activeWizardCurr);
+            localStorage.setItem('pf_payment', activeWizardPay);
+            localStorage.setItem('pf_configured', 'true');
+
+            syncWizardPillsUI();
+            closePreferenceWizard();
+
+            // Trigger multi-agent swarm search
+            triggerSearch(chosenQuery);
+        });
+
+        // Initial setup on page load:
+        // Automatically ask first by popping up the wizard modal if not yet configured!
+        syncWizardPillsUI();
+        const hasConfigured = localStorage.getItem('pf_configured');
+        if (!hasConfigured) {
+            // First time visitor: show the wizard prompt upfront!
+            setTimeout(() => {
+                openPreferenceWizard();
+            }, 300);
+        } else {
+            // Returning user: launch their preferred search or await input
+            const initialQuery = searchInput.value.trim() || "Sony WH-1000XM5 Noise Canceling Headphones";
+            setTimeout(() => {
+                triggerSearch(initialQuery);
+            }, 400);
+        }
     </script>
 </body>
 </html>

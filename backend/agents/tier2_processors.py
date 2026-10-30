@@ -51,16 +51,18 @@ class ProcessingSwarm:
         covers_drops = "drop" in text or "accidental" in text or "applecare" in text
         covers_spills = "spill" in text or "water" in text or "liquid" in text
         adp_price = 0.0
-        if "39.99" in text:
-            adp_price = 39.99
-        elif "59.99" in text:
-            adp_price = 59.99
-        elif "199" in text:
-            adp_price = 199.00
-        elif "28.00" in text:
-            adp_price = 28.00
-        elif "65" in text:
-            adp_price = 65.00
+        
+        # Regex to parse any dollar figure in the ADP text (e.g. $149.00 or $39.99)
+        import re
+        price_match = re.search(r'\$\s*([0-9]+(?:\.[0-9]{2})?)', listing.raw_adp_text)
+        if price_match:
+            try:
+                adp_price = float(price_match.group(1))
+            except Exception:
+                adp_price = 0.0
+        elif has_adp:
+            adp_price = round(listing.base_price * 0.12, 2)
+
 
         # Check for ambiguity in deductible
         confidence = 0.75 if ("unspecified" in text or "nominal claim fee" in text) else 1.0
