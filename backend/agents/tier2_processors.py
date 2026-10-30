@@ -52,12 +52,12 @@ class ProcessingSwarm:
         covers_spills = "spill" in text or "water" in text or "liquid" in text
         adp_price = 0.0
         
-        # Regex to parse any dollar figure in the ADP text (e.g. $149.00 or $39.99)
+        # Regex to parse any currency figure in the ADP text (e.g. $149.00 or ₹2,499)
         import re
-        price_match = re.search(r'\$\s*([0-9]+(?:\.[0-9]{2})?)', listing.raw_adp_text)
+        price_match = re.search(r'[\$₹€£CA\$A\$¥]?\s*([0-9,]+(?:\.[0-9]{1,2})?)', listing.raw_adp_text)
         if price_match:
             try:
-                adp_price = float(price_match.group(1))
+                adp_price = float(price_match.group(1).replace(',', ''))
             except Exception:
                 adp_price = 0.0
         elif has_adp:

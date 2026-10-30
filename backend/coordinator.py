@@ -110,11 +110,14 @@ class SentinelCoordinator:
         state.paypal_evaluations = paypal_evals
 
         # 3. Price History and AI Prediction Swarm
-        min_price = min((l.base_price for l in listings), default=300.0)
-        converted_min_price = self.fx_svc.convert_amount(min_price, "USD", preferences.currency)
+        converted_prices = [
+            self.fx_svc.convert_amount(l.base_price, l.currency, preferences.currency)
+            for l in listings
+        ]
+        best_price = min(converted_prices, default=300.0)
         price_analysis = self.predictor.analyze_price_history_and_predict(
             product_title=query,
-            current_best_price=converted_min_price,
+            current_best_price=best_price,
             target_currency=preferences.currency
         )
         state.price_analytics = price_analysis

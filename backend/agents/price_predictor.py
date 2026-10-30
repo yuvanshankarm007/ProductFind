@@ -5,6 +5,7 @@ and forecasts 14-day price movements with actionable BUY NOW vs WAIT verdicts fo
 """
 
 from typing import List, Dict, Any
+import re
 from ..core.state import PriceAnalytics, PriceHistoryPoint
 from .fx_service import FXService
 
@@ -25,38 +26,8 @@ class PricePredictorAgent:
         title_lower = product_title.lower()
         curr = target_currency.upper()
 
-        # Calibration based on product category & title
-        if any(w in title_lower for w in ["iphone", "s24", "s25", "pixel", "galaxy", "phone"]):
-            expected_delta_pct = -3.2
-            prediction_trend = "Cyclical Post-Launch Drift"
-            confidence = 89
-            explanation = (
-                f"Smartphone pricing intelligence indicates steady carrier trade-in subsidies for {product_title}. "
-                f"Current pricing is holding near the 60-day support band with minor promotional variations expected over the next 14 days."
-            )
-            buy_verdict = "BUY NOW (Competitive Carrier Subsidy)"
-
-        elif any(w in title_lower for w in ["macbook", "laptop", "thinkpad", "dell xps", "notebook"]):
-            expected_delta_pct = 2.4
-            prediction_trend = "Inventory Depletion / Likely Rise"
-            confidence = 92
-            explanation = (
-                f"Authorized distributor inventories for {product_title} are tightening. "
-                f"Promotional stock allocation is near exhaustion; prices are projected to rise +2% to +4% over the next 14 days."
-            )
-            buy_verdict = "BUY NOW (All-Time Low Window)"
-
-        elif any(w in title_lower for w in ["ps5", "playstation", "xbox", "switch", "console"]):
-            expected_delta_pct = -6.5
-            prediction_trend = "Upcoming Retail Holiday Bundle"
-            confidence = 86
-            explanation = (
-                f"Gaming console supply tracking indicates upcoming game-bundle discounts for {product_title}. "
-                f"Waiting 10-14 days could yield an extra bundle voucher or 5-8% savings."
-            )
-            buy_verdict = "WAIT FOR BUNDLE PROMO"
-
-        elif any(w in title_lower for w in ["sony", "bose", "airpods", "headphone", "earbuds", "audio"]):
+        # Calibration based on product category & title (audio checked before phone so 'headphones' won't match 'phone')
+        if any(w in title_lower for w in ["headphone", "earbud", "earphone", "audio", "sony wh", "xm5", "airpods", "bose"]):
             expected_delta_pct = -8.5
             prediction_trend = "Probable Clearance Drop"
             confidence = 88
@@ -66,7 +37,37 @@ class PricePredictorAgent:
             )
             buy_verdict = "GOOD DEAL (WAIT FOR FLASH SALE)"
 
-        elif any(w in title_lower for w in ["watch", "garmin", "smartwatch"]):
+        elif any(re.search(r'\b' + re.escape(w) + r'\b', title_lower) for w in ["iphone", "s24", "s25", "pixel", "galaxy", "phone", "smartphone", "mobile"]):
+            expected_delta_pct = -3.2
+            prediction_trend = "Cyclical Post-Launch Drift"
+            confidence = 89
+            explanation = (
+                f"Smartphone pricing intelligence indicates steady carrier trade-in subsidies for {product_title}. "
+                f"Current pricing is holding near the 60-day support band with minor promotional variations expected over the next 14 days."
+            )
+            buy_verdict = "BUY NOW (Competitive Carrier Subsidy)"
+
+        elif any(re.search(r'\b' + re.escape(w) + r'\b', title_lower) for w in ["macbook", "laptop", "thinkpad", "dell xps", "notebook", "zenbook"]):
+            expected_delta_pct = 2.4
+            prediction_trend = "Inventory Depletion / Likely Rise"
+            confidence = 92
+            explanation = (
+                f"Authorized distributor inventories for {product_title} are tightening. "
+                f"Promotional stock allocation is near exhaustion; prices are projected to rise +2% to +4% over the next 14 days."
+            )
+            buy_verdict = "BUY NOW (All-Time Low Window)"
+
+        elif any(re.search(r'\b' + re.escape(w) + r'\b', title_lower) for w in ["ps5", "playstation", "xbox", "switch", "console", "nintendo"]):
+            expected_delta_pct = -6.5
+            prediction_trend = "Upcoming Retail Holiday Bundle"
+            confidence = 86
+            explanation = (
+                f"Gaming console supply tracking indicates upcoming game-bundle discounts for {product_title}. "
+                f"Waiting 10-14 days could yield an extra bundle voucher or 5-8% savings."
+            )
+            buy_verdict = "WAIT FOR BUNDLE PROMO"
+
+        elif any(re.search(r'\b' + re.escape(w) + r'\b', title_lower) for w in ["watch", "garmin", "smartwatch"]):
             expected_delta_pct = 1.8
             prediction_trend = "Stable Price Floor"
             confidence = 84
