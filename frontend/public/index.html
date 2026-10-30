@@ -98,8 +98,8 @@
                 <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
                     <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400 mr-1.5"></i>
                     <select id="pref-country" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="IN" class="bg-gray-800" selected>India 🇮🇳</option>
                         <option value="US" class="bg-gray-800">United States 🇺🇸</option>
-                        <option value="IN" class="bg-gray-800">India 🇮🇳</option>
                         <option value="GB" class="bg-gray-800">United Kingdom 🇬🇧</option>
                         <option value="DE" class="bg-gray-800">Germany 🇩🇪</option>
                         <option value="CA" class="bg-gray-800">Canada 🇨🇦</option>
@@ -112,8 +112,8 @@
                 <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
                     <i data-lucide="coins" class="w-3.5 h-3.5 text-amber-400 mr-1.5"></i>
                     <select id="pref-currency" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="INR" class="bg-gray-800" selected>INR (₹)</option>
                         <option value="USD" class="bg-gray-800">USD ($)</option>
-                        <option value="INR" class="bg-gray-800">INR (₹)</option>
                         <option value="EUR" class="bg-gray-800">EUR (€)</option>
                         <option value="GBP" class="bg-gray-800">GBP (£)</option>
                         <option value="CAD" class="bg-gray-800">CAD (CA$)</option>
@@ -499,8 +499,8 @@
         </div>
     </div>
 
-    <!-- Interactive Onboarding & Shopping Preference Wizard Modal -->
-    <div id="preference-wizard-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto custom-scrollbar hidden">
+    <!-- Interactive Onboarding & Shopping Preference Wizard Modal (Pops up upfront like a splash screen) -->
+    <div id="preference-wizard-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto custom-scrollbar">
         <div class="bg-gray-900 border border-blue-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl relative my-auto">
             <!-- Close button -->
             <button id="close-wizard-btn" class="absolute right-4 top-4 text-gray-400 hover:text-white transition">
@@ -814,14 +814,7 @@
                         const ev = data.event;
                         appendTerminalLog(ev.source_agent, ev.target_agent, ev.event_type, ev.content);
                     } else if (data.type === 'FINAL_RESULT') {
-                        const state = data.state;
-                        currentCurrency = state.user_preferences?.currency || prefCurrency.value;
-                        renderPriceAnalytics(state.price_analytics);
-                        renderResults(state.final_options);
-                        renderComparisonMatrix(state.comparison_matrix);
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
-                        lucide.createIcons();
+                        applySearchResults(data.state);
                     }
                 } catch (err) {
                     console.error('Error parsing WS message:', err);
@@ -898,25 +891,47 @@
                 preferred_payment: prefPayment.value
             };
 
+            let searchResolved = false;
+            window.applySearchResults = function(state) {
+                if (searchResolved) return;
+                searchResolved = true;
+                currentCurrency = state.user_preferences?.currency || prefCurrency.value;
+                renderPriceAnalytics(state.price_analytics);
+                renderResults(state.final_options);
+                renderComparisonMatrix(state.comparison_matrix);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
+                lucide.createIcons();
+            };
+
+            // Stream inter-agent negotiation logs via WebSocket if connected
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify(payload));
-            } else {
-                fetch('/api/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then(r => r.json())
-                .then(state => {
-                    currentCurrency = state.user_preferences?.currency || prefCurrency.value;
-                    renderPriceAnalytics(state.price_analytics);
-                    renderResults(state.final_options);
-                    renderComparisonMatrix(state.comparison_matrix);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
-                    lucide.createIcons();
-                });
             }
+
+            // Always call HTTP /api/search in parallel to ensure 100% reliable data retrieval for ANY query
+            fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => {
+                if (!r.ok) throw new Error("HTTP error " + r.status);
+                return r.json();
+            })
+            .then(state => {
+                applySearchResults(state);
+            })
+            .catch(err => {
+                console.error("HTTP search error:", err);
+                setTimeout(() => {
+                    if (!searchResolved) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
+                        lucide.createIcons();
+                    }
+                }, 3000);
+            });
         }
 
         searchForm.addEventListener('submit', (e) => {
@@ -1610,11 +1625,11 @@
 
         // Open and close wizard modal
         function openPreferenceWizard() {
-            activeWizardLang = prefLanguage.value;
-            activeWizardCountry = prefCountry.value;
-            activeWizardCurr = prefCurrency.value;
-            activeWizardPay = prefPayment.value;
-            wizardProductInput.value = searchInput.value || "iPhone 16 Pro Max";
+            activeWizardLang = prefLanguage.value || 'en';
+            activeWizardCountry = prefCountry.value || 'IN';
+            activeWizardCurr = prefCurrency.value || 'INR';
+            activeWizardPay = prefPayment.value || 'all';
+            wizardProductInput.value = searchInput.value || "Sony WH-1000XM5 Noise Canceling Headphones";
             syncWizardPillsUI();
             wizardModal.classList.remove('hidden');
             lucide.createIcons();
@@ -1625,12 +1640,18 @@
         }
 
         openWizardBtn.addEventListener('click', openPreferenceWizard);
-        closeWizardBtn.addEventListener('click', closePreferenceWizard);
+        closeWizardBtn.addEventListener('click', () => {
+            closePreferenceWizard();
+            if (!activeOptions || activeOptions.length === 0) {
+                const initialQuery = searchInput.value.trim() || "Sony WH-1000XM5 Noise Canceling Headphones";
+                triggerSearch(initialQuery);
+            }
+        });
 
         // Wizard Form Submission
         wizardForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const chosenQuery = wizardProductInput.value.trim() || searchInput.value.trim() || "iPhone 16 Pro Max";
+            const chosenQuery = wizardProductInput.value.trim() || searchInput.value.trim() || "Sony WH-1000XM5 Noise Canceling Headphones";
             
             // Sync all header controls
             prefLanguage.value = activeWizardLang;
@@ -1650,26 +1671,14 @@
             syncWizardPillsUI();
             closePreferenceWizard();
 
-            // Trigger multi-agent swarm search
+            // Trigger multi-agent swarm search immediately
             triggerSearch(chosenQuery);
         });
 
         // Initial setup on page load:
-        // Automatically ask first by popping up the wizard modal if not yet configured!
+        // Always ask first by presenting the onboarding wizard like a splash screen
         syncWizardPillsUI();
-        const hasConfigured = localStorage.getItem('pf_configured');
-        if (!hasConfigured) {
-            // First time visitor: show the wizard prompt upfront!
-            setTimeout(() => {
-                openPreferenceWizard();
-            }, 300);
-        } else {
-            // Returning user: launch their preferred search or await input
-            const initialQuery = searchInput.value.trim() || "Sony WH-1000XM5 Noise Canceling Headphones";
-            setTimeout(() => {
-                triggerSearch(initialQuery);
-            }, 400);
-        }
+        openPreferenceWizard();
     </script>
 </body>
 </html>

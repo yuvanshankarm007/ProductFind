@@ -164,7 +164,7 @@ PRODUCT_CATALOG = [
         "brand": "Sony PlayStation",
         "category": "Gaming Console",
         "base_usd": 499.99,
-        "regional": {"IN": 54990.00, "GB": 479.99, "DE": 549.99, "CA": 649.99, "JP": 79980.0, "AU": 799.95},
+        "regional": {"IN": 49990.00, "GB": 479.99, "DE": 549.99, "CA": 649.99, "JP": 79980.0, "AU": 799.95},
         "adp_provider": "GeekSquad Gamer Protection",
         "adp_usd": 69.99,
         "adp_inr": 4999.00,
@@ -339,6 +339,58 @@ PRODUCT_CATALOG = [
         "adp_inr": 1499.00,
         "exchange_usd": 25.00,
         "exchange_inr": 2000.00
+    },
+    {
+        "keywords": [r"\bnike\b", r"\badidas\b", r"\bpuma\b", r"\bshoes?\b", r"\bsneakers?\b", r"\brunning\s+shoes?\b", r"\bfootwear\b"],
+        "title": "Athletic Sports Running Shoes",
+        "brand": "Nike / Certified OEM",
+        "category": "Footwear",
+        "base_usd": 110.00,
+        "regional": {"IN": 6995.00, "GB": 89.00, "DE": 99.00, "CA": 149.00, "JP": 15800.0, "AU": 169.00},
+        "adp_provider": "Shoe Shield Auth",
+        "adp_usd": 14.99,
+        "adp_inr": 999.00,
+        "exchange_usd": 20.00,
+        "exchange_inr": 1500.00
+    },
+    {
+        "keywords": [r"\bboat\b", r"\bnoise\b", r"\bboult\b", r"\btws\b", r"wireless\s+earbuds?"],
+        "title": "True Wireless Stereo (TWS) Earbuds",
+        "brand": "boAt / Certified Audio",
+        "category": "Wireless Earbuds",
+        "base_usd": 39.00,
+        "regional": {"IN": 1999.00, "GB": 35.00, "DE": 39.00, "CA": 49.00, "JP": 4980.0, "AU": 59.00},
+        "adp_provider": "Audio Care Plan",
+        "adp_usd": 9.99,
+        "adp_inr": 299.00,
+        "exchange_usd": 10.00,
+        "exchange_inr": 500.00
+    },
+    {
+        "keywords": [r"gaming\s+laptop", r"asus\s+rog", r"lenovo\s+legion", r"acer\s+predator", r"hp\s+omen", r"alienware", r"rtx\s*40\d\d"],
+        "title": "High-Performance RTX Gaming Laptop",
+        "brand": "Certified Gaming OEM",
+        "category": "Gaming Laptop",
+        "base_usd": 1199.00,
+        "regional": {"IN": 89990.00, "GB": 1099.00, "DE": 1199.00, "CA": 1599.00, "JP": 179800.0, "AU": 1899.00},
+        "adp_provider": "Gamer Care Plus",
+        "adp_usd": 149.00,
+        "adp_inr": 7999.00,
+        "exchange_usd": 120.00,
+        "exchange_inr": 10000.00
+    },
+    {
+        "keywords": [r"coffee\s+maker", r"espresso", r"blender", r"air\s+fryer", r"microwave", r"kitchen", r"appliance"],
+        "title": "Smart Countertop Kitchen Appliance",
+        "brand": "Certified Appliance",
+        "category": "Home & Kitchen",
+        "base_usd": 89.00,
+        "regional": {"IN": 5999.00, "GB": 79.00, "DE": 89.00, "CA": 119.00, "JP": 12800.0, "AU": 139.00},
+        "adp_provider": "Home Care Plan",
+        "adp_usd": 14.99,
+        "adp_inr": 799.00,
+        "exchange_usd": 15.00,
+        "exchange_inr": 1000.00
     },
 
     # --- Broad Category Fallbacks (using strict whole-word regexes) ---

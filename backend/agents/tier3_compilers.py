@@ -193,33 +193,43 @@ class StrategyCompiler:
 
         # Sort by TCO to identify best true value
         by_tco = sorted(eligible_pool, key=lambda x: x.risk_adjusted_tco)
-        # Sort by protection (has ADP + highest trust)
-        by_protection = sorted(
-            eligible_pool,
-            key=lambda x: (not x.warranty.has_adp, not x.warranty.covers_drops, -x.trust.overall_score)
-        )
-        # Sort by base price for sticker budget
-        by_price = sorted(eligible_pool, key=lambda x: x.converted_cash_outlay)
 
         curated: List[AnalyzedDealOption] = []
 
-        # 1. OPTIMAL VALUE CHAMPION (Lowest TCO & High Trust)
-        optimal = by_tco[0]
+        # 1. OPTIMAL VALUE CHAMPION (Domestic verified retailer with zero import customs risk)
+        domestic_candidates = [opt for opt in eligible_pool if opt.listing.origin_country == preferences.country]
+        if domestic_candidates:
+            optimal = sorted(domestic_candidates, key=lambda x: x.risk_adjusted_tco)[0]
+        else:
+            optimal = by_tco[0]
+
         optimal.recommendation_tier = "OPTIMAL_VALUE"
         optimal.rank = 1
         curated.append(optimal)
 
         # 2. MAXIMUM PROTECTION (Full ADP + Best Warranty)
-        max_protect = next((opt for opt in by_protection if opt.id != optimal.id), by_protection[0])
-        max_protect.recommendation_tier = "MAX_PROTECTION"
-        max_protect.rank = 2
-        curated.append(max_protect)
+        pool_prot = [opt for opt in eligible_pool if opt.id != optimal.id] or [opt for opt in analyzed_options if opt.id != optimal.id]
+        if pool_prot:
+            by_protection = sorted(
+                pool_prot,
+                key=lambda x: (not x.warranty.has_adp, not x.warranty.covers_drops, -x.trust.overall_score)
+            )
+            max_protect = by_protection[0]
+            max_protect.recommendation_tier = "MAX_PROTECTION"
+            max_protect.rank = 2
+            curated.append(max_protect)
+        else:
+            max_protect = optimal
 
         # 3. BUDGET STICKER (Lowest Initial Outlay)
-        budget = next((opt for opt in by_price if opt.id != optimal.id and opt.id != max_protect.id), by_price[0])
-        budget.recommendation_tier = "BUDGET_STICKER"
-        budget.rank = 3
-        curated.append(budget)
+        pool_budget = [opt for opt in eligible_pool if opt.id not in (optimal.id, max_protect.id)] or [opt for opt in analyzed_options if opt.id not in (optimal.id, max_protect.id)]
+        if pool_budget:
+            budget = sorted(pool_budget, key=lambda x: x.converted_cash_outlay)[0]
+            budget.recommendation_tier = "BUDGET_STICKER"
+            budget.rank = 3
+            curated.append(budget)
+        else:
+            budget = max_protect
 
         await self.bus.emit(
             source="StrategyCompiler",
