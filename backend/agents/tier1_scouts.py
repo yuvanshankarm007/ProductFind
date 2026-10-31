@@ -546,13 +546,24 @@ class ScoutSwarm:
             content=f"Scouted live web index for '{query}': {profile['web_search_hits']} listings analyzed. Market baseline: {curr_symbol}{regional_price:,.2f} ({profile['category']})."
         )
 
+        # Generate genuine, live, working retailer search URLs for direct price verification
+        import urllib.parse
+        q_enc = urllib.parse.quote_plus(query)
+        is_india = (dest == "IN")
+        amz_domain = "amazon.in" if is_india else "amazon.com"
+        amz_url = f"https://www.{amz_domain}/s?k={q_enc}"
+        bby_url = f"https://www.bestbuy.com/site/searchpage.jsp?st={q_enc}"
+        wmt_url = f"https://www.walmart.com/search?q={q_enc}"
+        flip_domain = "flipkart.com" if is_india else "target.com"
+        flip_url = f"https://www.flipkart.com/search?q={q_enc}" if is_india else f"https://www.target.com/s?searchTerm={q_enc}"
+
         # 1. Amazon Listing (Competitive Domestic / 3rd Party)
         amz_price = round(base_msrp_usd * 0.94, 2)
         amz_tax = round(amz_price * 0.07, 2)
         listing_amz = ScrapedListing(
             id=f"AMZ-{re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()}",
             merchant="Amazon",
-            merchant_domain="amazon.com",
+            merchant_domain=amz_domain,
             product_title=f"{prod_title} (Official Retail Packaging)",
             base_price=amz_price,
             currency="USD",
@@ -577,7 +588,7 @@ class ScoutSwarm:
             raw_warranty_text="1-Year Limited Manufacturer OEM Warranty. Covers defects in material or workmanship under normal usage.",
             raw_adp_text=f"Optional {adp_provider} 2-Year Plan available for ${adp_usd:.2f}. Covers mechanical breakdown. Drops and water damage deductible unspecified in preview.",
             raw_return_policy="30 days return window. 15% restocking fee on opened boxes. Customer pays return postage.",
-            listing_url=f"https://amazon.com/dp/{re.sub(r'[^A-Za-z0-9]', '', prod_title)[:8]}"
+            listing_url=amz_url
         )
 
         # 2. Best Buy Listing (Authorized Flagship Distributor)
@@ -611,7 +622,7 @@ class ScoutSwarm:
             raw_warranty_text="1-Year Official Manufacturer Direct Warranty. Full parts & labor.",
             raw_adp_text=f"Geek Squad 2-Year Accidental Protection Plan for ${round(adp_usd * 1.25, 2):.2f}. Complete coverage for normal wear and tear plus drops, spills, and surges.",
             raw_return_policy="15-day return window (60 days for My Best Buy Plus/Total). Zero restocking fees. Free in-store returns.",
-            listing_url=f"https://bestbuy.com/site/{re.sub(r'[^A-Za-z0-9]', '', prod_title)[:8]}"
+            listing_url=bby_url
         )
 
         # 3. Walmart Global Listing (Cross-Border Importer - Low Sticker Consumer Trap)
@@ -645,11 +656,10 @@ class ScoutSwarm:
             raw_warranty_text="90-Day Seller Warranty. Note: International model, domestic manufacturer warranty may NOT be honored by local service centers.",
             raw_adp_text="Protection Plan by Allstate: Not available for imported open-box items.",
             raw_return_policy="14 days return policy. Buyer must obtain RMA before shipping. 20% restocking fee if packaging is torn.",
-            listing_url=f"https://walmart.com/ip/{re.sub(r'[^A-Za-z0-9]', '', prod_title)[:8]}"
+            listing_url=wmt_url
         )
 
         # 4. Regional Assured Listing (Flipkart in India / Target in US)
-        is_india = (dest == "IN")
         if is_india:
             flip_curr = "INR"
             flip_price = round(regional_price, 2)
@@ -670,7 +680,7 @@ class ScoutSwarm:
         listing_flip = ScrapedListing(
             id=f"FLIP-{re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()}",
             merchant="Flipkart" if is_india else "Target Assured",
-            merchant_domain="flipkart.com" if is_india else "target.com",
+            merchant_domain=flip_domain,
             product_title=f"{prod_title} with Domestic Brand Warranty",
             base_price=flip_price,
             currency=flip_curr,
@@ -695,7 +705,7 @@ class ScoutSwarm:
             raw_warranty_text="1 Year Official Brand Warranty. Valid across authorized brand service centers.",
             raw_adp_text=flip_adp_text,
             raw_return_policy="7 Days Replacement only (Zero restocking fee penalty).",
-            listing_url=f"https://{'flipkart.com' if is_india else 'target.com'}/{re.sub(r'[^A-Za-z0-9]', '', prod_title)[:8]}"
+            listing_url=flip_url
         )
 
         raw_listings = [listing_amz, listing_bby, listing_wmt, listing_flip]

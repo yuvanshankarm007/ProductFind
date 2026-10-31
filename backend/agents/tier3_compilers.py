@@ -161,6 +161,7 @@ class StrategyCompiler:
                 "id": listing.id,
                 "merchant": listing.merchant,
                 "domain": listing.merchant_domain,
+                "listing_url": listing.listing_url,
                 "condition": listing.condition,
                 "origin_country": listing.origin_country,
                 "destination_country": preferences.country,
