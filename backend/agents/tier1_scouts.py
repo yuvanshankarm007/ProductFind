@@ -11,6 +11,7 @@ import re
 from ..core.state import ScrapedListing
 from ..core.bus import EventBus
 from ..core.i18n import translate
+from .web_scout_engine import LiveWebScoutEngine
 
 # Real-world retail database for accurate pricing across US, India, and global regions
 PRODUCT_CATALOG = [
@@ -489,243 +490,26 @@ PRODUCT_CATALOG = [
 
 def estimate_product_profile(query: str, dest_country: str = "US") -> Dict[str, Any]:
     """Dynamically determines the category, base MSRP, and regional localized prices for ANY search query across the web."""
-    q_clean = query.strip()
-    q_lower = q_clean.lower()
+    engine = LiveWebScoutEngine()
+    sem = engine.get_semantic_profile(query, dest_country)
     dest = dest_country.upper()
-
-    # 1. Dynamic Phone Model Matcher for Samsung Galaxy (A, M, F, S, Z series)
-    samsung_series_match = re.search(r'(?:samsung|galaxy)?\s*\b([amfsz])\s*(\d{1,2})\b', q_lower)
-    if ("samsung" in q_lower or "galaxy" in q_lower) and samsung_series_match:
-        series = samsung_series_match.group(1).lower()
-        num = int(samsung_series_match.group(2))
-        if series in ['a', 'm', 'f']:
-            if num <= 19:
-                # E.g. Samsung A14, A15, A16, A17, M14, M15, F14, F15 (User bought near 18k, now near 22k)
-                title = f"Samsung Galaxy {series.upper()}{num} 5G (Official Packaging)"
-                base_usd = 239.00
-                regional_price = 21999.00 if dest == "IN" else 239.00
-                return {
-                    "title": title,
-                    "base_msrp_usd": base_usd,
-                    "regional_price": regional_price,
-                    "brand": "Samsung",
-                    "category": "Budget 5G Smartphone",
-                    "adp_provider": "Samsung Care+",
-                    "adp_usd": 24.99,
-                    "adp_inr": 1499.00,
-                    "exchange_usd": 35.00,
-                    "exchange_inr": 3500.00
-                }
-            elif num <= 39:
-                # E.g. Samsung A25, A34, A35, M34, M35
-                title = f"Samsung Galaxy {series.upper()}{num} 5G"
-                base_usd = 299.00
-                regional_price = 26999.00 if dest == "IN" else 299.00
-                return {
-                    "title": title,
-                    "base_msrp_usd": base_usd,
-                    "regional_price": regional_price,
-                    "brand": "Samsung",
-                    "category": "Mid-Range Smartphone",
-                    "adp_provider": "Samsung Care+",
-                    "adp_usd": 34.99,
-                    "adp_inr": 1999.00,
-                    "exchange_usd": 45.00,
-                    "exchange_inr": 4500.00
-                }
-            else:
-                # E.g. Samsung A54, A55, M55
-                title = f"Samsung Galaxy {series.upper()}{num} 5G"
-                base_usd = 429.00
-                regional_price = 36999.00 if dest == "IN" else 429.00
-                return {
-                    "title": title,
-                    "base_msrp_usd": base_usd,
-                    "regional_price": regional_price,
-                    "brand": "Samsung",
-                    "category": "Upper Mid-Range Smartphone",
-                    "adp_provider": "Samsung Care+",
-                    "adp_usd": 44.99,
-                    "adp_inr": 2499.00,
-                    "exchange_usd": 65.00,
-                    "exchange_inr": 6000.00
-                }
-        elif series == 's':
-            if "ultra" in q_lower:
-                title = f"Samsung Galaxy S{num} Ultra"
-                base_usd = 1299.99
-                regional_price = 119999.00 if dest == "IN" else 1299.99
-                return {
-                    "title": title,
-                    "base_msrp_usd": base_usd,
-                    "regional_price": regional_price,
-                    "brand": "Samsung",
-                    "category": "AI Flagship Smartphone",
-                    "adp_provider": "Samsung Care+",
-                    "adp_usd": 169.00,
-                    "adp_inr": 14999.00,
-                    "exchange_usd": 260.00,
-                    "exchange_inr": 25000.00
-                }
-            else:
-                title = f"Samsung Galaxy S{num} 5G"
-                base_usd = 799.99
-                regional_price = 64999.00 if dest == "IN" else 799.99
-                return {
-                    "title": title,
-                    "base_msrp_usd": base_usd,
-                    "regional_price": regional_price,
-                    "brand": "Samsung",
-                    "category": "Flagship Smartphone",
-                    "adp_provider": "Samsung Care+",
-                    "adp_usd": 129.00,
-                    "adp_inr": 9999.00,
-                    "exchange_usd": 180.00,
-                    "exchange_inr": 18000.00
-                }
-
-    if "samsung" in q_lower and any(w in q_lower for w in ["phone", "mobile", "galaxy"]):
-        return {
-            "title": f"{q_clean.title()} (Official Retail Packaging)",
-            "base_usd": 229.00,
-            "regional_price": 19999.00 if dest == "IN" else 229.00,
-            "brand": "Samsung",
-            "category": "5G Smartphone",
-            "adp_provider": "Samsung Care+",
-            "adp_usd": 24.99,
-            "adp_inr": 1499.00,
-            "exchange_usd": 35.00,
-            "exchange_inr": 3500.00
-        }
-
-    # 2. Dynamic iPhone Legacy & Mainstream Matcher (iPhone 11, 12, 13, 14)
-    iphone_match = re.search(r'iphone\s*(\d{1,2})', q_lower)
-    if iphone_match:
-        inum = int(iphone_match.group(1))
-        if inum == 13:
-            return {
-                "title": "Apple iPhone 13 (128GB Official)",
-                "base_usd": 499.00,
-                "regional_price": 44900.00 if dest == "IN" else 499.00,
-                "brand": "Apple",
-                "category": "Smartphone",
-                "adp_provider": "AppleCare+",
-                "adp_usd": 99.00,
-                "adp_inr": 7900.00,
-                "exchange_usd": 100.00,
-                "exchange_inr": 10000.00
-            }
-        elif inum == 14:
-            return {
-                "title": "Apple iPhone 14 (128GB Official)",
-                "base_usd": 599.00,
-                "regional_price": 52900.00 if dest == "IN" else 599.00,
-                "brand": "Apple",
-                "category": "Smartphone",
-                "adp_provider": "AppleCare+",
-                "adp_usd": 129.00,
-                "adp_inr": 9900.00,
-                "exchange_usd": 120.00,
-                "exchange_inr": 12000.00
-            }
-        elif inum <= 12:
-            return {
-                "title": f"Apple iPhone {inum} (Certified Retail)",
-                "base_usd": 349.00,
-                "regional_price": 32900.00 if dest == "IN" else 349.00,
-                "brand": "Apple",
-                "category": "Smartphone",
-                "adp_provider": "Retail Protection",
-                "adp_usd": 49.00,
-                "adp_inr": 3900.00,
-                "exchange_usd": 60.00,
-                "exchange_inr": 5000.00
-            }
-
-    # 3. Dynamic Android Mid-Range Brands (OnePlus Nord, Redmi, Realme, Poco, Vivo, Oppo, Moto)
-    if any(k in q_lower for k in ["nord", "redmi", "realme", "poco", "vivo", "oppo", "moto", "g54", "g64", "g84", "g85", "narzo"]):
-        return {
-            "title": f"{q_clean.title()} (5G Dual SIM)",
-            "base_usd": 229.00,
-            "regional_price": 19999.00 if dest == "IN" else 229.00,
-            "brand": "Android OEM",
-            "category": "5G Smartphone",
-            "adp_provider": "Device Care Plan",
-            "adp_usd": 29.00,
-            "adp_inr": 1499.00,
-            "exchange_usd": 40.00,
-            "exchange_inr": 3000.00
-        }
-
-    # 4. Tech & Mobile Accessories (Cases, covers, chargers, tempered glass, cables)
-    if any(k in q_lower for k in ["case", "cover", "protector", "tempered glass", "cable", "charger", "adapter", "strap"]):
-        return {
-            "title": f"{q_clean.title()} (Certified Quality)",
-            "base_usd": 14.99,
-            "regional_price": 799.00 if dest == "IN" else 14.99,
-            "brand": "Certified OEM",
-            "category": "Accessories",
-            "adp_provider": "Direct Replacement Warranty",
-            "adp_usd": 1.99,
-            "adp_inr": 99.00,
-            "exchange_usd": 0.0,
-            "exchange_inr": 0.0
-        }
-
-    # 5. Search Static Universal Product Catalog
-    for item in PRODUCT_CATALOG:
-        for kw_pattern in item["keywords"]:
-            if re.search(kw_pattern, q_lower):
-                regional_price = item["regional"].get(dest)
-                if not regional_price:
-                    if dest == "IN":
-                        regional_price = round(item["base_usd"] * 86.80, 2)
-                    elif dest == "GB":
-                        regional_price = round(item["base_usd"] * 0.785, 2)
-                    elif dest == "DE":
-                        regional_price = round(item["base_usd"] * 0.925, 2)
-                    elif dest == "CA":
-                        regional_price = round(item["base_usd"] * 1.390, 2)
-                    elif dest == "JP":
-                        regional_price = round(item["base_usd"] * 152.40, 0)
-                    elif dest == "AU":
-                        regional_price = round(item["base_usd"] * 1.545, 2)
-                    else:
-                        regional_price = item["base_usd"]
-
-                return {
-                    "title": item.get("title", q_clean.title()),
-                    "base_msrp_usd": item["base_usd"],
-                    "regional_price": regional_price,
-                    "brand": item["brand"],
-                    "category": item["category"],
-                    "adp_provider": item["adp_provider"],
-                    "adp_usd": item["adp_usd"],
-                    "adp_inr": item.get("adp_inr", round(item["adp_usd"] * 86.8, 2)),
-                    "exchange_usd": item["exchange_usd"],
-                    "exchange_inr": item.get("exchange_inr", round(item["exchange_usd"] * 86.8, 2))
-                }
-
-    # 6. Calibrated Dynamic Fallback for any other general retail product
-    hash_val = sum(ord(c) for c in q_lower)
-    derived_usd = round(45.0 + (hash_val % 95) + 0.99, 2)
-    derived_inr = round(derived_usd * 86.8, 2)
     return {
-        "title": q_clean.title(),
-        "base_msrp_usd": derived_usd,
-        "regional_price": derived_inr if dest == "IN" else derived_usd,
-        "brand": "Certified Brand",
-        "category": "Consumer Goods & Retail",
-        "adp_provider": "Retailer Protection Plan",
-        "adp_usd": round(derived_usd * 0.10, 2),
-        "adp_inr": round(derived_inr * 0.10, 2),
-        "exchange_usd": round(derived_usd * 0.12, 2),
-        "exchange_inr": round(derived_inr * 0.12, 2)
+        "title": sem["title"],
+        "category": sem["category"],
+        "brand": sem["brand"],
+        "base_msrp_usd": sem["base_usd"],
+        "regional_price": sem["inr_baseline"] if dest == "IN" else sem["base_usd"],
+        "adp_provider": sem["adp_provider"],
+        "adp_usd": sem["adp_usd"],
+        "adp_inr": sem["adp_inr"],
+        "exchange_usd": sem["ex_usd"],
+        "exchange_inr": sem["ex_inr"]
     }
 
 class ScoutSwarm:
     def __init__(self, bus: EventBus):
         self.bus = bus
+        self.web_engine = LiveWebScoutEngine()
 
     async def search(
         self,
@@ -743,7 +527,8 @@ class ScoutSwarm:
             content=translate("dispatch_scouts", lang=language, query=query)
         )
 
-        profile = estimate_product_profile(query, dest)
+        # 1. Live Web Search & Market Calibration across real search index
+        profile = await self.web_engine.scout(query, dest)
         prod_title = profile["title"]
         base_msrp_usd = profile["base_msrp_usd"]
         regional_price = profile["regional_price"]
@@ -752,6 +537,14 @@ class ScoutSwarm:
         adp_inr = profile["adp_inr"]
         exchange_usd = profile["exchange_usd"]
         exchange_inr = profile["exchange_inr"]
+
+        curr_symbol = "₹" if dest == "IN" else ("£" if dest == "GB" else ("€" if dest == "DE" else "$"))
+        await self.bus.emit(
+            source="WebSearchScout",
+            target="ProcessingSwarm",
+            event_type="DISPATCH",
+            content=f"Scouted live web index for '{query}': {profile['web_search_hits']} listings analyzed. Market baseline: {curr_symbol}{regional_price:,.2f} ({profile['category']})."
+        )
 
         # 1. Amazon Listing (Competitive Domestic / 3rd Party)
         amz_price = round(base_msrp_usd * 0.94, 2)
