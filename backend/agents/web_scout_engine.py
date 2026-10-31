@@ -1,6 +1,6 @@
 """
 Live Web Search & Universal Product Scout Engine.
-Performs real-time live web scraping across global search indices (Bing, DuckDuckGo, Retailer feeds)
+Performs real-time live web scraping across global search indices (Flipkart Live Search, Bing, Retailer feeds)
 to extract actual product titles, live market prices, and retailer availability for ANY search query.
 Harmonizes live search results with intelligent category-aware pricing boundaries to eliminate
 unrealistic or dummy price drift.
@@ -9,15 +9,57 @@ unrealistic or dummy price drift.
 import asyncio
 import httpx
 import re
+import urllib.parse
 from typing import Dict, Any, List, Optional
 
 class LiveWebScoutEngine:
     def __init__(self):
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9"
         }
+
+    async def scrape_flipkart_live(self, query: str) -> Dict[str, Any]:
+        """Scrapes live search results directly from Flipkart for 100% accurate Indian market pricing."""
+        try:
+            async with httpx.AsyncClient(headers=self.headers, timeout=6.0, follow_redirects=True) as client:
+                r = await client.get("https://www.flipkart.com/search", params={"q": query})
+                if r.status_code == 200:
+                    html = r.text
+                    
+                    # Extract prices matching Flipkart's currency tags
+                    raw_prices = re.findall(r'<div[^>]*class="[^"]*(?:hZ3P6w|DeU9vF|Nx9bqj|_30jeq3)[^"]*"[^>]*>₹\s*([0-9,]+)</div>', html)
+                    
+                    valid_prices = []
+                    for p in raw_prices:
+                        try:
+                            v = float(p.replace(',', ''))
+                            if 300 <= v <= 3000000 and v not in [2023.0, 2024.0, 2025.0, 2026.0, 2027.0]:
+                                valid_prices.append(v)
+                        except Exception:
+                            pass
+                            
+                    # Extract product titles from img alt or product link tags
+                    raw_titles = [
+                        a for a in re.findall(r'<img[^>]*alt="([^"]+)"', html) 
+                        if len(a) > 12 and not any(w in a.lower() for w in ['buying guide', 'plus', 'assured', 'flipkart', 'supercoin', 'advertisement'])
+                    ]
+                    
+                    if valid_prices:
+                        # Clean title
+                        best_title = raw_titles[0] if raw_titles else query.title()
+                        best_title = re.sub(r'\.\.\.$', '', best_title).strip()
+                        
+                        return {
+                            "found": True,
+                            "prices": valid_prices,
+                            "title": best_title
+                        }
+        except Exception:
+            pass
+            
+        return {"found": False, "prices": [], "title": None}
 
     async def search_web(self, query: str, dest_country: str = "IN") -> List[Dict[str, Any]]:
         """Scrapes live search index from Bing for actual product data and pricing."""
@@ -26,7 +68,7 @@ class LiveWebScoutEngine:
         search_q = f"{query} {dest_keyword}"
         
         try:
-            async with httpx.AsyncClient(headers=self.headers, timeout=6.5) as client:
+            async with httpx.AsyncClient(headers=self.headers, timeout=6.0) as client:
                 r = await client.get("https://www.bing.com/search", params={"q": search_q})
                 if r.status_code == 200:
                     blocks = r.text.split('<li class="b_algo')
@@ -127,7 +169,56 @@ class LiveWebScoutEngine:
                 "ex_usd": 60.0, "ex_inr": 5000.0
             }
 
-        # 4. Ultra-Flagship / Pro Smartphones (iPhone 18, 17, 16 Pro, S24/S25 Ultra, Fold)
+        # 4. Comprehensive Laptops, Notebooks & Hardware (Evaluated BEFORE phones so Vivobook won't match Vivo phone)
+        elif any(f in q for f in [
+            "vivobook", "zenbook", "ideapad", "thinkpad", "thinkbook", "victus", "pavilion", 
+            "omen", "inspiron", "xps", "vostro", "latitude", "alienware", "nitro", "predator", 
+            "swift", "aspire", "tuf", "rog", "zephyrus", "strix", "katana", "cyborg", "bravo", 
+            "loq", "legion", "yoga", "surface", "galaxy book", "gram", "spectre", "envy", 
+            "macbook", "laptop", "notebook", "ultrabook", "chromebook", "probook", "elitebook",
+            "rtx", "gpu", "graphics card", "geforce"
+        ]):
+            is_gaming_flagship = any(f in q for f in [
+                "victus", "omen", "rog", "tuf", "predator", "nitro", "alienware", "legion", 
+                "loq", "katana", "cyborg", "bravo", "strix", "zephyrus", "rtx 40", "rtx 50", 
+                "macbook pro", "i7", "i9", "ryzen 7", "ryzen 9"
+            ])
+            inr_baseline = 84990.00 if is_gaming_flagship else 69990.00
+            usd_baseline = 999.00 if is_gaming_flagship else 799.00
+            
+            # Determine Brand
+            if any(w in q for w in ["vivobook", "zenbook", "tuf", "rog", "zephyrus", "strix"]):
+                brand = "ASUS"
+            elif any(w in q for w in ["victus", "pavilion", "omen", "spectre", "envy", "probook", "elitebook"]):
+                brand = "HP"
+            elif any(w in q for w in ["ideapad", "thinkpad", "thinkbook", "legion", "loq", "yoga"]):
+                brand = "Lenovo"
+            elif any(w in q for w in ["inspiron", "xps", "alienware", "vostro", "latitude"]):
+                brand = "Dell"
+            elif any(w in q for w in ["nitro", "predator", "swift", "aspire"]):
+                brand = "Acer"
+            elif any(w in q for w in ["katana", "cyborg", "bravo"]):
+                brand = "MSI"
+            elif "macbook" in q:
+                brand = "Apple"
+            else:
+                brand = "Laptop OEM"
+
+            cat = "Gaming / High-Performance Laptop" if is_gaming_flagship else "Thin & Light Laptop"
+            return {
+                "category": cat,
+                "brand": brand,
+                "title": f"{brand} {query.title()}" if brand.lower() not in q else query.title(),
+                "base_usd": usd_baseline,
+                "inr_baseline": inr_baseline,
+                "min_inr": 25000.0, "max_inr": 450000.0,
+                "min_usd": 300.0, "max_usd": 5000.0,
+                "adp_provider": f"{brand} Care Accidental Protection",
+                "adp_usd": 89.0, "adp_inr": 5999.0,
+                "ex_usd": 120.0, "ex_inr": 12000.0
+            }
+
+        # 5. Ultra-Flagship / Pro Smartphones (iPhone 18, 17, 16 Pro, S24/S25 Ultra, Fold)
         elif any(f in q for f in ["iphone 18", "iphone 17", "iphone 16 pro", "iphone 15 pro", "s24 ultra", "s25 ultra", "fold", "z fold", "find n"]):
             clean_title = f"Apple {query.title()}" if "iphone" in q and not "apple" in q else query.title()
             return {
@@ -143,7 +234,7 @@ class LiveWebScoutEngine:
                 "ex_usd": 250.0, "ex_inr": 25000.0
             }
 
-        # 5. Mainstream Flagships (Standard iPhone 16/15, Galaxy S24/S25, Pixel 9 Pro)
+        # 6. Mainstream Flagships (Standard iPhone 16/15, Galaxy S24/S25, Pixel 9 Pro)
         elif any(f in q for f in ["iphone", "galaxy s", "pixel 8", "pixel 9", "oneplus 12", "oneplus 13"]):
             clean_title = f"Apple {query.title()}" if "iphone" in q and not "apple" in q else query.title()
             return {
@@ -159,8 +250,8 @@ class LiveWebScoutEngine:
                 "ex_usd": 150.0, "ex_inr": 15000.0
             }
 
-        # 6. Budget & Mid-Range Phones (Samsung Galaxy A/M/F series, Redmi, Realme, Moto, Vivo)
-        elif any(f in q for f in ["samsung", "galaxy", "redmi", "realme", "poco", "nord", "moto", "narzo", "vivo", "oppo"]) or re.search(r'\b[amf]\d{2}\b', q):
+        # 7. Budget & Mid-Range Phones (Samsung Galaxy A/M/F series, Redmi, Realme, Moto, Vivo with word boundaries)
+        elif any(f in q for f in ["samsung", "galaxy", "redmi", "realme", "poco", "nord", "narzo"]) or re.search(r'\b(vivo|oppo|moto)\b', q) or re.search(r'\b[amf]\d{2}\b', q):
             # Check for A1x / budget entry (e.g. A14, A15, A16, A17)
             if re.search(r'\b[amf]1\d\b', q) or "a17" in q or "a16" in q or "a15" in q or "a14" in q:
                 inr_base = 21999.00
@@ -189,22 +280,6 @@ class LiveWebScoutEngine:
                 "ex_usd": 35.0, "ex_inr": 3500.0
             }
 
-        # 7. Laptops & GPUs (MacBook, ThinkPad, XPS, RTX, Graphics)
-        elif any(f in q for f in ["macbook", "laptop", "thinkpad", "xps", "legion", "rog", "rtx", "gpu", "graphics"]):
-            is_high_end = any(f in q for f in ["pro", "max", "rtx 40", "rtx 50", "rog", "alienware"])
-            return {
-                "category": "High-Performance Computer / Hardware",
-                "brand": "Apple" if "macbook" in q else ("NVIDIA" if "rtx" in q else "Hardware OEM"),
-                "title": f"{query.title()}",
-                "base_usd": 1999.00 if is_high_end else 999.00,
-                "inr_baseline": 189900.00 if is_high_end else 89900.00,
-                "min_inr": 40000.0, "max_inr": 380000.0,
-                "min_usd": 500.0, "max_usd": 4000.0,
-                "adp_provider": "Hardware Protection Plan",
-                "adp_usd": 149.0, "adp_inr": 12999.0,
-                "ex_usd": 180.0, "ex_inr": 18000.0
-            }
-
         # 8. TVs & Smart Displays
         elif any(f in q for f in ["tv", "oled", "qled", "bravia", "television"]):
             return {
@@ -213,8 +288,8 @@ class LiveWebScoutEngine:
                 "title": f"{query.title()} (4K UHD)",
                 "base_usd": 799.00,
                 "inr_baseline": 64990.00,
-                "min_inr": 25000.0, "max_inr": 250000.0,
-                "min_usd": 300.0, "max_usd": 3000.0,
+                "min_inr": 20000.0, "max_inr": 350000.0,
+                "min_usd": 250.0, "max_usd": 3500.0,
                 "adp_provider": "Panel Screen Protection",
                 "adp_usd": 89.0, "adp_inr": 5999.0,
                 "ex_usd": 80.0, "ex_inr": 7000.0
@@ -226,47 +301,67 @@ class LiveWebScoutEngine:
                 "category": "Consumer Retail Goods",
                 "brand": "Certified Brand",
                 "title": f"{query.title()}",
-                "base_usd": 129.00,
-                "inr_baseline": 9999.00,
-                "min_inr": 800.0, "max_inr": 40000.0,
-                "min_usd": 15.0, "max_usd": 500.0,
+                "base_usd": 149.00,
+                "inr_baseline": 12999.00,
+                "min_inr": 500.0, "max_inr": 250000.0,
+                "min_usd": 10.0, "max_usd": 3000.0,
                 "adp_provider": "Retail Protection Plan",
-                "adp_usd": 12.0, "adp_inr": 999.0,
-                "ex_usd": 10.0, "ex_inr": 800.0
+                "adp_usd": 15.0, "adp_inr": 1299.0,
+                "ex_usd": 15.0, "ex_inr": 1200.0
             }
 
     async def scout(self, query: str, dest_country: str = "IN") -> Dict[str, Any]:
-        """Orchestrates live web search + semantic calibration."""
+        """Orchestrates live store scraping (Flipkart for India) + Bing search + semantic calibration."""
         dest = dest_country.upper()
         sem = self.get_semantic_profile(query, dest)
-        web_res = await self.search_web(query, dest)
-        
-        # Try extracting live price within semantic boundaries
+        calibrated = False
+        final_inr = sem["inr_baseline"]
+        final_usd = sem["base_usd"]
+        title = sem["title"]
+        web_hits = 0
+        snippets = []
+
+        # 1. For India (IN): Query Flipkart Live Search for exact real-time prices & genuine product titles
         if dest == "IN":
-            live_price = self.extract_prices(web_res, sem["min_inr"], sem["max_inr"], dest_country="IN")
-            if live_price:
-                final_inr = live_price
-                final_usd = round(live_price / 86.8, 2)
-                calibrated = True
-            else:
-                final_inr = sem["inr_baseline"]
-                final_usd = sem["base_usd"]
-                calibrated = False
-            regional_price = final_inr
-        else:
-            live_price = self.extract_prices(web_res, sem["min_usd"], sem["max_usd"], dest_country=dest)
-            if live_price:
-                final_usd = live_price
-                final_inr = round(live_price * 86.8, 2)
-                calibrated = True
-            else:
-                final_usd = sem["base_usd"]
-                final_inr = sem["inr_baseline"]
-                calibrated = False
-            regional_price = final_usd
+            flip_data = await self.scrape_flipkart_live(query)
+            if flip_data.get("found") and flip_data.get("prices"):
+                prices = flip_data["prices"]
+                # Filter prices that fit semantic min and max bounds
+                valid_inr = [p for p in prices if sem["min_inr"] <= p <= sem["max_inr"]]
+                if valid_inr:
+                    # Sort and pick the median or closest matching variant
+                    valid_inr.sort()
+                    chosen_price = valid_inr[len(valid_inr) // 2]
+                    final_inr = chosen_price
+                    final_usd = round(chosen_price / 86.8, 2)
+                    calibrated = True
+                    web_hits = len(prices)
+                    if flip_data.get("title"):
+                        title = flip_data["title"]
+                        
+        # 2. Parallel / Fallback: Query Bing Search
+        if not calibrated:
+            web_res = await self.search_web(query, dest)
+            web_hits = len(web_res)
+            snippets = [r["snippet"] for r in web_res[:3] if r.get("snippet")]
             
+            if dest == "IN":
+                live_price = self.extract_prices(web_res, sem["min_inr"], sem["max_inr"], dest_country="IN")
+                if live_price:
+                    final_inr = live_price
+                    final_usd = round(live_price / 86.8, 2)
+                    calibrated = True
+            else:
+                live_price = self.extract_prices(web_res, sem["min_usd"], sem["max_usd"], dest_country=dest)
+                if live_price:
+                    final_usd = live_price
+                    final_inr = round(live_price * 86.8, 2)
+                    calibrated = True
+
+        regional_price = final_inr if dest == "IN" else final_usd
+        
         return {
-            "title": sem["title"],
+            "title": title,
             "category": sem["category"],
             "brand": sem["brand"],
             "base_msrp_usd": final_usd,
@@ -277,6 +372,6 @@ class LiveWebScoutEngine:
             "exchange_usd": sem["ex_usd"],
             "exchange_inr": sem["ex_inr"],
             "live_web_calibrated": calibrated,
-            "web_search_hits": len(web_res),
-            "web_snippets": [r["snippet"] for r in web_res[:3] if r.get("snippet")]
+            "web_search_hits": web_hits,
+            "web_snippets": snippets
         }
