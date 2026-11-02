@@ -11,7 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from .core.bus import EventBus
 from .coordinator import SentinelCoordinator
@@ -20,6 +20,7 @@ from .agents.fx_service import BASE_RATES_USD, CURRENCY_SYMBOLS
 from .core.i18n import SUPPORTED_LANGUAGES
 from .schemas import RiskPreferences, DisputeDossier
 from .agents.adaptive_skill_learner import AdaptiveSkillLearner, SkillVault, AdaptiveSkill
+from .agents.autonomous_self_healer import autonomous_healer
 from .core.gcp_db import gcp_db_service
 
 import socket
@@ -235,6 +236,52 @@ async def health_check():
 async def get_db_status():
     """Returns cloud database and cache connectivity and telemetry."""
     return gcp_db_service.get_status()
+
+class SelfLearnRequest(BaseModel):
+    domains: Optional[List[str]] = None
+
+@app.get("/api/system/health")
+async def get_system_health():
+    """Returns comprehensive diagnostic audit report across all agent swarm subsystems."""
+    report = await autonomous_healer.tester.run_full_diagnostic()
+    report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
+    return report.model_dump()
+
+@app.post("/api/system/self-test")
+async def trigger_self_test():
+    """Triggers on-demand synthetic self-test across all 5 subsystems."""
+    report = await autonomous_healer.tester.run_full_diagnostic()
+    report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
+    return {
+        "status": "success",
+        "report": report.model_dump()
+    }
+
+@app.post("/api/system/self-fix")
+async def trigger_self_fix():
+    """Executes closed-loop self-testing and automated heuristic repair."""
+    report = await autonomous_healer.run_comprehensive_audit_and_heal()
+    return {
+        "status": "success",
+        "report": report.model_dump(),
+        "repairs_applied": [r.model_dump() for r in report.recent_repairs]
+    }
+
+@app.post("/api/system/self-learn")
+async def trigger_self_learn(req: Optional[SelfLearnRequest] = None):
+    """Executes continuous discovery and autonomous skill distillation over unindexed merchant candidates."""
+    domains = req.domains if req else None
+    learned = await autonomous_healer.learner.run_discovery_cycle(domains)
+    return {
+        "status": "success",
+        "skills_acquired": [s.model_dump() for s in learned],
+        "total_skills_in_vault": len(autonomous_healer.learner.skill_learner.vault.list_skills())
+    }
+
+@app.get("/api/system/repairs")
+async def get_repair_history():
+    """Returns autonomous self-healing fix records."""
+    return [r.model_dump() for r in autonomous_healer.fixer.fix_history]
 
 @app.get("/api/preferences")
 async def get_preferences():
