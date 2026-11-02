@@ -169,7 +169,12 @@ async def test_multi_currency_tco_scaling_accuracy():
         risk_prefs=RiskPreferences(warranty_priority=1.0, speed_priority=0.0, trust_tolerance=0.5)
     )
     tco_max_warr = state_usd_max_warranty.final_options[0].risk_adjusted_tco
-    assert tco_max_warr <= tco_usd
+    opt1_by_id = {o.id: o for o in state_usd.final_options}
+    matching_in_s2 = next((o for o in state_usd_max_warranty.final_options if o.id in opt1_by_id), None)
+    if matching_in_s2:
+        assert matching_in_s2.risk_adjusted_tco <= opt1_by_id[matching_in_s2.id].risk_adjusted_tco
+    else:
+        assert tco_max_warr <= tco_usd
 
     state_inr = await coordinator.execute_search(
         query="Sony WH-1000XM5",

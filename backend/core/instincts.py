@@ -11,6 +11,7 @@ import time
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from pathlib import Path
+from .asin_resolver import resolve_canonical_product_url
 
 
 class CommerceInstinct(BaseModel):
@@ -187,19 +188,7 @@ class CommerceInstinctsVault:
                 if inst.replacement_target:
                     # Regional adaptation for search leaks
                     if inst.category == "SEARCH_PAGE_INTERCEPT":
-                        q_low = query.lower()
-                        if "sony" in q_low or "xm5" in q_low or "headphone" in q_low:
-                            return (
-                                "https://www.amazon.in/dp/B0BZP2H373"
-                                if dest == "IN"
-                                else "https://www.amazon.com/dp/B09Z2S9FSX"
-                            )
-                        elif "latitude" in q_low or "5511" in q_low or "dell" in q_low:
-                            return (
-                                "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
-                                if dest == "IN"
-                                else "https://www.amazon.com/dp/B0D16TS69T"
-                            )
+                        return resolve_canonical_product_url(query=query, dest_country=dest_country)
                     return inst.replacement_target
 
         return url

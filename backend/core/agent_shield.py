@@ -7,6 +7,7 @@ merchant trust boundaries, and counterfeit protections before client rendering.
 
 from typing import Dict, Any, List, Optional
 from .instincts import commerce_instincts
+from .asin_resolver import resolve_canonical_product_url
 
 
 class CommerceAgentShield:
@@ -58,25 +59,7 @@ class CommerceAgentShield:
     @classmethod
     def _get_canonical_fallback(cls, query: str, merchant_domain: str, dest_country: str) -> str:
         """Generates a certified 200 OK canonical product link based on intent and region."""
-        q_low = query.lower()
-        dest = dest_country.upper()
-
-        if "macbook" in q_low or "apple" in q_low or "m2" in q_low or "m3" in q_low:
-            return "https://www.amazon.in/dp/B0B3C57XLR" if dest == "IN" else "https://www.amazon.com/dp/B0B3C57XLR"
-        elif "dell" in q_low or "latitude" in q_low or "5511" in q_low or "laptop" in q_low or "notebook" in q_low:
-            if dest == "IN":
-                if "indiamart" in merchant_domain:
-                    return "https://www.indiamart.com/proddetail/dell-latitude-5511-i7-refurbished-laptop-2855589109433.html"
-                elif "flipkart" in merchant_domain:
-                    return "https://www.flipkart.com/dell-renewed-latitude-5420-14-fhd-laptop-quad-core-i5-1185g7-windows-11-pro-pro-intel-quad-core-i5-11th-generation-processor-type-1185g7-i5-1185g7e-530-mb-graphics-card-8-gb-ddr-4-ram-2600-mhz-256-ssd-m-2-mini-pc/p/itm1af14c1889b86"
-                return "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
-            else:
-                return "https://www.amazon.com/dp/B0D16TS69T"
-        elif "xm5" in q_low or "1000xm" in q_low or "sony" in q_low or "headphone" in q_low or "earphone" in q_low or "audio" in q_low:
-            return "https://www.amazon.in/dp/B0BZP2H373" if dest == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
-
-        # Default guaranteed canonical electronics item
-        return "https://www.amazon.in/dp/B0BZP2H373" if dest == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
+        return resolve_canonical_product_url(query=query, merchant_domain=merchant_domain, dest_country=dest_country)
 
     @classmethod
     def validate_listing(cls, listing: Any, query: str = "", dest_country: str = "IN") -> bool:

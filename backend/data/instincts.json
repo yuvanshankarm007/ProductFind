@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-11-02T18:19:39Z",
+  "updated_at": "2026-11-02T19:00:39Z",
   "instincts": [
     {
       "rule_id": "INST-DEAD-ASIN-B0CKZJ8V3C",
@@ -9,9 +9,9 @@
       "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
       "reason": "Amazon India delisted B0CKZJ8V3C. Replaced with active live 200 OK Dell Latitude listing B0HP26WLF4.",
       "confidence": 1.0,
-      "triggers_count": 8,
+      "triggers_count": 11,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-02T18:19:38Z"
+      "last_triggered_at": "2026-11-02T19:00:37Z"
     },
     {
       "rule_id": "INST-DEAD-ASIN-B09V1K8X1V",
@@ -42,9 +42,9 @@
       "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
       "reason": "Search query URLs (/s?k=) strictly forbidden. Enforce canonical product detail pages (/dp/).",
       "confidence": 1.0,
-      "triggers_count": 16,
+      "triggers_count": 22,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-02T18:19:38Z"
+      "last_triggered_at": "2026-11-02T19:00:37Z"
     },
     {
       "rule_id": "INST-SEARCH-PAGE-NEWEGG",
@@ -53,9 +53,9 @@
       "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
       "reason": "Newegg search listing queries (/p/pl?) forbidden. Enforce canonical direct item resolution.",
       "confidence": 1.0,
-      "triggers_count": 8,
+      "triggers_count": 11,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-02T18:19:38Z"
+      "last_triggered_at": "2026-11-02T19:00:37Z"
     },
     {
       "rule_id": "INST-BOT-DEFENSE-CF",
@@ -154,6 +154,39 @@
       "confidence": 1.0,
       "triggers_count": 0,
       "created_at": "2026-11-02T18:19:39Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-22E610",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T18:53:39Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-7DD8E9",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T18:57:51Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-1A62EE",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T19:00:39Z",
       "last_triggered_at": null
     }
   ]

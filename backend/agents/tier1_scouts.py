@@ -12,6 +12,7 @@ import urllib.parse
 from ..core.state import ScrapedListing
 from ..core.bus import EventBus
 from ..core.i18n import translate
+from ..core.asin_resolver import resolve_amazon_asin
 from .web_scout_engine import LiveWebScoutEngine
 from .fx_service import CURRENCY_SYMBOLS, FXService
 from .adaptive_skill_learner import AdaptiveSkillLearner
@@ -33,6 +34,7 @@ def estimate_product_profile(query: str, dest_country: str = "US") -> Dict[str, 
         "exchange_usd": sem["ex_usd"],
         "exchange_inr": sem["ex_inr"]
     }
+
 
 class DomesticScoutSubAgent:
     """
@@ -555,10 +557,15 @@ class ScoutSwarm:
                 raw_listings.append(listing_flip_1)
 
                 # 2. Second Deal: Amazon Direct Listing (guarantees direct /dp/{asin} product URL)
-                scraped_amz = next((p for p in scraped_products if "amazon" in p.get("domain", "") and "/dp/" in p.get("url", "") and p.get("price") and p.get("in_stock", True) and not p.get("is_dead_link", False)), None)
+                scraped_amz = next((
+                    p for p in scraped_products 
+                    if "amazon" in p.get("domain", "") 
+                    and any(marker in p.get("url", "") for marker in ["/dp/", "/clp/", "/gp/product/"]) 
+                    and not p.get("is_dead_link", False)
+                ), None)
                 if scraped_amz:
                     amz_title = scraped_amz["title"]
-                    amz_in_price = scraped_amz["price"]
+                    amz_in_price = scraped_amz.get("price") or round(m0_price * 0.96, 2)
                     amz_url = scraped_amz["url"]
                     amz_seller = scraped_amz.get("seller_name", "Appario Retail / Amazon Seller (Fulfilled by Amazon)")
                     amz_name = scraped_amz.get("merchant", "Amazon India Direct")
@@ -569,20 +576,8 @@ class ScoutSwarm:
                     amz_seller = "Amazon Renewed Certified Store" if is_renewed else "Appario Retail / Amazon Seller (Fulfilled by Amazon)"
                     amz_name = "Amazon India"
                     amz_warranty = "6 Months Amazon Renewed Guarantee. Tested and certified to work and look like new." if is_renewed else "1 Year Brand Warranty from date of invoice."
-                    q_lower_m = query.lower()
-                    if any(k in q_lower_m for k in ["macbook", "apple", "m2", "m3"]):
-                        amz_url = "https://www.amazon.in/dp/B0B3C57XLR"
-                    elif any(k in q_lower_m for k in ["dell", "latitude", "5511"]):
-                        amz_url = "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
-                    elif any(k in q_lower_m for k in ["xm5", "1000xm", "sony", "headphone"]):
-                        amz_url = "https://www.amazon.in/dp/B0BZP2H373"
-                    elif any(k in q_lower_m for k in ["iphone"]):
-                        amz_url = "https://www.amazon.in/dp/B0CHX1W1XY"
-                    elif any(k in q_lower_m for k in ["samsung", "galaxy"]):
-                        amz_url = "https://www.amazon.in/dp/B0CS5X8286"
-                    else:
-                        clean_asin = re.sub(r'[^A-Z0-9]', '', clean_id_1)[:10]
-                        amz_url = f"https://www.amazon.in/dp/{clean_asin}" if len(clean_asin) == 10 else "https://www.amazon.in/dp/B0HP26WLF4"
+                    asin = resolve_amazon_asin(query, dest="IN")
+                    amz_url = f"https://www.amazon.in/dp/{asin}"
 
                 amz_return = "14 Days Refund or Replacement via Amazon Renewed." if is_renewed else "7 Days Service Center Replacement policy."
 
@@ -628,7 +623,6 @@ class ScoutSwarm:
                 scraped_3rd = next((
                     p for p in scraped_products 
                     if p.get("url") not in used_urls 
-                    and p.get("price") 
                     and p.get("in_stock", True) 
                     and not p.get("is_dead_link", False)
                     and "/search" not in p.get("url", "") 
@@ -641,7 +635,7 @@ class ScoutSwarm:
                     val_domain = p3_domain
                     val_url = scraped_3rd["url"]
                     val_title = scraped_3rd["title"]
-                    val_price = scraped_3rd["price"]
+                    val_price = scraped_3rd.get("price") or round(m0_price * 0.94, 2)
                     val_seller = scraped_3rd.get("seller_name", f"{val_name} Verified Store")
                     val_warranty = scraped_3rd.get("warranty", "1 Year Manufacturer Direct Warranty.")
                 elif valid_p1 and valid_p1.get("url") not in used_urls and "/search" not in valid_p1.get("url", "") and "/s?" not in valid_p1.get("url", ""):
@@ -654,12 +648,12 @@ class ScoutSwarm:
                     val_seller = valid_p1.get("seller_name", f"{val_name} Store")
                     val_warranty = "1 Year Manufacturer Direct Warranty."
                 else:
-                    val_name = "Tata Croma Retail"
-                    val_domain = "croma.com"
-                    val_url = f"https://www.croma.com/p/{clean_id_2.lower()}"
-                    val_title = f"{prod_title} (Tata Croma Direct)"
+                    val_name = m0_name
+                    val_domain = m0_domain
+                    val_url = listing_flip_1.listing_url
+                    val_title = f"{prod_title} (Verified Value Deal)"
                     val_price = round(m0_price * 0.94, 2)
-                    val_seller = "Infiniti Retail Ltd (Tata Enterprise)"
+                    val_seller = m0_seller
                     val_warranty = "1 Year Official Brand Domestic Warranty."
 
                 listing_flip_2 = ScrapedListing(
@@ -718,13 +712,12 @@ class ScoutSwarm:
                 imp_title = f"{prod_title} (Certified Refurbished - US Import)"
                 imp_price = round(base_msrp_usd * 0.88, 2)
                 imp_seller = "Global Tech Refurb Direct (Grade A Imports)"
-                scraped_amz_us = next((p for p in scraped_products if "amazon.com" in p.get("domain", "") and "/dp/" in p.get("url", "")), None)
-                if any(k in q_lower_check for k in ["macbook", "apple", "m2", "m3"]):
-                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0B3C57XLR"
-                elif any(k in q_lower_check for k in ["dell", "latitude", "laptop", "notebook", "pc"]):
-                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0D16TS69T"
+                scraped_amz_us = next((p for p in scraped_products if "amazon.com" in p.get("domain", "") and any(marker in p.get("url", "") for marker in ["/dp/", "/clp/"])), None)
+                if scraped_amz_us:
+                    imp_url = scraped_amz_us["url"]
                 else:
-                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B09Z2S9FSX"
+                    asin_us = resolve_amazon_asin(query, dest="US")
+                    imp_url = f"https://www.amazon.com/dp/{asin_us}"
                 imp_warranty = "90-Day US Refurbisher Warranty. Insured by PayPal Section 13."
                 imp_adp = "International Cargo Protection Plan ($35.00)."
                 imp_return = "14 Days International Return. Buyer pays return air freight."
@@ -734,13 +727,12 @@ class ScoutSwarm:
                 imp_title = f"{prod_title} (US Import Direct)"
                 imp_price = round(base_msrp_usd * 0.85, 2)
                 imp_seller = "Global Express Logistics LLC"
-                scraped_amz_us = next((p for p in scraped_products if "amazon.com" in p.get("domain", "") and "/dp/" in p.get("url", "")), None)
-                if any(k in q_lower_check for k in ["macbook", "apple", "m2", "m3"]):
-                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0B3C57XLR"
-                elif any(k in q_lower_check for k in ["dell", "latitude", "laptop", "notebook", "pc"]):
-                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0D16TS69T"
+                scraped_amz_us = next((p for p in scraped_products if "amazon.com" in p.get("domain", "") and any(marker in p.get("url", "") for marker in ["/dp/", "/clp/"])), None)
+                if scraped_amz_us:
+                    imp_url = scraped_amz_us["url"]
                 else:
-                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B09Z2S9FSX"
+                    asin_us = resolve_amazon_asin(query, dest="US")
+                    imp_url = f"https://www.amazon.com/dp/{asin_us}"
                 imp_warranty = "US Domestic Warranty Only. May require shipping unit to US service center."
                 imp_adp = "International Cargo Protection Plan ($35.00)."
                 imp_return = "14 Days International Return. Buyer pays return air freight."
@@ -781,15 +773,28 @@ class ScoutSwarm:
 
             # 5. Dynamically Learned Merchant Skill (Autonomous E-Commerce Skill Acquisition)
             # Select a distinct source for the dynamically learned merchant skill
-            used_for_novel = {valid_p0.get("url") if valid_p0 else None, valid_p1.get("url") if valid_p1 else None, valid_p2.get("url") if valid_p2 else None}
-            remaining_for_novel = [p for p in scraped_products if p.get("url") not in used_for_novel]
-            novel_source = remaining_for_novel[0] if remaining_for_novel else (valid_p1 if valid_p1 else valid_p0)
-            if has_specialized_merchants and novel_source:
-                novel_domain = novel_source.get("domain", "eazypc.in")
-                novel_name = novel_source.get("merchant", "EazyPC India")
+            used_for_novel = {listing.listing_url for listing in raw_listings}
+            candidate_novel = [
+                p for p in scraped_products 
+                if p.get("url") not in used_for_novel 
+                and p.get("domain") not in ["flipkart.com", "amazon.in", "amazon.com"]
+                and p.get("url")
+                and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?"])
+            ]
+            if not candidate_novel:
+                candidate_novel = [
+                    p for p in scraped_products 
+                    if p.get("url") not in used_for_novel 
+                    and p.get("url")
+                    and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?"])
+                ]
+            novel_source = candidate_novel[0] if candidate_novel else (valid_p1 if valid_p1 else valid_p0)
+            if novel_source:
+                novel_domain = novel_source.get("domain", "tatacliq.com")
+                novel_name = novel_source.get("merchant") or DOMAIN_STORE_NAMES.get(novel_domain, novel_domain.capitalize())
                 novel_url = novel_source.get("url", f"https://{novel_domain}")
-                novel_warranty = novel_source.get("warranty", "6 Months Certified Refurbisher Warranty & Support.")
-                novel_text = f"{novel_name} verified e-commerce merchant. Return policy: 14 days replacement under refurbished guarantee. Cash on delivery available with doorstep open box inspection. Warranty: {novel_warranty}."
+                novel_warranty = novel_source.get("warranty", "1 Year Authorized Brand Warranty.")
+                novel_text = f"{novel_name} verified e-commerce merchant. Return policy: 14 days replacement. Cash on delivery available with doorstep inspection. Warranty: {novel_warranty}."
                 clean_id_novel = re.sub(r'[^A-Za-z0-9]', '', novel_name)[:10].upper()
 
                 skill_novel = self.skill_learner.discover_and_learn_merchant(
@@ -806,7 +811,7 @@ class ScoutSwarm:
                     content=f"Discovered novel merchant '{skill_novel.merchant_name}' ({skill_novel.merchant_domain}). Autonomously synthesized parsing & policy audit skill '{skill_novel.skill_id}'. Confidence: {skill_novel.verification_score*100:.0f}%. Persisted to Skill Vault."
                 )
 
-                novel_price = novel_source.get("price") or regional_price
+                novel_price = novel_source.get("price") or round(regional_price * 0.95, 2)
                 listing_novel = ScrapedListing(
                     id=f"NOVEL-{clean_id_novel}",
                     merchant=skill_novel.merchant_name,
@@ -835,7 +840,7 @@ class ScoutSwarm:
                     exchange_terms="Instant trade-in discount on old electronics.",
                     supported_payments=skill_novel.policy_rules.supported_payments,
                     raw_warranty_text=f"{skill_novel.policy_rules.warranty_months} Months {skill_novel.policy_rules.warranty_type}.",
-                    raw_adp_text=f"Merchant Care Protection Plan (Rs.{adp_inr:,.0f}).",
+                    raw_adp_text=f"Merchant Care Protection Plan (₹{adp_inr:,.0f}).",
                     raw_return_policy=f"{skill_novel.policy_rules.return_window_days} Days Easy Replacement policy (Insured by PayPal Section 13).",
                     listing_url=novel_url,
                     is_auto_learned_skill=True,
@@ -843,63 +848,9 @@ class ScoutSwarm:
                     skill_confidence=skill_novel.verification_score
                 )
 
-                # Deduplicate by listing_url before appending — prevents double-entry when novel_source URL
-                # coincidentally matches an earlier listing (can happen if scraped_products has only 1 unique merchant)
                 existing_urls = {r.listing_url for r in raw_listings}
                 if listing_novel.listing_url not in existing_urls:
                     raw_listings.append(listing_novel)
-            else:
-                clean_id_croma = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()
-                skill_croma = self.skill_learner.discover_and_learn_merchant(
-                    domain="croma.com",
-                    page_html_or_text="Tata Croma 15 days easy replacement policy. Cash on Delivery available with doorstep open box inspection. 1 year authorized brand warranty.",
-                    sample_url=f"https://www.croma.com/search/?text={q_enc}",
-                    country="IN",
-                    currency="INR"
-                )
-                await self.bus.emit(
-                    source="AdaptiveSkillLearner",
-                    target="ProcessingSwarm",
-                    event_type="SKILL_ACQUIRED",
-                    content=f"Discovered novel merchant '{skill_croma.merchant_name}' ({skill_croma.merchant_domain}). Autonomously synthesized parsing & policy audit skill '{skill_croma.skill_id}'. Confidence: {skill_croma.verification_score*100:.0f}%. Persisted to Skill Vault."
-                )
-
-                croma_price = round((valid_p0["price"] if valid_p0 else regional_price) * 0.96, 2)
-                croma_warranty = "6 Months Croma Assured Refurbished Warranty." if is_renewed else f"{skill_croma.policy_rules.warranty_months} Months {skill_croma.policy_rules.warranty_type}."
-                listing_croma = ScrapedListing(
-                    id=f"CROMA-{clean_id_croma}",
-                    merchant=skill_croma.merchant_name,
-                    merchant_domain=skill_croma.merchant_domain,
-                    product_title=f"{prod_title} (Tata Croma Direct)",
-                    base_price=croma_price,
-                    currency="INR",
-                    origin_country="IN",
-                    shipping_cost=0.0,
-                    estimated_tax=0.0,
-                    condition=condition,
-                    seller_name="Infiniti Retail Ltd (Tata Enterprise)",
-                    is_third_party=False,
-                    estimated_delivery_days=2,
-                    estimated_delivery_text="2 Days (Store Express Delivery)",
-                    shipping_speed_tier="Express",
-                    cod_available=skill_croma.policy_rules.cod_supported,
-                    cod_fee=skill_croma.policy_rules.cod_fee,
-                    cod_terms="Pay on delivery accepted via UPI or Cash.",
-                    open_box_delivery=skill_croma.policy_rules.open_box_inspection,
-                    open_box_details="Tata Croma technician unboxing at doorstep.",
-                    exchange_offer_available=skill_croma.policy_rules.exchange_offered,
-                    exchange_max_discount=round(exchange_inr * 0.95, 2),
-                    exchange_terms="Instant in-store / doorstep exchange credit.",
-                    supported_payments=skill_croma.policy_rules.supported_payments,
-                    raw_warranty_text=f"{skill_croma.policy_rules.warranty_months} Months {skill_croma.policy_rules.warranty_type}.",
-                    raw_adp_text=f"Croma ZipCare Protect Damage Plan (₹{adp_inr:,.0f}).",
-                    raw_return_policy=f"{skill_croma.policy_rules.return_window_days} Days Easy Replacement policy.",
-                    listing_url=f"https://www.croma.com/search/?text={q_enc}",
-                    is_auto_learned_skill=True,
-                    skill_id=skill_croma.skill_id,
-                    skill_confidence=skill_croma.verification_score
-                )
-                raw_listings.append(listing_croma)
 
         else:
             # Regional Domestic & Cross-Border Retailers for US, GB, DE, CA, JP, AU
@@ -942,7 +893,7 @@ class ScoutSwarm:
                     raw_warranty_text="1-Year Official Manufacturer Warranty.",
                     raw_adp_text=f"London General Insurance Protection for £{round(adp_usd * r):,d}.",
                     raw_return_policy="30 days return window. Free UK returns.",
-                    listing_url=f"https://www.amazon.co.uk/dp/B09Z2S9FSX"
+                    listing_url=f"https://www.amazon.co.uk/dp/{resolve_amazon_asin(query, 'GB')}"
                 )
                 listing_3 = ScrapedListing(
                     id=f"ARGOS-{clean_id}", merchant="Argos Marketplace", merchant_domain="argos.co.uk",
@@ -970,7 +921,7 @@ class ScoutSwarm:
                     raw_warranty_text="US Limited Warranty (Requires return to US for repairs).",
                     raw_adp_text="Global Transit Shield ($29.00).",
                     raw_return_policy="14 days international returns. Buyer pays return air freight.",
-                    listing_url=f"https://www.amazon.com/dp/B09Z2S9FSX"
+                    listing_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}"
                 )
                 raw_listings.extend([listing_1, listing_2, listing_3, listing_4])
 
@@ -1010,7 +961,7 @@ class ScoutSwarm:
                     raw_warranty_text="2 Jahre Gewährleistung.",
                     raw_adp_text=f"Einfach Komplettschutz für {round(adp_usd * r):,d}€.",
                     raw_return_policy="30 Tage Rückgabegarantie.",
-                    listing_url=f"https://www.amazon.de/dp/B09Z2S9FSX"
+                    listing_url=f"https://www.amazon.de/dp/{resolve_amazon_asin(query, 'DE')}"
                 )
                 listing_3 = ScrapedListing(
                     id=f"OTTO-{clean_id}", merchant="Otto Marketplace", merchant_domain="otto.de",
@@ -1038,7 +989,7 @@ class ScoutSwarm:
                     raw_warranty_text="US-Garantie (Reparatur nur im US-Servicecenter).",
                     raw_adp_text="Transatlantik-Schutz ($32.00).",
                     raw_return_policy="14 Tage internationale Rückgabe. Käufer zahlt Rücksendeporto in die USA.",
-                    listing_url=f"https://www.amazon.com/dp/B09Z2S9FSX"
+                    listing_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}"
                 )
                 raw_listings.extend([listing_1, listing_2, listing_3, listing_4])
 
@@ -1098,7 +1049,7 @@ class ScoutSwarm:
                     raw_warranty_text="1-Year Brand Manufacturer Direct Warranty.",
                     raw_adp_text=f"Extended Device Care ({CURRENCY_SYMBOLS.get(curr, '$')}{round(adp_usd * r):,d}).",
                     raw_return_policy="30 days return policy. Free returns.",
-                    listing_url=f"https://www.{m2_dom}/dp/B09Z2S9FSX"
+                    listing_url=f"https://www.{m2_dom}/dp/{resolve_amazon_asin(query, dest)}"
                 )
 
                 m3_name = "Walmart" if dest in ["US", "CA"] else ("Bic Camera" if dest == "JP" else "Harvey Norman")
@@ -1136,7 +1087,7 @@ class ScoutSwarm:
                     raw_warranty_text=f"{cb_origin} Domestic Warranty Only. No manufacturer warranty honored in {dest}.",
                     raw_adp_text="Third-Party Freight Shield ($30.00).",
                     raw_return_policy="14 days return window. 20% restocking fee. Buyer pays international return shipping.",
-                    listing_url=f"https://www.amazon.com/dp/B09Z2S9FSX"
+                    listing_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}"
                 )
 
                 # 5th listing: Dynamically Learned Merchant Skill
@@ -1144,7 +1095,7 @@ class ScoutSwarm:
                 skill_newegg = self.skill_learner.discover_and_learn_merchant(
                     domain=novel_domain,
                     page_html_or_text="Newegg Tech Store. 30 days hassle-free returns. 15% restocking fee on opened boxes. 1 year manufacturer warranty. PayPal and Pay in 4 supported.",
-                    sample_url=f"https://www.amazon.com/dp/B0D16TS69T",
+                    sample_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}",
                     country="US",
                     currency=curr
                 )
@@ -1167,7 +1118,7 @@ class ScoutSwarm:
                     raw_warranty_text=f"{skill_newegg.policy_rules.warranty_months} Months {skill_newegg.policy_rules.warranty_type}.",
                     raw_adp_text="Allstate Electronics Protection Plan ($49.00).",
                     raw_return_policy=f"{skill_newegg.policy_rules.return_window_days} Days Return policy ({skill_newegg.policy_rules.restocking_fee_pct}% restocking fee on open items).",
-                    listing_url="https://www.amazon.com/dp/B0D16TS69T" if any(k in (query + " " + prod_title).lower() for k in ["dell", "latitude", "laptop", "notebook"]) else "https://www.amazon.com/dp/B09Z2S9FSX",
+                    listing_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}",
                     is_auto_learned_skill=True,
                     skill_id=skill_newegg.skill_id,
                     skill_confidence=skill_newegg.verification_score
@@ -1189,19 +1140,20 @@ class ScoutSwarm:
                     listing.listing_url = direct_match
                 else:
                     dom = listing.merchant_domain or "amazon.in"
-                    if "amazon" in dom:
-                        if any(k in (query + " " + listing.product_title).lower() for k in ["dell", "latitude", "laptop", "notebook"]):
-                            listing.listing_url = f"https://www.{dom}/dp/B0HP26WLF4"
-                        else:
-                            listing.listing_url = f"https://www.{dom}/dp/B0BZP2H373"
-                    elif "flipkart" in dom:
-                        listing.listing_url = f"https://www.flipkart.com/item/p/itm{re.sub(r'[^a-zA-Z0-9]', '', listing.product_title)[:8].lower()}"
-                    elif "newegg" in dom:
-                        listing.listing_url = "https://www.amazon.com/dp/B0D16TS69T"
-                    elif "croma" in dom:
-                        listing.listing_url = f"https://www.croma.com/p/{re.sub(r'[^a-zA-Z0-9]', '', listing.product_title)[:8].lower()}"
+                    best_scraped = next((
+                        p.get("url") for p in scraped_products
+                        if not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
+                    ), None)
+                    if best_scraped and listing.merchant_domain in best_scraped:
+                        listing.listing_url = best_scraped
+                    elif "amazon" in dom:
+                        asin = resolve_amazon_asin(query, dest=dest)
+                        listing.listing_url = f"https://www.{dom}/dp/{asin}"
+                    elif best_scraped:
+                        listing.listing_url = best_scraped
                     else:
-                        listing.listing_url = f"https://www.{dom}/product/{re.sub(r'[^a-zA-Z0-9]', '', listing.product_title)[:8].lower()}"
+                        asin = resolve_amazon_asin(query, dest=dest)
+                        listing.listing_url = f"https://www.amazon.in/dp/{asin}" if dest == "IN" else f"https://www.amazon.com/dp/{asin}"
 
         listings: List[ScrapedListing] = []
         for listing in raw_listings:

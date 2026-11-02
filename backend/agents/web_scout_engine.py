@@ -61,6 +61,14 @@ DOMAIN_STORE_NAMES = {
     "tatacliq.com": "Tata CLiQ"
 }
 
+KNOWN_BRANDS = [
+    'dell', 'sony', 'apple', 'hp', 'lenovo', 'asus', 'acer', 'samsung', 'msi',
+    'cmf', 'nothing', 'oneplus', 'bose', 'sennheiser', 'jbl', 'boat', 'noise',
+    'realme', 'xiaomi', 'redmi', 'poco', 'google', 'pixel', 'motorola', 'oppo',
+    'vivo', 'iqoo', 'nike', 'adidas', 'nintendo', 'xbox', 'playstation', 'logitech',
+    'razer', 'corsair', 'canon', 'nikon', 'lg', 'panasonic', 'anker', 'marshall'
+]
+
 class LiveWebScoutEngine:
     def __init__(self):
         self.headers = {
@@ -203,6 +211,12 @@ class LiveWebScoutEngine:
                         # Filter out accessory results if user is searching for the actual device
                         title_lower = raw_title.lower()
                         if not has_accessory_intent and any(w in title_lower for w in accessory_stop_words):
+                            continue
+                        
+                        # Brand relevance gating: reject competitor brands & cheap clones
+                        q_lower = query.lower()
+                        brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
+                        if brand_keywords and not any(b in title_lower for b in brand_keywords):
                             continue
                             
                         try:
@@ -412,14 +426,16 @@ class LiveWebScoutEngine:
                 if not has_accessory_intent and any(w in title_lower for w in accessory_stop_words):
                     continue
 
-                # Brand & query relevance filter: eliminate sponsored cross-brand ads
-                brand_keywords = [b for b in ['dell', 'sony', 'apple', 'hp', 'lenovo', 'asus', 'samsung', 'acer'] if b in q_lower]
+                # Brand & query relevance filter: eliminate sponsored cross-brand ads and knockoffs
+                brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
                 if brand_keywords and not any(b in title_lower for b in brand_keywords):
                     continue
-                # Specific series check (e.g. latitude or xm5)
+                # Specific series check (e.g. latitude or xm5 or cmf)
                 if 'latitude' in q_lower and not any(k in title_lower for k in ['latitude', 'dell']):
                     continue
                 if 'xm5' in q_lower and not any(k in title_lower for k in ['xm5', '1000xm5', 'sony']):
+                    continue
+                if 'cmf' in q_lower and not any(k in title_lower for k in ['cmf', 'nothing']):
                     continue
 
                 # 3. Live Price
@@ -736,6 +752,11 @@ class LiveWebScoutEngine:
 
                     t_lower = raw_title.lower()
                     
+                    # Brand relevance gating: reject competitor brands & cheap clones
+                    brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
+                    if brand_keywords and not any(b in t_lower for b in brand_keywords):
+                        continue
+
                     # STRICT MODEL FILTER: Disqualify any listing lacking explicit model digits
                     if model_digits:
                         if not any(re.search(r'\b' + re.escape(m) + r'\b', t_lower) for m in model_digits):
@@ -952,38 +973,70 @@ class LiveWebScoutEngine:
             storage_addon_usd = 500.0
             storage_addon_inr = 45000.0
 
-        # 1. Premium Audio & Noise Canceling Headphones
-        if any(f in q for f in ["wh-1000", "wh1000", "airpods max", "airpods pro", "bose", "sennheiser", "momentum", "headphone", "earbud", "audio-technica"]):
-            if "xm5" in q or "1000xm5" in q:
+        # 1. Premium Audio, Noise Canceling Headphones & TWS Earbuds
+        if any(f in q for f in ["wh-1000", "wh1000", "airpods", "bose", "sennheiser", "momentum", "headphone", "earbud", "earbuds", "buds", "tws", "nothing", "cmf", "audio-technica"]):
+            if "cmf" in q or ("nothing" in q and ("buds" in q or "ear" in q)):
+                b_usd, b_inr, brand = 49.00, 3499.00, "CMF by Nothing"
+                title = "CMF by Nothing Buds Pro 2 with 50 dB ANC (Dual Drivers / LDAC)"
+                min_inr, max_inr = 1800.0, 6500.0
+                min_usd, max_usd = 25.0, 95.0
+            elif "xm5" in q or "1000xm5" in q:
                 b_usd, b_inr, brand = 399.99, 29990.00, "Sony"
                 title = "Sony WH-1000XM5 Wireless Noise-Cancelling Headphones"
+                min_inr, max_inr = 18000.0, 65000.0
+                min_usd, max_usd = 220.0, 650.0
             elif "xm4" in q or "1000xm4" in q:
                 b_usd, b_inr, brand = 348.00, 22990.00, "Sony"
                 title = "Sony WH-1000XM4 Wireless Noise-Cancelling Headphones"
+                min_inr, max_inr = 12000.0, 65000.0
+                min_usd, max_usd = 120.0, 650.0
             elif "airpods max" in q:
                 b_usd, b_inr, brand = 549.00, 59900.00, "Apple"
                 title = "Apple AirPods Max Wireless Over-Ear Headphones"
+                min_inr, max_inr = 30000.0, 75000.0
+                min_usd, max_usd = 300.0, 800.0
             elif "airpods pro" in q or "airpods" in q:
                 b_usd, b_inr, brand = 249.00, 24900.00, "Apple"
                 title = "Apple AirPods Pro (2nd Gen) with MagSafe Case (USB-C)"
+                min_inr, max_inr = 9000.0, 35000.0
+                min_usd, max_usd = 90.0, 350.0
             elif "bose" in q or "qc" in q:
                 b_usd, b_inr, brand = 429.00, 35900.00, "Bose"
                 title = "Bose QuietComfort Ultra Wireless Noise-Cancelling Headphones"
+                min_inr, max_inr = 15000.0, 55000.0
+                min_usd, max_usd = 150.0, 550.0
+            elif "galaxy buds" in q:
+                b_usd, b_inr, brand = 149.00, 11999.00, "Samsung"
+                title = "Samsung Galaxy Buds FE / Pro True Wireless Earbuds"
+                min_inr, max_inr = 4000.0, 20000.0
+                min_usd, max_usd = 50.0, 250.0
+            elif "oneplus" in q and "buds" in q:
+                b_usd, b_inr, brand = 45.00, 2999.00, "OnePlus"
+                title = "OnePlus Nord Buds True Wireless Earbuds"
+                min_inr, max_inr = 1200.0, 7000.0
+                min_usd, max_usd = 20.0, 100.0
             else:
-                b_usd, b_inr, brand = 349.00, 22990.00, "Premium Audio"
-                title = f"{query.title()} Wireless ANC Headphones"
+                is_earbud_type = any(k in q for k in ["buds", "earbud", "earbuds", "tws", "in-ear"])
+                b_usd = 49.00 if is_earbud_type else 349.00
+                b_inr = 3999.00 if is_earbud_type else 22990.00
+                brand = "Audio OEM"
+                title = f"{query.title()} True Wireless Earbuds" if is_earbud_type else f"{query.title()} Wireless ANC Headphones"
+                min_inr, max_inr = (1200.0, 15000.0) if is_earbud_type else (12000.0, 65000.0)
+                min_usd, max_usd = (20.0, 180.0) if is_earbud_type else (120.0, 650.0)
 
             return {
-                "category": "Premium Noise-Cancelling Headphones",
+                "category": "Wireless Earbuds & Headphones",
                 "brand": brand,
                 "title": title,
                 "base_usd": b_usd,
                 "inr_baseline": b_inr,
-                "min_inr": 12000.0, "max_inr": 65000.0,
-                "min_usd": 120.0, "max_usd": 650.0,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
                 "adp_provider": f"{brand} Care Protection Plan",
-                "adp_usd": 39.0, "adp_inr": 2499.0,
-                "ex_usd": 40.0, "ex_inr": 3000.0
+                "adp_usd": 19.0 if b_usd < 100 else 39.0,
+                "adp_inr": 999.0 if b_inr < 8000 else 2499.0,
+                "ex_usd": 15.0 if b_usd < 100 else 40.0,
+                "ex_inr": 1000.0 if b_inr < 8000 else 3000.0
             }
 
         # 2. Footwear & Sneakers
