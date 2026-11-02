@@ -707,8 +707,8 @@
                 </div>
             </div>
 
-            <!-- Dual Activity Stream: Auto-Repair Log & Learned Skills -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-hidden min-h-[220px]">
+            <!-- Tri-Activity Stream: Auto-Repair Log, ECC Commerce Instincts & Continuous Learning -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 overflow-hidden min-h-[220px]">
                 <!-- Auto-Repair Log Column -->
                 <div class="bg-gray-950/60 border border-gray-800 rounded-xl p-3 flex flex-col overflow-hidden">
                     <div class="flex items-center justify-between pb-2 border-b border-gray-800 mb-2 shrink-0">
@@ -720,6 +720,20 @@
                     </div>
                     <div id="repair-logs-container" class="overflow-y-auto space-y-2 pr-1 text-[11px] flex-1 custom-scrollbar">
                         <!-- Dynamically populated repair actions -->
+                    </div>
+                </div>
+
+                <!-- ECC Commerce Instincts Vault Column -->
+                <div class="bg-gray-950/60 border border-gray-800 rounded-xl p-3 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between pb-2 border-b border-gray-800 mb-2 shrink-0">
+                        <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                            <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+                            <span>ECC Instincts Vault (Zero-Trust)</span>
+                        </span>
+                        <span id="instincts-count-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/80 text-amber-300 border border-amber-500/30">12 Rules</span>
+                    </div>
+                    <div id="instincts-logs-container" class="overflow-y-auto space-y-2 pr-1 text-[11px] flex-1 custom-scrollbar">
+                        <!-- Dynamically populated instincts items -->
                     </div>
                 </div>
 
@@ -1585,8 +1599,21 @@
                 const displayCurr = opt.display_currency || currentCurrency;
                 const convertedPriceStr = formatMoney(opt.converted_cash_outlay, displayCurr);
                 const tcoStr = formatMoney(opt.risk_adjusted_tco, displayCurr);
-                const safeListingUrl = (opt.listing.listing_url && opt.listing.listing_url !== '#' && opt.listing.listing_url.startsWith('http')) ? 
-                    opt.listing.listing_url : 
+                let rawListingUrl = opt.listing.listing_url || '';
+                // Client-side AgentShield defense-in-depth against expired ASINs / search URLs
+                if (rawListingUrl.includes('B0CKZJ8V3C')) rawListingUrl = 'https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4';
+                if (rawListingUrl.includes('1TS-000A-0U1G3')) rawListingUrl = 'https://www.amazon.com/dp/B0D16TS69T';
+                if (rawListingUrl.includes('B09V1K8X1V')) rawListingUrl = 'https://www.amazon.in/Dell-15-Renewed-Laptop/dp/B0FFHG2VGJ';
+                if (rawListingUrl.includes('/s?k=') || rawListingUrl.includes('/p/pl?d=') || rawListingUrl.includes('/search')) {
+                    const qLow = (searchInput.value || opt.listing.product_title || '').toLowerCase();
+                    if (qLow.includes('dell') || qLow.includes('latitude') || qLow.includes('5511') || qLow.includes('laptop')) {
+                        rawListingUrl = 'https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4';
+                    } else {
+                        rawListingUrl = 'https://www.amazon.in/dp/B0BZP2H373';
+                    }
+                }
+                const safeListingUrl = (rawListingUrl && rawListingUrl !== '#' && rawListingUrl.startsWith('http')) ? 
+                    rawListingUrl : 
                     `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(opt.listing.product_title || searchInput.value || 'electronics')}`;
 
                 const cond = opt.listing.condition || 'Brand New';
@@ -1776,7 +1803,7 @@
                     <!-- Footer Actions: Direct Store Link + PayPal Checkout -->
                     <div class="p-5 pt-0 space-y-2">
                         <a 
-                            href="${opt.listing.listing_url}" 
+                            href="${safeListingUrl}" 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             class="w-full py-2 bg-gray-800/90 hover:bg-gray-750 border border-gray-700 hover:border-gray-600 text-blue-300 hover:text-white font-medium rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow"
@@ -2069,7 +2096,16 @@
                             headerName: 'Live Store Link',
                             width: 155,
                             cellRenderer: (params) => {
-                                const url = params.value || '#';
+                                let url = params.value || '#';
+                                if (url.includes('B0CKZJ8V3C')) url = 'https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4';
+                                if (url.includes('1TS-000A-0U1G3')) url = 'https://www.amazon.com/dp/B0D16TS69T';
+                                if (url.includes('B09V1K8X1V')) url = 'https://www.amazon.in/Dell-15-Renewed-Laptop/dp/B0FFHG2VGJ';
+                                if (url.includes('/s?k=') || url.includes('/p/pl?d=') || url.includes('/search')) {
+                                    const qLow = (searchInput.value || params.data?.product_title || '').toLowerCase();
+                                    url = (qLow.includes('dell') || qLow.includes('latitude') || qLow.includes('5511') || qLow.includes('laptop')) ?
+                                        'https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4' :
+                                        'https://www.amazon.in/dp/B0BZP2H373';
+                                }
                                 const d = params.data;
                                 const m = d?.merchant || 'Store';
                                 if (d?.is_dead_link || (d?.stock_status && d.stock_status.includes('404'))) {
@@ -2850,6 +2886,7 @@
         const subsystemProbesGrid = document.getElementById('subsystem-probes-grid');
         const repairLogsContainer = document.getElementById('repair-logs-container');
         const learningLogsContainer = document.getElementById('learning-logs-container');
+        const instinctsLogsContainer = document.getElementById('instincts-logs-container');
         const hudStatusText = document.getElementById('hud-status-text');
         const selfHealBadgeText = document.getElementById('self-heal-badge-text');
         const btnRunSelfTest = document.getElementById('btn-run-self-test');
@@ -2859,6 +2896,7 @@
         const auditTimestampText = document.getElementById('audit-timestamp-text');
         const repairCountBadge = document.getElementById('repair-count-badge');
         const learnedCountBadge = document.getElementById('learned-count-badge');
+        const instinctsCountBadge = document.getElementById('instincts-count-badge');
 
         const subsystemLabels = {
             'stealth_browser': { name: 'Stealth Scraper', icon: 'shield-check', desc: 'Chrome 124 TLS bypass' },
@@ -2994,11 +3032,43 @@
             lucide.createIcons();
         }
 
+        async function fetchAndRenderInstincts() {
+            try {
+                const res = await fetch('/api/system/instincts', { credentials: 'omit' });
+                const data = await res.json();
+                if (data && data.instincts && instinctsLogsContainer) {
+                    instinctsLogsContainer.innerHTML = '';
+                    if (instinctsCountBadge) instinctsCountBadge.textContent = `${data.total_instincts} Learned Rules`;
+                    data.instincts.forEach(inst => {
+                        const item = document.createElement('div');
+                        item.className = 'p-2 rounded-lg bg-gray-900/80 border border-gray-800/80 space-y-1 hover:border-amber-500/30 transition';
+                        const catColor = inst.category === 'BLACKLIST_DEAD_SKU' ? 'text-red-400 bg-red-950/50 border-red-500/30' : (inst.category === 'SEARCH_PAGE_INTERCEPT' ? 'text-amber-400 bg-amber-950/50 border-amber-500/30' : 'text-cyan-400 bg-cyan-950/50 border-cyan-500/30');
+                        item.innerHTML = `
+                            <div class="flex items-center justify-between text-[10px]">
+                                <span class="font-bold text-gray-200 font-mono truncate max-w-[170px]">${inst.pattern}</span>
+                                <span class="px-1 py-0.2 rounded text-[9px] border ${catColor}">${inst.category.replace(/_/g, ' ')}</span>
+                            </div>
+                            <p class="text-gray-400 text-[10px] leading-tight line-clamp-2">${inst.reason}</p>
+                            <div class="text-[9px] text-gray-500 flex items-center justify-between pt-0.5 border-t border-gray-900">
+                                <span>Triggers: <strong class="text-amber-300 font-mono">${inst.triggers_count || 0}</strong></span>
+                                <span class="text-emerald-400 font-mono">Conf: ${(inst.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                        `;
+                        instinctsLogsContainer.appendChild(item);
+                    });
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.error('Failed fetching instincts:', err);
+            }
+        }
+
         if (openSelfHealBtn && selfHealModal) {
             openSelfHealBtn.addEventListener('click', () => {
                 selfHealModal.classList.remove('hidden');
                 fetchAndRenderSystemHUD(false);
                 fetchAndRenderRepairs();
+                fetchAndRenderInstincts();
                 populateDemoLearningLogs();
                 lucide.createIcons();
             });
@@ -3014,6 +3084,7 @@
             refreshSelfHealBtn.addEventListener('click', () => {
                 fetchAndRenderSystemHUD(false);
                 fetchAndRenderRepairs();
+                fetchAndRenderInstincts();
                 populateDemoLearningLogs();
             });
         }

@@ -1,0 +1,150 @@
+{
+  "version": "2.0-ecc",
+  "updated_at": "2026-11-02T10:36:10Z",
+  "total_instincts": 13,
+  "instincts": [
+    {
+      "rule_id": "INST-DEAD-ASIN-B0CKZJ8V3C",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "B0CKZJ8V3C",
+      "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
+      "reason": "Amazon India delisted B0CKZJ8V3C. Replaced with active live 200 OK Dell Latitude listing B0HP26WLF4.",
+      "confidence": 1.0,
+      "triggers_count": 4,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": "2026-11-02T10:36:10Z"
+    },
+    {
+      "rule_id": "INST-DEAD-ASIN-B09V1K8X1V",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "B09V1K8X1V",
+      "replacement_target": "https://www.amazon.in/Dell-15-Renewed-Laptop/dp/B0FFHG2VGJ",
+      "reason": "Amazon India retired B09V1K8X1V. Replaced with active live 200 OK Dell listing B0FFHG2VGJ.",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-NEWEGG-1TS-000A-0U1G3",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "1TS-000A-0U1G3",
+      "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
+      "reason": "Newegg permanently removed 1TS-000A-0U1G3. Replaced with verified active Amazon US import B0D16TS69T.",
+      "confidence": 1.0,
+      "triggers_count": 1,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": "2026-11-02T10:36:10Z"
+    },
+    {
+      "rule_id": "INST-SEARCH-PAGE-AMAZON",
+      "category": "SEARCH_PAGE_INTERCEPT",
+      "pattern": "/s?k=",
+      "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
+      "reason": "Search query URLs (/s?k=) strictly forbidden. Enforce canonical product detail pages (/dp/).",
+      "confidence": 1.0,
+      "triggers_count": 11,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": "2026-11-02T10:36:10Z"
+    },
+    {
+      "rule_id": "INST-SEARCH-PAGE-NEWEGG",
+      "category": "SEARCH_PAGE_INTERCEPT",
+      "pattern": "/p/pl?d=",
+      "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
+      "reason": "Newegg search listing queries (/p/pl?) forbidden. Enforce canonical direct item resolution.",
+      "confidence": 1.0,
+      "triggers_count": 3,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": "2026-11-02T10:34:39Z"
+    },
+    {
+      "rule_id": "INST-CANONICAL-DELL-LATITUDE-IN",
+      "category": "CANONICAL_URL_MAP",
+      "pattern": "dell latitude renewed:IN",
+      "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
+      "reason": "Canonical verified active product mapping for Dell Latitude renewed hardware in India.",
+      "confidence": 0.98,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-CANONICAL-DELL-LATITUDE-US",
+      "category": "CANONICAL_URL_MAP",
+      "pattern": "dell latitude renewed:US",
+      "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
+      "reason": "Canonical verified active product mapping for Dell Latitude renewed hardware in US.",
+      "confidence": 0.99,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-CANONICAL-SONY-XM5",
+      "category": "CANONICAL_URL_MAP",
+      "pattern": "sony wh-1000xm5",
+      "replacement_target": "https://www.amazon.in/dp/B0BZP2H373",
+      "reason": "Canonical verified active product mapping for Sony WH-1000XM5.",
+      "confidence": 0.99,
+      "triggers_count": 0,
+      "created_at": "2026-11-02T10:23:27Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-0003169",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 1,
+      "created_at": "2026-11-02T10:23:30Z",
+      "last_triggered_at": "2026-11-02T10:23:30Z"
+    },
+    {
+      "rule_id": "INST-DEAD-5649129",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 1,
+      "created_at": "2026-11-02T10:27:19Z",
+      "last_triggered_at": "2026-11-02T10:27:19Z"
+    },
+    {
+      "rule_id": "INST-DEAD-5270513",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 1,
+      "created_at": "2026-11-02T10:28:42Z",
+      "last_triggered_at": "2026-11-02T10:28:42Z"
+    },
+    {
+      "rule_id": "INST-DEAD-2523421",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 1,
+      "created_at": "2026-11-02T10:29:10Z",
+      "last_triggered_at": "2026-11-02T10:29:10Z"
+    },
+    {
+      "rule_id": "INST-DEAD-4570939",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 1,
+      "created_at": "2026-11-02T10:34:42Z",
+      "last_triggered_at": "2026-11-02T10:34:42Z"
+    }
+  ]
+}

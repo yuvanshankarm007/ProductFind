@@ -283,6 +283,33 @@ async def get_repair_history():
     """Returns autonomous self-healing fix records."""
     return [r.model_dump() for r in autonomous_healer.fixer.fix_history]
 
+@app.get("/api/system/instincts")
+async def get_system_instincts():
+    """Returns learned ECC-style operational instincts and negative failure patterns."""
+    from .core.instincts import commerce_instincts
+    instincts = commerce_instincts.list_instincts()
+    return {
+        "status": "success",
+        "total_instincts": len(instincts),
+        "instincts": [inst.model_dump() for inst in instincts]
+    }
+
+class LearnInstinctRequest(BaseModel):
+    pattern: str
+    reason: str
+    replacement_target: Optional[str] = None
+
+@app.post("/api/system/instincts/learn")
+async def add_system_instinct(req: LearnInstinctRequest):
+    """Crystallizes a new operational instinct or negative pattern into persistent memory."""
+    from .core.instincts import commerce_instincts
+    inst = commerce_instincts.record_dead_link_instinct(
+        pattern=req.pattern,
+        reason=req.reason,
+        replacement_url=req.replacement_target
+    )
+    return {"status": "success", "instinct": inst.model_dump()}
+
 @app.get("/api/preferences")
 async def get_preferences():
     """Returns available localized preferences."""

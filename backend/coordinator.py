@@ -29,6 +29,7 @@ from .agents.tier2_processors import ProcessingSwarm
 from .agents.tier3_compilers import StrategyCompiler
 from .paypal_service import PayPalService
 from .schemas import RiskPreferences
+from .core.hooks import SwarmLifecycleHooks
 
 # Circuit-breaker timeout (seconds) for the scout live-scrape phase (supports multi-engine stealth web scraping)
 _SCOUT_TIMEOUT = 8.5
@@ -43,6 +44,7 @@ class SentinelCoordinator:
         self.processors = ProcessingSwarm(bus, self.scouts, self.fx_svc, self.paypal_svc)
         self.compiler = StrategyCompiler(bus, self.fx_svc)
         self.predictor = PricePredictorAgent(self.fx_svc)
+        self.hooks = SwarmLifecycleHooks(bus=bus)
         self._last_state = None
 
     async def _run_scouts_with_circuit_breaker(
@@ -128,6 +130,9 @@ class SentinelCoordinator:
             user_preferences=preferences
         )
 
+        # 0. Lifecycle Hook: Pre-Search Ingestion & Geographic Calibration (ECC Pattern)
+        await self.hooks.pre_search(query=query, country=country, currency=currency)
+
         await self.bus.emit(
             source="Coordinator",
             target="Swarm",
@@ -141,11 +146,13 @@ class SentinelCoordinator:
         )
 
         # 1. Tier 1: Scout Swarm with circuit-breaker
-        listings = await self._run_scouts_with_circuit_breaker(
+        raw_listings = await self._run_scouts_with_circuit_breaker(
             query=query,
             destination_country=preferences.country,
             language=preferences.language,
         )
+        # Lifecycle Hook: Post-Scout AgentShield Zero-Trust Link & Price Audit (ECC Pattern)
+        listings = await self.hooks.post_scout(raw_listings, query=query, dest_country=preferences.country)
         state.raw_listings = listings
 
         # 2. Tier 2: Parallel Specialist Processing with Feedback Loops
@@ -289,6 +296,10 @@ class SentinelCoordinator:
             preferences=preferences,
             risk_prefs=risk_prefs,
         )
+
+        # Lifecycle Hook: Pre-Render Final Audit & AgentShield Verification (ECC Pattern)
+        final_options = await self.hooks.pre_render(final_options, query=query, dest_country=preferences.country)
+
         state.final_options = final_options
         state.comparison_matrix = comp_matrix
         state.is_complete = True
@@ -324,6 +335,11 @@ class SentinelCoordinator:
             paypal_evals=state.paypal_evaluations,
             preferences=state.user_preferences,
             risk_prefs=risk_prefs,
+        )
+        final_options = await self.hooks.pre_render(
+            final_options,
+            query=state.search_query,
+            dest_country=state.user_preferences.country
         )
         state.final_options = final_options
         state.comparison_matrix = comp_matrix
