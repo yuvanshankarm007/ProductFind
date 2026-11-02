@@ -1,7 +1,7 @@
 {
-  "dossier_id": "DOSSIER-ORDER-PP-7CEA4D",
+  "dossier_id": "DOSSIER-ORDER-PP-856AA0",
   "paypal_order_id": "ORDER-PP-2690000-INR",
-  "timestamp": "2026-11-02T05:44:12.792123Z",
+  "timestamp": "2026-11-02T08:00:37.604448Z",
   "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
   "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
   "item_title": "Dell Latitude 5511 (Refurbished Grade A)",
@@ -14,8 +14,8 @@
   "warranty_claims_evidence": "6-Month Seller Warranty",
   "merkle_spec_hash": "21ca6a280a486fd7b24dde663f0ba57ef04f542440bd2e2f37cafedc9e980d1a",
   "merkle_terms_hash": "6f9ad99d10738e66cd800725533dfa3608d645e591322d64f7dedf082dd83bf0",
-  "merkle_pricing_hash": "4709ef10212765f8a9126c640d49b9c0233f8428e179ef23733e23bcf271c9c2",
-  "cryptographic_hash": "7cea4dc9e557b64af360aa235fc1c3b0820b94ce65fe257dc41662e213c4f289",
+  "merkle_pricing_hash": "c672df6f88b8ab9e29b26fee2029cc85a6830b9ca9a3fa7bf947938e4f8c9a21",
+  "cryptographic_hash": "856aa0833da4993324e10dd3d0ad7bdc8fd88986ae6cbadc57f826304edee0a7",
   "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
   "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
 }
