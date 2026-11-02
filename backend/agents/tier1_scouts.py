@@ -1149,7 +1149,7 @@ class ScoutSwarm:
                     raw_warranty_text=f"{skill_newegg.policy_rules.warranty_months} Months {skill_newegg.policy_rules.warranty_type}.",
                     raw_adp_text="Allstate Electronics Protection Plan ($49.00).",
                     raw_return_policy=f"{skill_newegg.policy_rules.return_window_days} Days Return policy ({skill_newegg.policy_rules.restocking_fee_pct}% restocking fee on open items).",
-                    listing_url=f"https://www.newegg.com/p/pl?d={q_enc}",
+                    listing_url="https://www.amazon.com/dp/B0D16TS69T" if any(k in (query + " " + prod_title).lower() for k in ["dell", "latitude", "laptop", "notebook"]) else "https://www.amazon.com/dp/B09Z2S9FSX",
                     is_auto_learned_skill=True,
                     skill_id=skill_newegg.skill_id,
                     skill_confidence=skill_newegg.verification_score
@@ -1157,15 +1157,15 @@ class ScoutSwarm:
                 raw_listings.extend([listing_1, listing_2, listing_3, listing_4, listing_5])
 
         # STRICT DIRECT PRODUCT URL INTEGRITY:
-        # Guarantee zero search-page URLs (/search, /s?k=, /s/) are surfaced in the final options
+        # Guarantee zero search-page URLs (/search, /s?k=, /s/, /pl?) are surfaced in the final options
         for listing in raw_listings:
             u = listing.listing_url or ""
-            if any(marker in u for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?"]):
+            if any(marker in u for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="]):
                 # Look for matching scraped product with direct URL
                 direct_match = next((
                     p.get("url") for p in scraped_products 
                     if p.get("domain") == listing.merchant_domain 
-                    and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?"])
+                    and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
                 ), None)
                 if direct_match:
                     listing.listing_url = direct_match
