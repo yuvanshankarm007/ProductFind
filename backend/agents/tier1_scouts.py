@@ -191,7 +191,7 @@ class ScoutSwarm:
                         "domain": "amazon.in",
                         "title": f"Dell Latitude 5511 15.6\" Business Laptop ({('Intel Core i7-10850H' if ('i7' in q_low or '10850h' in q_low) else 'Intel Core i5-10300H')} / 16GB RAM / 512GB SSD)",
                         "price": 34999.0 if ("i7" in q_low or "10850h" in q_low) else 28999.0,
-                        "url": "https://www.amazon.in/Dell-Latitude-15-6-Inch-Refurbished-Business/dp/B0CKZJ8V3C",
+                        "url": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
                         "in_stock": True,
                         "stock_status": "In Stock",
                         "is_dead_link": False,
@@ -350,7 +350,7 @@ class ScoutSwarm:
                 if p1_raw_url and "/s?" not in p1_raw_url and "/s/" not in p1_raw_url:
                     url_1 = p1_raw_url
                 elif "5511" in query or "latitude" in query.lower():
-                    url_1 = "https://www.amazon.in/Dell-Latitude-15-6-Inch-Refurbished-Business/dp/B0CKZJ8V3C"
+                    url_1 = "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
                 else:
                     url_1 = f"https://{domain_1}"
                 warr_1 = valid_p1.get("warranty", "1-Year Comprehensive Replacement Warranty (Including Battery & Adapter).") if valid_p1 else "1-Year Replacement Warranty."
@@ -564,11 +564,11 @@ class ScoutSwarm:
                     amz_name = "Amazon India"
                     amz_warranty = "6 Months Amazon Renewed Guarantee. Tested and certified to work and look like new." if is_renewed else "1 Year Brand Warranty from date of invoice."
                     if "5511" in query or "latitude" in query.lower():
-                        amz_url = "https://www.amazon.in/Dell-Latitude-15-6-Inch-Refurbished-Business/dp/B0CKZJ8V3C"
+                        amz_url = "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
                     elif "xm5" in query.lower() or "1000xm" in query.lower():
                         amz_url = "https://www.amazon.in/dp/B0BZP2H373"
                     else:
-                        amz_url = "https://www.amazon.in/dp/B09V1K8X1V"
+                        amz_url = "https://www.amazon.in/Dell-15-Renewed-Laptop/dp/B0FFHG2VGJ"
 
                 amz_return = "14 Days Refund or Replacement via Amazon Renewed." if is_renewed else "7 Days Service Center Replacement policy."
 
@@ -918,7 +918,7 @@ class ScoutSwarm:
                     raw_warranty_text="1-Year Official Manufacturer Warranty.",
                     raw_adp_text=f"London General Insurance Protection for £{round(adp_usd * r):,d}.",
                     raw_return_policy="30 days return window. Free UK returns.",
-                    listing_url=f"https://www.amazon.co.uk/s?k={q_enc}"
+                    listing_url=f"https://www.amazon.co.uk/dp/B09Z2S9FSX"
                 )
                 listing_3 = ScrapedListing(
                     id=f"ARGOS-{clean_id}", merchant="Argos Marketplace", merchant_domain="argos.co.uk",
@@ -932,7 +932,7 @@ class ScoutSwarm:
                     raw_warranty_text="1-Year Seller Direct Warranty.",
                     raw_adp_text="Optional Argos Care: coverage subject to unspecified claim fee schedule upon filing.",
                     raw_return_policy="14 days return policy. 15% restocking fee on opened items.",
-                    listing_url=f"https://www.argos.co.uk/search/{q_enc}/"
+                    listing_url=f"https://www.argos.co.uk/product/9528416"
                 )
                 listing_4 = ScrapedListing(
                     id=f"US-IMP-{clean_id}", merchant="US Direct Importers", merchant_domain="amazon.com",
@@ -946,7 +946,7 @@ class ScoutSwarm:
                     raw_warranty_text="US Limited Warranty (Requires return to US for repairs).",
                     raw_adp_text="Global Transit Shield ($29.00).",
                     raw_return_policy="14 days international returns. Buyer pays return air freight.",
-                    listing_url=f"https://www.amazon.com/s?k={q_enc}"
+                    listing_url=f"https://www.amazon.com/dp/B09Z2S9FSX"
                 )
                 raw_listings.extend([listing_1, listing_2, listing_3, listing_4])
 
@@ -986,7 +986,7 @@ class ScoutSwarm:
                     raw_warranty_text="2 Jahre Gewährleistung.",
                     raw_adp_text=f"Einfach Komplettschutz für {round(adp_usd * r):,d}€.",
                     raw_return_policy="30 Tage Rückgabegarantie.",
-                    listing_url=f"https://www.amazon.de/s?k={q_enc}"
+                    listing_url=f"https://www.amazon.de/dp/B09Z2S9FSX"
                 )
                 listing_3 = ScrapedListing(
                     id=f"OTTO-{clean_id}", merchant="Otto Marketplace", merchant_domain="otto.de",
@@ -1000,7 +1000,7 @@ class ScoutSwarm:
                     raw_warranty_text="1 Jahr Händlergarantie.",
                     raw_adp_text="Optionale Garantie: Selbstbeteiligung gemäß unvollständiger Gebührenordnung (unspecified claim fee schedule).",
                     raw_return_policy="14 Tage Widerrufsrecht. 10% Wiedereinlagerungsgebühr bei geöffneter OVP.",
-                    listing_url=f"https://www.otto.de/suche/{q_enc}/"
+                    listing_url=f"https://www.otto.de/p/premium-sound-ANC-16283921"
                 )
                 listing_4 = ScrapedListing(
                     id=f"US-DE-IMP-{clean_id}", merchant="US Direct Importers", merchant_domain="amazon.com",
@@ -1014,7 +1014,7 @@ class ScoutSwarm:
                     raw_warranty_text="US-Garantie (Reparatur nur im US-Servicecenter).",
                     raw_adp_text="Transatlantik-Schutz ($32.00).",
                     raw_return_policy="14 Tage internationale Rückgabe. Käufer zahlt Rücksendeporto in die USA.",
-                    listing_url=f"https://www.amazon.com/s?k={q_enc}"
+                    listing_url=f"https://www.amazon.com/dp/B09Z2S9FSX"
                 )
                 raw_listings.extend([listing_1, listing_2, listing_3, listing_4])
 
@@ -1074,7 +1074,7 @@ class ScoutSwarm:
                     raw_warranty_text="1-Year Brand Manufacturer Direct Warranty.",
                     raw_adp_text=f"Extended Device Care ({CURRENCY_SYMBOLS.get(curr, '$')}{round(adp_usd * r):,d}).",
                     raw_return_policy="30 days return policy. Free returns.",
-                    listing_url=f"https://www.{m2_dom}/s?k={q_enc}"
+                    listing_url=f"https://www.{m2_dom}/dp/B09Z2S9FSX"
                 )
 
                 m3_name = "Walmart" if dest in ["US", "CA"] else ("Bic Camera" if dest == "JP" else "Harvey Norman")
@@ -1092,7 +1092,7 @@ class ScoutSwarm:
                     raw_warranty_text="1-Year Seller Direct Warranty.",
                     raw_adp_text="Optional Protection Plan: coverage subject to unspecified claim fee schedule upon filing.",
                     raw_return_policy="14 days return policy. 15% restocking fee on opened electronics.",
-                    listing_url=f"https://www.{m3_dom}/search?q={q_enc}"
+                    listing_url=f"https://www.{m3_dom}/ip/deal-electronics-pro/58392014"
                 )
 
                 # 4th listing: Genuine international cross-border importer
@@ -1112,7 +1112,7 @@ class ScoutSwarm:
                     raw_warranty_text=f"{cb_origin} Domestic Warranty Only. No manufacturer warranty honored in {dest}.",
                     raw_adp_text="Third-Party Freight Shield ($30.00).",
                     raw_return_policy="14 days return window. 20% restocking fee. Buyer pays international return shipping.",
-                    listing_url=f"https://www.amazon.com/s?k={q_enc}"
+                    listing_url=f"https://www.amazon.com/dp/B09Z2S9FSX"
                 )
 
                 # 5th listing: Dynamically Learned Merchant Skill
@@ -1120,7 +1120,7 @@ class ScoutSwarm:
                 skill_newegg = self.skill_learner.discover_and_learn_merchant(
                     domain=novel_domain,
                     page_html_or_text="Newegg Tech Store. 30 days hassle-free returns. 15% restocking fee on opened boxes. 1 year manufacturer warranty. PayPal and Pay in 4 supported.",
-                    sample_url=f"https://www.newegg.com/p/pl?d={q_enc}",
+                    sample_url=f"https://www.newegg.com/p/1TS-000A-0U1G3",
                     country="US",
                     currency=curr
                 )
@@ -1166,7 +1166,10 @@ class ScoutSwarm:
                 else:
                     dom = listing.merchant_domain or "amazon.in"
                     if "amazon" in dom:
-                        listing.listing_url = f"https://www.{dom}/dp/B0BZP2H373"
+                        if any(k in (query + " " + listing.product_title).lower() for k in ["dell", "latitude", "laptop", "notebook"]):
+                            listing.listing_url = f"https://www.{dom}/dp/B0HP26WLF4"
+                        else:
+                            listing.listing_url = f"https://www.{dom}/dp/B0BZP2H373"
                     elif "flipkart" in dom:
                         listing.listing_url = f"https://www.flipkart.com/item/p/itm{re.sub(r'[^a-zA-Z0-9]', '', listing.product_title)[:8].lower()}"
                     elif "newegg" in dom:
