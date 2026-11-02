@@ -1,0 +1,18 @@
+{
+  "skill_id": "skill_amazon_in_renewed",
+  "merchant_domain": "amazon.in",
+  "merchant_name": "Amazon Renewed (Verified Direct)",
+  "learned_at": "2026-11-01T05:20:32.009636+00:00",
+  "confidence_score": 0.99,
+  "anti_bot_profile": "curl_cffi Chrome 124 Impersonate + Cookie Session",
+  "selectors": {
+    "price": ".a-price-whole, #priceblock_ourprice",
+    "title": "#productTitle, .a-size-large.product-title-word-break",
+    "stock": "#availability .a-color-success",
+    "warranty": "#renewedWarrantyMessage, #RETURNS_POLICY"
+  },
+  "verified_in_stock": true,
+  "cod_supported": true,
+  "doorstep_openbox_verified": true,
+  "sample_latency_ms": 280
+}

@@ -1,0 +1,21 @@
+{
+  "dossier_id": "DOSSIER-ORDER-PP-7CEA4D",
+  "paypal_order_id": "ORDER-PP-2690000-INR",
+  "timestamp": "2026-11-02T05:44:12.792123Z",
+  "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
+  "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
+  "item_title": "Dell Latitude 5511 (Refurbished Grade A)",
+  "platform": "IndiaMART Certified Supplier",
+  "agreed_tco": 26900.0,
+  "advertised_condition": "Refurbished - Grade A",
+  "open_box_verified": true,
+  "seller_name": "IndiaMART Certified Supplier",
+  "seller_rating": 4.6,
+  "warranty_claims_evidence": "6-Month Seller Warranty",
+  "merkle_spec_hash": "21ca6a280a486fd7b24dde663f0ba57ef04f542440bd2e2f37cafedc9e980d1a",
+  "merkle_terms_hash": "6f9ad99d10738e66cd800725533dfa3608d645e591322d64f7dedf082dd83bf0",
+  "merkle_pricing_hash": "4709ef10212765f8a9126c640d49b9c0233f8428e179ef23733e23bcf271c9c2",
+  "cryptographic_hash": "7cea4dc9e557b64af360aa235fc1c3b0820b94ce65fe257dc41662e213c4f289",
+  "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
+  "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
+}

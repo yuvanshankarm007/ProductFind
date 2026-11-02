@@ -1,0 +1,34 @@
+{
+  "dossier_id": "PP-DISP-4102-XBORDER",
+  "order_id": "ORD-NE-583-99",
+  "claimant_id": "user_sarah_k",
+  "merchant": "Newegg (Price Right Computers Store)",
+  "merchant_domain": "newegg.com",
+  "claim_reason": "DAMAGED_IN_TRANSIT",
+  "claim_amount": 583.28,
+  "currency": "USD",
+  "status": "MERCHANT_INSPECTION_PENDING",
+  "underwriting_decision": "Escalated to Newegg Verified Refurbisher. Funds held in PayPal Escrow pending carrier inspection.",
+  "created_at": "2026-10-28T05:20:32.009636+00:00",
+  "resolved_at": null,
+  "merkle_root": "9626673d65bf809c4cca080e77f6d5e114f629299e09196d151a9dcef0b539da",
+  "evidence_records": [
+    {
+      "type": "CUSTOMS_DECLARATION",
+      "carrier": "DHL Express",
+      "origin": "US",
+      "destination": "IN",
+      "tracking": "DHL-9841289512"
+    },
+    {
+      "type": "DAMAGE_REPORT",
+      "carrier_timestamp": "2026-10-27T05:20:32.009636+00:00",
+      "screen_shattered": true
+    },
+    {
+      "type": "PAYPAL_SHIELD",
+      "coverage": "Cross-Border Transit Damage Protection Section 13.4"
+    }
+  ],
+  "payout_status": "ESCROW_LOCKED"
+}

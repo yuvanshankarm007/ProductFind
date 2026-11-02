@@ -1,0 +1,4 @@
+project_id         = "your-gcp-project-id"
+region             = "us-central1"
+firestore_location = "nam5"
+environment        = "production"

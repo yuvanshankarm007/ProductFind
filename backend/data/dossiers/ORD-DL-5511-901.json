@@ -1,0 +1,38 @@
+{
+  "dossier_id": "PP-DISP-8921-SNAD",
+  "order_id": "ORD-DL-5511-901",
+  "claimant_id": "user_rahul_m",
+  "merchant": "IndiaMART Certified Supplier",
+  "merchant_domain": "indiamart.com",
+  "claim_reason": "SIGNIFICANTLY_NOT_AS_DESCRIBED",
+  "claim_amount": 26900.0,
+  "currency": "INR",
+  "status": "REIMBURSEMENT_APPROVED",
+  "underwriting_decision": "100% Full Refund issued under PayPal Buyer Protection Section 13. Pre-paid return shipping label generated.",
+  "created_at": "2026-10-30T05:20:32.009636+00:00",
+  "resolved_at": "2026-11-01T15:20:32.009636+00:00",
+  "merkle_root": "4509d49c85acecc881d5c15a9369c021f7b7d644ff08c5975e1e6ec1ab1606af",
+  "evidence_records": [
+    {
+      "type": "ORDER_RECEIPT",
+      "item": "Dell Latitude 5511 (Grade A)",
+      "amount": 26900.0,
+      "currency": "INR",
+      "date": "2026-10-29T05:20:32.009636+00:00"
+    },
+    {
+      "type": "UNBOXING_VIDEO_HASH",
+      "sha256": "3fa85f647902ba9e77728d90c38493f4f8304930294801938501239850192841"
+    },
+    {
+      "type": "INSPECTION_DIAGNOSTIC",
+      "issue": "Deep chassis dents + battery health 68% (Violates Grade A guarantee)",
+      "severity": "HIGH"
+    },
+    {
+      "type": "SECTION_13_RULE",
+      "policy": "Significantly Not As Described (SNAD) - Tier 1 Condition Misrepresentation"
+    }
+  ],
+  "payout_status": "PAID"
+}

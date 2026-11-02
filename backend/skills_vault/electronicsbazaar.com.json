@@ -1,0 +1,19 @@
+{
+  "skill_id": "skill_electronicsbazaar_404",
+  "merchant_domain": "electronicsbazaar.com",
+  "merchant_name": "Electronics Bazaar",
+  "learned_at": "2026-10-21T05:20:32.009636+00:00",
+  "confidence_score": 0.91,
+  "anti_bot_profile": "Direct Scrape with 404 Discontinued SKU Gating",
+  "selectors": {
+    "price": ".price",
+    "title": "h1.page-title",
+    "stock": ".stock.unavailable",
+    "warranty": ".warranty-tab"
+  },
+  "verified_in_stock": false,
+  "stock_status": "Listing Expired / 404",
+  "cod_supported": false,
+  "doorstep_openbox_verified": false,
+  "sample_latency_ms": 150
+}

@@ -1,0 +1,17 @@
+{
+  "dossier_id": "DOSSIER-ORDER-GC-A1B2C3",
+  "paypal_order_id": "ORDER-GCP-TEST-001",
+  "timestamp": "2026-11-01T12:00:00Z",
+  "item_title": "Dell XPS 15 9530",
+  "platform": "Best Buy",
+  "agreed_tco": 1899.99,
+  "advertised_condition": "Brand New",
+  "open_box_verified": true,
+  "seller_name": "Best Buy Official",
+  "seller_rating": 4.8,
+  "warranty_claims_evidence": "1-Year OEM Coverage",
+  "merkle_spec_hash": "a1b2c3d4e5f6",
+  "merkle_terms_hash": "b2c3d4e5f6a1",
+  "merkle_pricing_hash": "c3d4e5f6a1b2",
+  "cryptographic_hash": "d4e5f6a1b2c3"
+}

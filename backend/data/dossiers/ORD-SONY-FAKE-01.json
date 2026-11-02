@@ -1,0 +1,29 @@
+{
+  "dossier_id": "PP-DISP-7719-FRAUD",
+  "order_id": "ORD-SONY-FAKE-01",
+  "claimant_id": "user_arjun_v",
+  "merchant": "ShadyTech Liquidation Deals",
+  "merchant_domain": "shadytech-deals.biz",
+  "claim_reason": "COUNTERFEIT_MERCHANDISE",
+  "claim_amount": 18500.0,
+  "currency": "INR",
+  "status": "IMMEDIATE_CHARGEBACK_SHIELD_ACTIVE",
+  "underwriting_decision": "Pre-emptive refund authorized within 4 hours of payment. Seller blocked in Sentinel Swarm blackboard.",
+  "created_at": "2026-11-01T05:20:32.009636+00:00",
+  "resolved_at": "2026-11-02T02:20:32.009636+00:00",
+  "merkle_root": "7edcc5ad97dd419a9c0492a12d1d77401538f81fcfd61c9cf845e6e1651ac726",
+  "evidence_records": [
+    {
+      "type": "SERIAL_CHECK",
+      "serial": "SN-WH1000XM5-FAKE-091",
+      "oem_database": "Sony Electronics",
+      "match": "INVALID_CHECKSUM"
+    },
+    {
+      "type": "SELLER_TRUST_FLAG",
+      "domain": "shadytech-deals.biz",
+      "risk_rating": 94
+    }
+  ],
+  "payout_status": "PAID"
+}

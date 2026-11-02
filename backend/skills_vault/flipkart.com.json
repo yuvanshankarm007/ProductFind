@@ -1,0 +1,30 @@
+{
+  "skill_id": "skill_flipkart_in_v1",
+  "merchant_name": "Flipkart Assured",
+  "merchant_domain": "flipkart.com",
+  "origin_country": "IN",
+  "currency": "INR",
+  "is_auto_synthesized": false,
+  "verification_score": 0.96,
+  "learned_at": "2026-11-01T11:16:17Z",
+  "success_count": 1,
+  "policy_rules": {
+    "return_window_days": 7,
+    "restocking_fee_pct": 0.0,
+    "warranty_type": "Brand Domestic Warranty",
+    "warranty_months": 12,
+    "cod_supported": true,
+    "cod_fee": 50.0,
+    "open_box_inspection": true,
+    "exchange_offered": false,
+    "supported_payments": [
+      "Cash on Delivery",
+      "UPI",
+      "Credit Card",
+      "PayPal"
+    ]
+  },
+  "paypal_shield_required": false,
+  "synthesized_code": "# Native Flipkart Assured Open Box Doorstep Inspection parser",
+  "sample_url": ""
+}

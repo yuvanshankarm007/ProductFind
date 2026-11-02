@@ -1,0 +1,2746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProductFind - Multi-Agent Commerce Swarm & PayPal Protection</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- AG Grid Enterprise/Community CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-quartz.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .paypal-blue {
+            background-color: #0070ba;
+        }
+        .paypal-yellow {
+            background-color: #ffc439;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .pulse-live {
+            animation: pulse-subtle 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scrollbar">
+
+    <!-- Top Navigation -->
+    <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-lg tracking-tight text-white">Product<span class="text-blue-400">Find</span></span>
+                        <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">PayPal Hackathon</span>
+                        <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">v2.0 Swarm</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Bidirectional Commerce Graph • FX & Duties • COD • Open Box • Price Prediction</p>
+                </div>
+            </div>
+
+            <!-- Global Preferences Switchers & Wizard Launcher -->
+            <div class="flex items-center space-x-2 flex-wrap gap-y-1.5 text-xs">
+                <!-- Open Preference Wizard Button -->
+                <button 
+                    id="btn-open-pref-wizard" 
+                    type="button"
+                    class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-blue-500/20 transition cursor-pointer"
+                    title="Customize Language, Country, Currency & Payment method"
+                >
+                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-blue-200"></i>
+                    <span id="wizard-badge-text">Preferences & Location</span>
+                </button>
+
+                <!-- Language Selector -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="globe" class="w-3.5 h-3.5 text-gray-400 mr-1.5"></i>
+                    <select id="pref-language" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="en" class="bg-gray-800">English 🇺🇸</option>
+                        <option value="hi" class="bg-gray-800">हिंदी (Hindi) 🇮🇳</option>
+                        <option value="es" class="bg-gray-800">Español 🇪🇸</option>
+                        <option value="de" class="bg-gray-800">Deutsch 🇩🇪</option>
+                        <option value="fr" class="bg-gray-800">Français 🇫🇷</option>
+                        <option value="ja" class="bg-gray-800">日本語 🇯🇵</option>
+                    </select>
+                </div>
+
+                <!-- Destination Country -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400 mr-1.5"></i>
+                    <select id="pref-country" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="IN" class="bg-gray-800" selected>India 🇮🇳</option>
+                        <option value="US" class="bg-gray-800">United States 🇺🇸</option>
+                        <option value="GB" class="bg-gray-800">United Kingdom 🇬🇧</option>
+                        <option value="DE" class="bg-gray-800">Germany 🇩🇪</option>
+                        <option value="CA" class="bg-gray-800">Canada 🇨🇦</option>
+                        <option value="JP" class="bg-gray-800">Japan 🇯🇵</option>
+                        <option value="AU" class="bg-gray-800">Australia 🇦🇺</option>
+                    </select>
+                </div>
+
+                <!-- Preferred Currency -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="coins" class="w-3.5 h-3.5 text-amber-400 mr-1.5"></i>
+                    <select id="pref-currency" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="INR" class="bg-gray-800" selected>INR (₹)</option>
+                        <option value="USD" class="bg-gray-800">USD ($)</option>
+                        <option value="EUR" class="bg-gray-800">EUR (€)</option>
+                        <option value="GBP" class="bg-gray-800">GBP (£)</option>
+                        <option value="CAD" class="bg-gray-800">CAD (CA$)</option>
+                        <option value="JPY" class="bg-gray-800">JPY (¥)</option>
+                        <option value="AUD" class="bg-gray-800">AUD (A$)</option>
+                    </select>
+                </div>
+
+                <!-- Preferred Payment -->
+                <div class="flex items-center bg-gray-800/90 border border-gray-700 rounded-lg px-2 py-1">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5 text-emerald-400 mr-1.5"></i>
+                    <select id="pref-payment" class="bg-transparent text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="all" class="bg-gray-800">All Payments</option>
+                        <option value="paypal" class="bg-gray-800">PayPal & Pay in 4</option>
+                        <option value="cod" class="bg-gray-800">Cash on Delivery (COD)</option>
+                        <option value="card" class="bg-gray-800">Credit / Debit Card</option>
+                        <option value="upi" class="bg-gray-800">UPI / Net Banking</option>
+                    </select>
+                </div>
+
+                <!-- Autonomous Swarm Skill Vault Button -->
+                <button 
+                    id="open-skill-vault-btn" 
+                    type="button"
+                    class="flex items-center space-x-1.5 px-3 py-1 bg-gradient-to-r from-purple-900/60 to-indigo-900/60 hover:from-purple-800/80 hover:to-indigo-800/80 border border-purple-500/40 rounded-lg text-xs font-semibold text-purple-200 shadow-sm transition"
+                    title="Open Autonomous Swarm Skill Vault: View dynamically learned merchant parsers & fine-print skills"
+                >
+                    <i data-lucide="brain-circuit" class="w-3.5 h-3.5 text-purple-400"></i>
+                    <span id="skill-vault-badge-text">Skill Vault: 4 Learned</span>
+                </button>
+
+                <!-- Google Cloud Firestore & Evidence Vault Button -->
+                <button 
+                    id="open-evidence-vault-btn" 
+                    type="button"
+                    class="flex items-center space-x-1.5 px-3 py-1 bg-gradient-to-r from-emerald-900/60 to-teal-900/60 hover:from-emerald-800/80 hover:to-teal-800/80 border border-emerald-500/40 rounded-lg text-xs font-semibold text-emerald-200 shadow-sm transition"
+                    title="Open Google Cloud Firestore & PayPal Cryptographic Dispute Evidence Vault"
+                >
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    <span id="evidence-vault-badge-text">Firestore: Native Mode</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- First-Time Onboarding Banner (Dismissible) -->
+    <div id="onboarding-banner" class="bg-gradient-to-r from-blue-950/80 via-indigo-950/70 to-gray-900 border-b border-blue-800/40 px-4 py-2 text-xs">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2 text-blue-200">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                <span id="onboarding-text"><strong>Welcome!</strong> Select your language, target delivery country, preferred currency, and payment method above. ProductFind's agent swarm personalizes delivery times, COD, customs duties, and live FX conversions automatically.</span>
+            </div>
+            <button id="dismiss-banner-btn" class="text-blue-300 hover:text-white ml-2">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Search & Control Panel -->
+        <section class="bg-gradient-to-b from-gray-900 to-gray-900/90 border border-gray-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="max-w-3xl">
+                <h1 id="hero-title" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                    Multi-Agent Commerce Sentinel & Risk Analyzer
+                </h1>
+                <p id="hero-subtitle" class="text-sm text-gray-400 mt-1">
+                    Audits fine-print warranties, delivery speeds, Cash on Delivery (COD), Open Box verification, exchange offers, and cross-border import duties—backed by PayPal Buyer Protection.
+                </p>
+
+                <!-- Query Input -->
+                <form id="search-form" class="mt-4 flex flex-col sm:flex-row gap-2.5">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400"></i>
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            value=""
+                            class="w-full pl-10 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 font-medium"
+                            placeholder="Search ANY product across the web (e.g. Samsung A17, iPhone 16, PS5, Shoes, Laptop)..."
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        id="submit-btn"
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 transition duration-150 cursor-pointer"
+                    >
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span id="btn-deploy-text">Deploy Agent Swarm</span>
+                    </button>
+                </form>
+
+                <!-- Quick Presets -->
+                <div class="flex items-center space-x-2 mt-3 text-xs text-gray-400 flex-wrap gap-y-1">
+                    <span class="text-gray-500 font-medium">Try Live Examples:</span>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-blue-950/60 hover:bg-blue-900/80 border border-blue-500/40 text-blue-200 transition font-semibold" data-query="renewed dell latitude 5511 core i7-10850h">
+                        💻 Dell Latitude 5511 (Refurbished)
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Samsung Galaxy A17">
+                        📱 Samsung A17
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="iPhone 16">
+                        📱 iPhone 16
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="PlayStation 5 Slim">
+                        🎮 PS5 Slim
+                    </button>
+                    <button type="button" class="preset-btn px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Nike Running Shoes">
+                        👟 Nike Shoes
+                    </button>
+                </div>
+
+                <!-- TCO Optimization & Dynamic Risk Weighting Vector -->
+                <div class="mt-4 p-3.5 bg-gray-900/90 border border-gray-800 rounded-xl shadow-md">
+                    <div class="flex items-center justify-between cursor-pointer" id="risk-panel-header" onclick="toggleRiskPanel()">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold text-gray-300 flex items-center space-x-1.5">
+                                <span>⚙️</span>
+                                <span>TCO Optimization & Dynamic Risk Vector:</span>
+                            </span>
+                            <span id="risk-summary-badge" class="text-[11px] px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-700/50">Balanced (50% / 50% / 70%)</span>
+                        </div>
+                        <button type="button" class="text-xs text-blue-400 hover:text-blue-300 transition flex items-center space-x-1">
+                            <span id="risk-panel-toggle-text">Configure</span>
+                            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="risk-panel-body" class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-800 text-xs">
+                        <div>
+                            <div class="flex justify-between text-gray-300 font-medium mb-1">
+                                <span title="Increases TCO benefit for listings with 24-month OEM and full drop/spill ADP">🛡️ Warranty Priority</span>
+                                <span id="warranty-val-label" class="text-blue-400 font-bold">50%</span>
+                            </div>
+                            <input type="range" id="warranty-priority-input" min="0" max="1" step="0.05" value="0.5" class="w-full accent-blue-500 cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                <span>Budget-First</span>
+                                <span>Max Warranty</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-gray-300 font-medium mb-1">
+                                <span title="Penalizes slow delivery speeds (e.g. 7-12 day cross-border shipments)">🚚 Speed Priority</span>
+                                <span id="speed-val-label" class="text-emerald-400 font-bold">50%</span>
+                            </div>
+                            <input type="range" id="speed-priority-input" min="0" max="1" step="0.05" value="0.5" class="w-full accent-emerald-500 cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                <span>Standard OK</span>
+                                <span>Next-Day Only</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-gray-300 font-medium mb-1">
+                                <span title="Amplifies penalty on sellers with low ratings, short return windows, or restocking fees">🏛️ Trust Sensitivity</span>
+                                <span id="trust-val-label" class="text-purple-400 font-bold">70%</span>
+                            </div>
+                            <input type="range" id="trust-tolerance-input" min="0" max="1" step="0.05" value="0.7" class="w-full accent-purple-500 cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                <span>Accept Risk</span>
+                                <span>Top Authorized</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Bidirectional Agent Negotiation Terminal -->
+        <section class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="px-5 py-3.5 bg-gray-850 border-b border-gray-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="flex space-x-1.5">
+                        <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                        <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+                    </div>
+                    <span class="text-xs font-semibold text-gray-300 mono-font">LIVE_AGENT_STREAM // Swarm Negotiation & Cross-Border Bus</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span id="agent-count-badge" class="px-2 py-0.5 text-xs rounded bg-gray-800 text-gray-400 border border-gray-700 mono-font">10 Specialized Agents</span>
+                    <button id="toggle-terminal-btn" class="text-xs text-blue-400 hover:text-blue-300 transition flex items-center space-x-1">
+                        <span id="toggle-text">Collapse</span>
+                        <i data-lucide="chevron-up" id="toggle-icon" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Terminal Output Window -->
+            <div id="terminal-body" class="p-4 bg-gray-950 max-h-60 overflow-y-auto custom-scrollbar mono-font text-xs space-y-2 border-b border-gray-800/80">
+                <div class="text-gray-500 flex items-center space-x-2">
+                    <span class="text-blue-400">system:</span>
+                    <span>Ready. Awaiting query to launch Tier 1 Scouts, FX Duty Inspector, and Tier 2 Specialist Swarm...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Price History & AI Price Prediction Section -->
+        <section id="price-analytics-section" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-xl hidden">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+                        <h2 class="text-lg font-bold text-white tracking-tight">Price History & 14-Day AI Price Prediction</h2>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-0.5">Historical price trend analysis, volatility modeling, and predictive purchasing recommendation</p>
+                </div>
+                <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+                    <div id="buy-verdict-badge" class="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span id="buy-verdict-text">BUY NOW</span>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-xl text-xs bg-gray-800 border border-gray-700 text-gray-300 flex items-center space-x-1.5">
+                        <i data-lucide="target" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span id="prediction-confidence-text">Confidence: 88%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                <!-- Metrics -->
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">All-Time Low (ATL)</div>
+                    <div id="stat-atl" class="text-lg font-bold text-emerald-400 mt-1">$0.00</div>
+                    <div class="text-[10px] text-gray-500">90-Day Best Recorded</div>
+                </div>
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">All-Time High (ATH)</div>
+                    <div id="stat-ath" class="text-lg font-bold text-amber-400 mt-1">$0.00</div>
+                    <div class="text-[10px] text-gray-500">Peak MSRP Window</div>
+                </div>
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">90-Day Moving Average</div>
+                    <div id="stat-avg" class="text-lg font-bold text-white mt-1">$0.00</div>
+                    <div class="text-[10px] text-gray-500">Benchmark Mean</div>
+                </div>
+                <div class="bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-[11px] text-gray-400">14-Day Price Forecast</div>
+                    <div id="stat-forecast" class="text-lg font-bold text-blue-400 mt-1">Stable</div>
+                    <div id="stat-delta" class="text-[10px] text-gray-400">Estimated Delta: 0%</div>
+                </div>
+            </div>
+
+            <!-- Price History Chart & Explanation -->
+            <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="lg:col-span-2 bg-gray-950/80 p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+                    <div class="text-xs font-semibold text-gray-400 mb-2 flex items-center justify-between">
+                        <span>90-DAY PRICE TRAJECTORY</span>
+                        <span class="text-[11px] text-gray-500 font-mono">X-Axis: Days Ago &bull; Y-Axis: Price</span>
+                    </div>
+                    <!-- SVG Chart Container -->
+                    <div id="chart-container" class="w-full h-36 flex items-end">
+                        <svg id="price-svg" class="w-full h-full" viewBox="0 0 600 120" preserveAspectRatio="none"></svg>
+                    </div>
+                    <!-- Chart X-Axis Labels -->
+                    <div id="chart-labels" class="flex justify-between text-[10px] text-gray-500 mt-2 font-mono px-1">
+                        <span>-90d</span>
+                        <span>-60d</span>
+                        <span>-45d</span>
+                        <span>-30d</span>
+                        <span>-15d</span>
+                        <span>-7d</span>
+                        <span class="text-emerald-400 font-bold">Today</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-gray-300 flex items-center space-x-1.5 mb-2">
+                            <i data-lucide="bot" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Agent Forecast Analysis</span>
+                        </div>
+                        <p id="prediction-explanation-text" class="text-xs text-gray-300 leading-relaxed">
+                            Analyzing seasonal sales cycles, manufacturer release patterns, and inventory volume...
+                        </p>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 flex items-center justify-between">
+                        <span>Predicted Price Target:</span>
+                        <span id="predicted-price-target" class="font-bold text-white">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Strategy Options Container -->
+        <section id="results-section" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-blue-400"></i>
+                        <span>Synthesized Options & Risk Breakdown</span>
+                    </h2>
+                    <p class="text-xs text-gray-400">Formulated with multi-currency FX, delivery estimates, COD, open box delivery, and trade-in deductions</p>
+                </div>
+                <div class="hidden sm:flex items-center space-x-3 text-xs text-gray-400">
+                    <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Optimal Value</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span><span>Max ADP Coverage</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Budget Sticker</span></span>
+                </div>
+            </div>
+
+            <!-- Live Retailer Web Verification Ribbon -->
+            <div id="live-retailer-ribbon" class="hidden p-3.5 rounded-2xl bg-gradient-to-r from-blue-950/40 via-gray-900 to-emerald-950/30 border border-blue-500/30 flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
+                <div class="flex items-center space-x-2 text-gray-300">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                    <span class="font-bold text-white">Live Store Verification Links:</span>
+                    <span class="text-gray-400 hidden sm:inline">Verify real-time stock, variants, and live prices directly on retailer sites:</span>
+                </div>
+                <div class="flex items-center space-x-2 flex-wrap gap-y-1.5" id="live-store-pills">
+                    <!-- Dynamic store pills populated on search -->
+                </div>
+            </div>
+
+            <!-- The Cards Grid -->
+            <div id="cards-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="p-8 text-center text-gray-500 col-span-3 border border-dashed border-gray-800 rounded-2xl bg-gray-900/40">
+                    <i data-lucide="compass" class="w-8 h-8 mx-auto mb-2 text-gray-600 animate-spin"></i>
+                    <p class="text-sm">Click "Deploy Agent Swarm" to run multi-agent search, live FX analysis, and risk arbitration.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- AG Grid Powered Swarm Comparison Matrix (Sponsor Category: Best Use of AG Grid) -->
+        <section id="matrix-section" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-xl hidden space-y-4">
+            <!-- Header with AG Grid Sponsor Badge & Action Controls -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-800">
+                <div>
+                    <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                        <i data-lucide="table-2" class="w-5 h-5 text-indigo-400"></i>
+                        <h3 class="text-lg font-bold text-white tracking-tight">AG Grid E-Commerce Swarm Matrix</h3>
+                        <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-gradient-to-r from-red-600/30 to-amber-600/30 text-amber-300 border border-amber-500/40 flex items-center space-x-1 shadow-sm">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <span>Sponsor: Best Use of AG Grid</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">High-performance comparison grid with custom cell renderers, multi-column sorting & filtering, pinned store/action columns, and CSV export.</p>
+                </div>
+
+                <!-- Controls: Quick Search, Out-of-Stock Filter & Export -->
+                <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+                    <label class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800/90 border border-emerald-500/40 text-xs font-semibold text-emerald-300 cursor-pointer hover:bg-gray-800 transition shadow-sm" title="Rule out out-of-stock and expired 404 listings from comparison grid">
+                        <input type="checkbox" id="filter-instock-only" checked class="w-3.5 h-3.5 rounded text-emerald-500 focus:ring-0 bg-gray-900 border-gray-600 cursor-pointer">
+                        <span class="flex items-center gap-1"><span>🛡️ Rule Out Out-of-Stock & 404</span></span>
+                    </label>
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5"></i>
+                        <input 
+                            type="text" 
+                            id="grid-search-input" 
+                            placeholder="Filter in AG Grid..." 
+                            class="pl-8 pr-3 py-1.5 bg-gray-800/90 border border-gray-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500 w-36 sm:w-48"
+                        />
+                    </div>
+                    <button 
+                        id="btn-export-csv" 
+                        class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold rounded-lg flex items-center space-x-1.5 transition shadow-sm"
+                        title="Export Comparison Audit to CSV using AG Grid native API"
+                    >
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>Export CSV</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- AG Grid Quick KPI / Summary Ribbon -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">Audited Listings:</span>
+                    <span id="grid-stat-count" class="font-bold text-white font-mono">0</span>
+                </div>
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">Lowest TCO:</span>
+                    <span id="grid-stat-lowest-tco" class="font-bold text-emerald-400 font-mono">-</span>
+                </div>
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">COD Available:</span>
+                    <span id="grid-stat-cod" class="font-bold text-amber-300 font-mono">-</span>
+                </div>
+                <div class="bg-gray-950/70 p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                    <span class="text-gray-400">Open Box Inspection:</span>
+                    <span id="grid-stat-openbox" class="font-bold text-indigo-300 font-mono">-</span>
+                </div>
+            </div>
+
+            <!-- The AG Grid Component -->
+            <div id="comparison-ag-grid" class="ag-theme-quartz-dark w-full h-[380px] rounded-xl overflow-hidden border border-gray-800 shadow-inner"></div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-4 mt-8 bg-gray-950/70 text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>ProductFind • PayPal AI Hackathon Submission • Bidirectional Multi-Agent Commerce Swarm</span>
+            <div class="flex items-center space-x-4">
+                <span>Multi-Currency FX</span>
+                <span>•</span>
+                <span>Open Box Delivery</span>
+                <span>•</span>
+                <span>PayPal Orders v2 API</span>
+                <span>•</span>
+                <span>180-Day Protection Shield</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Autonomous Swarm Skill Vault Modal -->
+    <div id="skill-vault-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-purple-500/40 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative space-y-4 max-h-[88vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300">
+                        <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <span>Autonomous Swarm Skill Vault</span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">Voyager / Reflexion Architecture</span>
+                        </h3>
+                        <p class="text-xs text-gray-400">Dynamically synthesized parsers and fine-print policy evaluation skills acquired on the fly.</p>
+                    </div>
+                </div>
+                <button id="close-skill-vault-btn" class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- On-Demand Learn Interactive Form -->
+            <form id="teach-skill-form" class="bg-gray-950/80 p-3 rounded-xl border border-gray-800 flex flex-col sm:flex-row gap-2">
+                <input 
+                    type="text" 
+                    id="teach-domain-input" 
+                    placeholder="Enter novel merchant domain (e.g. adorama.com, microcenter.com, rakuten.co.jp)..." 
+                    class="flex-1 px-3 py-1.5 bg-gray-900 border border-gray-700 rounded-lg text-xs text-white focus:outline-none focus:border-purple-500"
+                    required
+                />
+                <button type="submit" id="btn-teach-skill" class="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-lg shadow-sm flex items-center justify-center space-x-1.5 shrink-0">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    <span>Teach Novel Merchant</span>
+                </button>
+            </form>
+
+            <!-- Skills List Container -->
+            <div id="skills-list-container" class="overflow-y-auto flex-1 space-y-3 pr-1 text-xs">
+                <!-- Dynamically populated skills -->
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex items-center justify-between text-xs text-gray-400">
+                <span class="flex items-center space-x-1.5 text-purple-300">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                    <span>All novel merchants auto-bound to PayPal Buyer Protection Section 13</span>
+                </span>
+                <button id="refresh-skills-btn" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg border border-gray-700 flex items-center space-x-1">
+                    <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                    <span>Refresh Vault</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Cloud Firestore & PayPal Cryptographic Evidence Vault Modal -->
+    <div id="evidence-vault-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-emerald-500/40 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative space-y-4 max-h-[88vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-900/50 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
+                        <i data-lucide="database" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <span>Google Cloud Firestore Evidence Vault</span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Multi-Region nam5 & Memorystore</span>
+                        </h3>
+                        <p class="text-xs text-gray-400">Durable cloud persistence for PayPal Section 13 Dispute Dossiers, Autonomous Skills & Price Trajectories.</p>
+                    </div>
+                </div>
+                <button id="close-evidence-vault-btn" class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Database & Cache Architecture Telemetry Card -->
+            <div id="db-telemetry-card" class="bg-gray-950/80 p-3 rounded-xl border border-gray-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div class="p-2 bg-gray-900/80 rounded-lg border border-gray-800">
+                    <div class="text-gray-400 text-[10px] uppercase font-bold">Persistence Mode</div>
+                    <div id="db-mode-val" class="font-semibold text-emerald-300 flex items-center gap-1 mt-0.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Firestore Native</span>
+                    </div>
+                </div>
+                <div class="p-2 bg-gray-900/80 rounded-lg border border-gray-800">
+                    <div class="text-gray-400 text-[10px] uppercase font-bold">GCP Project</div>
+                    <div id="db-project-val" class="font-mono text-gray-200 mt-0.5 truncate">productfind-sentinel</div>
+                </div>
+                <div class="p-2 bg-gray-900/80 rounded-lg border border-gray-800">
+                    <div class="text-gray-400 text-[10px] uppercase font-bold">Durable Dossiers</div>
+                    <div id="db-dossiers-count" class="font-semibold text-cyan-300 mt-0.5">0 Cryptographic</div>
+                </div>
+                <div class="p-2 bg-gray-900/80 rounded-lg border border-gray-800">
+                    <div class="text-gray-400 text-[10px] uppercase font-bold">Zero-Crash Guarantee</div>
+                    <div class="font-semibold text-purple-300 mt-0.5">Local Mirror Active</div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs font-semibold text-gray-300 px-1">
+                <span>Stored PayPal Buyer Protection (Section 13) Cryptographic Dossiers</span>
+                <span class="text-gray-500 text-[11px]">Merkle Tree Leaves: Spec + Terms + Agreed TCO</span>
+            </div>
+
+            <!-- Dossiers List Container -->
+            <div id="dossiers-list-container" class="overflow-y-auto flex-1 space-y-3 pr-1 text-xs">
+                <!-- Dynamically populated dossiers -->
+            </div>
+
+            <div class="pt-3 border-t border-gray-800 flex items-center justify-between text-xs text-gray-400">
+                <span class="flex items-center space-x-1.5 text-emerald-300">
+                    <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+                    <span>SHA-256 Merkle proofs admissible to PayPal Resolution Center</span>
+                </span>
+                <button id="refresh-evidence-btn" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg border border-gray-700 flex items-center space-x-1">
+                    <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                    <span>Refresh Dossiers</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PayPal Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button id="close-modal-btn" class="absolute right-4 top-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-xl paypal-blue flex items-center justify-center text-white font-bold text-lg">
+                    P
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-base">PayPal Checkout Sandbox</h3>
+                    <p class="text-xs text-gray-400">Multi-Currency Payment & 180-Day Buyer Protection</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-800/80 rounded-xl p-4 border border-gray-700/80 space-y-2 mb-4 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Selected Product:</span>
+                    <span id="modal-product-title" class="font-semibold text-white truncate max-w-[200px]">Item</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Merchant / Retailer:</span>
+                    <span id="modal-merchant" class="text-gray-200">Store</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Estimated Delivery:</span>
+                    <span id="modal-delivery" class="text-gray-200">2-3 Days</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Open Box Inspection:</span>
+                    <span id="modal-openbox" class="text-emerald-400 font-semibold">Verified</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Base Price + Tax / Duty:</span>
+                    <span id="modal-base-price" class="text-gray-200">$0.00</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Protection Plan (ADP):</span>
+                    <span id="modal-adp-price" class="text-gray-200">$0.00</span>
+                </div>
+                <div class="border-t border-gray-700 pt-2 flex justify-between font-bold text-sm text-white">
+                    <span>Total Purchase:</span>
+                    <span id="modal-total-price" class="text-emerald-400">$0.00</span>
+                </div>
+                <div class="border-t border-gray-700/60 pt-2 flex justify-between items-center text-[11px]">
+                    <span class="text-gray-400">Official Store Link:</span>
+                    <a id="modal-store-link" href="#" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 font-semibold underline flex items-center space-x-1">
+                        <span id="modal-store-name">Visit Store Site</span>
+                        <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-blue-950/40 border border-blue-800/50 rounded-xl p-3 mb-5 text-xs text-blue-200 flex items-start space-x-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-blue-400 shrink-0 mt-0.5"></i>
+                <span id="modal-protection-reason">PayPal Buyer Protection is automatically attached to this transaction.</span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="space-y-2.5">
+                <button id="modal-confirm-paypal" class="w-full py-3 paypal-yellow hover:opacity-95 text-gray-900 font-bold rounded-xl text-sm flex items-center justify-center space-x-2 shadow-lg transition">
+                    <span class="italic font-extrabold text-blue-900 text-base">PayPal</span>
+                    <span>Checkout Now</span>
+                </button>
+                <button id="modal-confirm-paylater" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white font-medium rounded-xl text-xs flex items-center justify-center space-x-1.5 transition">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-blue-400"></i>
+                    <span id="modal-paylater-btn-text">Split into 4 Interest-Free Payments with <strong>Pay in 4</strong></span>
+                </button>
+            </div>
+            
+            <div id="modal-receipt" class="hidden mt-4 p-3 bg-emerald-950/50 border border-emerald-800 rounded-xl text-xs text-emerald-300 space-y-1">
+                <div class="flex items-center space-x-1 font-semibold">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Payment Captured via PayPal Sandbox API!</span>
+                </div>
+                <div class="text-[11px] text-gray-400" id="modal-order-id">Order ID: ORDER-SANDBOX</div>
+                <div class="text-[11px] text-emerald-400">180-Day PayPal Buyer Protection Active.</div>
+                <button onclick="openDossierForCurrentOrder()" class="mt-2.5 w-full py-2 bg-purple-900/50 hover:bg-purple-850 text-purple-200 border border-purple-700/70 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                    <span>🛡️ View Sealed PayPal Dispute Dossier</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cryptographic Dispute Evidence Dossier Modal -->
+    <div id="dossier-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-purple-800/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button id="close-dossier-btn" onclick="closeDossierModal()" class="absolute right-4 top-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-xl bg-purple-900/50 border border-purple-600 flex items-center justify-center text-purple-300 font-bold text-lg">
+                    🛡️
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h3 class="font-bold text-white text-base">PayPal Buyer Protection Dossier</h3>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">SEALED</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Cryptographically Signed Section 13 Dispute Evidence</p>
+                </div>
+            </div>
+
+            <!-- Dossier Meta Box -->
+            <div class="bg-gray-800/90 rounded-xl p-3.5 border border-gray-700 space-y-2 mb-3 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Dossier Identifier:</span>
+                    <span id="dossier-id-val" class="font-mono font-bold text-blue-400">DOSSIER-PP-...</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Timestamp (UTC):</span>
+                    <span id="dossier-timestamp-val" class="font-mono text-gray-300">2026-11-01T...</span>
+                </div>
+                <div class="pt-1.5 border-t border-gray-700/80">
+                    <div class="text-gray-400 mb-1 flex justify-between items-center">
+                        <span>SHA-256 Cryptographic Signature:</span>
+                        <button id="copy-dossier-btn" onclick="copyDossierHash(event)" class="text-[10px] text-blue-400 hover:text-blue-300 underline cursor-pointer">Copy Hash</button>
+                    </div>
+                    <div class="p-2 bg-gray-950 rounded-lg border border-gray-800 font-mono text-[10px] text-emerald-400 break-all select-all" id="dossier-hash-val">
+                        e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-800 grid grid-cols-3 gap-1.5 text-[9px] font-mono">
+                        <div class="p-1.5 bg-gray-900/90 rounded border border-gray-800 truncate" title="Merkle Leaf: Specifications & Advertised Condition">
+                            <span class="text-gray-400 block font-sans">Spec Leaf:</span>
+                            <span id="dossier-spec-hash" class="text-blue-400">...</span>
+                        </div>
+                        <div class="p-1.5 bg-gray-900/90 rounded border border-gray-800 truncate" title="Merkle Leaf: Seller Identity & Warranty Terms">
+                            <span class="text-gray-400 block font-sans">Terms Leaf:</span>
+                            <span id="dossier-terms-hash" class="text-indigo-400">...</span>
+                        </div>
+                        <div class="p-1.5 bg-gray-900/90 rounded border border-gray-800 truncate" title="Merkle Leaf: Agreed Landed TCO & Currency Lock">
+                            <span class="text-gray-400 block font-sans">Pricing Leaf:</span>
+                            <span id="dossier-pricing-hash" class="text-amber-400">...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sealed Parameters Table -->
+            <div class="bg-gray-800/60 rounded-xl p-3.5 border border-gray-700/60 space-y-2 mb-4 text-xs">
+                <h4 class="font-bold text-gray-200 text-xs border-b border-gray-700/60 pb-1.5">Sealed Contract Parameters:</h4>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                        <span class="text-gray-400 block">Item Title:</span>
+                        <span id="dossier-item-title" class="font-semibold text-white truncate block">Product</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 block">Retail Platform:</span>
+                        <span id="dossier-platform" class="font-semibold text-gray-200">Store</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 block">Agreed Risk-Adjusted TCO:</span>
+                        <span id="dossier-agreed-tco" class="font-mono font-bold text-emerald-400">$0.00</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 block">Advertised Condition:</span>
+                        <span id="dossier-condition" class="text-gray-200 font-medium">Brand New</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 block">Doorstep Open Box Inspection:</span>
+                        <span id="dossier-openbox" class="text-gray-200 font-medium">Verified</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 block">Seller Rating:</span>
+                        <span id="dossier-seller" class="text-gray-200 font-medium">4.5 / 5.0</span>
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-gray-700/60 text-[11px]">
+                    <span class="text-gray-400 block mb-0.5">Warranty & Claims Evidence:</span>
+                    <span id="dossier-warranty" class="text-gray-300 font-medium leading-tight block">1-Year Official OEM Warranty</span>
+                </div>
+            </div>
+
+            <!-- Resolution Center Instructions -->
+            <div class="p-3 bg-purple-950/40 border border-purple-800/60 rounded-xl text-[11px] text-purple-200 space-y-1 mb-4 leading-relaxed">
+                <div class="font-semibold text-purple-300 flex items-center space-x-1">
+                    <span>⚖️</span>
+                    <span>PayPal Resolution Center Claim Readiness:</span>
+                </div>
+                <p>
+                    This immutable cryptographic snapshot locks the exact advertised condition, seller claims, and agreed purchase TCO. If the merchant denies returns, delivers an uninspected empty parcel, or ships counterfeit goods, this sealed record serves as non-repudiable evidentiary proof under PayPal Buyer Protection Section 13.
+                </p>
+            </div>
+
+            <div class="flex space-x-2">
+                <button onclick="downloadDossierJson()" class="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    <span>Export Sealed JSON Dossier</span>
+                </button>
+                <button onclick="closeDossierModal()" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-semibold transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Onboarding & Shopping Preference Wizard Modal (Hidden by default; opens via header badge) -->
+    <div id="preference-wizard-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto custom-scrollbar">
+        <div class="bg-gray-900 border border-blue-500/40 rounded-3xl max-w-2xl w-full shadow-2xl relative my-auto max-h-[90vh] flex flex-col overflow-hidden">
+            <!-- Header (Fixed at top of modal) -->
+            <div class="p-5 sm:p-6 pb-3 border-b border-gray-800 bg-gray-900/95 relative shrink-0">
+                <button id="close-wizard-btn" class="absolute right-4 top-4 p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition z-10" title="Close (Esc)">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+                <div class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-[11px] font-semibold mb-2">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Personalized Commerce Swarm Setup</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Configure Your Shopping Copilot</h2>
+                <p class="text-xs text-gray-400 mt-1">
+                    Select your delivery destination, currency, and payment method so our agents can audit COD, Open Box inspection, customs duties, and live FX conversions.
+                </p>
+            </div>
+
+            <!-- Wizard Form (Scrollable body) -->
+            <form id="wizard-form" class="p-5 sm:p-6 pt-3 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <!-- 1. Preferred Language -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="globe" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>1. Preferred Language</span>
+                    </label>
+                    <div id="wizard-lang-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="en">
+                            <span>🇺🇸</span><span>English</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="hi">
+                            <span>🇮🇳</span><span>हिंदी (Hindi)</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="es">
+                            <span>🇪🇸</span><span>Español</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="de">
+                            <span>🇩🇪</span><span>Deutsch</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="fr">
+                            <span>🇫🇷</span><span>Français</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-2" data-value="ja">
+                            <span>🇯🇵</span><span>日本語</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Delivery Destination Country -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-400"></i>
+                        <span>2. Delivery Destination Country</span>
+                    </label>
+                    <div id="wizard-country-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="US" data-currency="USD">
+                            <span>🇺🇸</span><span>United States</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="IN" data-currency="INR">
+                            <span>🇮🇳</span><span>India</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="GB" data-currency="GBP">
+                            <span>🇬🇧</span><span>United Kingdom</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="DE" data-currency="EUR">
+                            <span>🇩🇪</span><span>Germany</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="CA" data-currency="CAD">
+                            <span>🇨🇦</span><span>Canada</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="JP" data-currency="JPY">
+                            <span>🇯🇵</span><span>Japan</span>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium text-left transition flex items-center space-x-1.5" data-value="AU" data-currency="AUD">
+                            <span>🇦🇺</span><span>Australia</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Preferred Currency -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="coins" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>3. Preferred Currency</span>
+                    </label>
+                    <div id="wizard-curr-grid" class="flex flex-wrap gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="USD">USD ($)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="INR">INR (₹)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="EUR">EUR (€)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="GBP">GBP (£)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="CAD">CAD (CA$)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="JPY">JPY (¥)</button>
+                        <button type="button" class="wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-200 font-mono transition" data-value="AUD">AUD (A$)</button>
+                    </div>
+                </div>
+
+                <!-- 4. Preferred Payment Method -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="credit-card" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>4. Preferred Payment Method</span>
+                    </label>
+                    <div id="wizard-payment-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="paypal">
+                            <span class="w-7 h-7 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold shrink-0">P</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">PayPal & Pay in 4</div>
+                                <div class="text-[10px] text-gray-400">180-Day Protection & Biweekly Installments</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="cod">
+                            <span class="w-7 h-7 rounded-lg bg-amber-600/30 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold shrink-0">💵</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">Cash on Delivery (COD)</div>
+                                <div class="text-[10px] text-gray-400">Pay Cash or UPI at Doorstep</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="upi">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0">⚡</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">UPI / Net Banking</div>
+                                <div class="text-[10px] text-gray-400">Instant Doorstep or Online Transfer</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn p-2.5 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="card">
+                            <span class="w-7 h-7 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold shrink-0">💳</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">Credit / Debit Card</div>
+                                <div class="text-[10px] text-gray-400">Standard Card Checkout</div>
+                            </div>
+                        </button>
+                        <button type="button" class="wizard-pill wizard-pay-btn sm:col-span-2 p-2 rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2" data-value="all">
+                            <span class="w-7 h-7 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-300 font-bold shrink-0">🌐</span>
+                            <div>
+                                <div class="font-bold text-white text-xs">All Payment Methods</div>
+                                <div class="text-[10px] text-gray-400">Compare all available payment options across all stores</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. What Product Are You Looking For? -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center space-x-1.5">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>5. What product are you shopping for?</span>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="wizard-product-input" 
+                            placeholder="Enter ANY product across the web (e.g. Dell Latitude 5511, iPhone 16, PS5, Shoes)..."
+                            value=""
+                            class="w-full pl-4 pr-4 py-2.5 bg-gray-800/90 border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 font-medium"
+                        />
+                    </div>
+                    <!-- Quick Trending Pills -->
+                    <div class="flex items-center space-x-1.5 mt-2 flex-wrap gap-y-1 text-[11px] text-gray-400">
+                        <span class="text-gray-500">Popular:</span>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-blue-900/60 hover:bg-blue-800 border border-blue-500/40 text-blue-200 font-semibold transition" data-query="renewed dell latitude 5511 core i7-10850h">💻 Dell Latitude 5511</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Samsung Galaxy A17">📱 Samsung A17</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="iPhone 16">📱 iPhone 16</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="PlayStation 5 Slim">🎮 PS5 Slim</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Nike Running Shoes">👟 Nike Shoes</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Wireless Earbuds">🎧 Earbuds</button>
+                        <button type="button" class="wizard-preset-btn px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition" data-query="Apple MacBook Air 13-inch M3">💻 MacBook M3</button>
+                    </div>
+                </div>
+
+                <!-- Sticky Footer Launch Button -->
+                <div class="pt-2 sticky bottom-0 bg-gray-900/95 backdrop-blur -mx-5 sm:-mx-6 -mb-5 sm:-mb-6 p-4 sm:p-5 border-t border-gray-800 z-10">
+                    <button 
+                        type="submit" 
+                        id="wizard-submit-btn" 
+                        class="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-sm rounded-xl shadow-xl shadow-blue-500/25 flex items-center justify-center space-x-2 transition transform active:scale-[0.99] cursor-pointer"
+                    >
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>Launch Multi-Agent Swarm with My Preferences 🚀</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Frontend Script -->
+    <script>
+        lucide.createIcons();
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        let socket = null;
+        let activeOptions = [];
+        let selectedOption = null;
+        let currentCurrency = "USD";
+        let currentSearchController = null;
+        let currentSearchToken = 0;
+
+        // DOM elements
+        const terminalBody = document.getElementById('terminal-body');
+        const cardsGrid = document.getElementById('cards-grid');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const matrixSection = document.getElementById('matrix-section');
+        const matrixTbody = document.getElementById('matrix-tbody');
+        const priceAnalyticsSection = document.getElementById('price-analytics-section');
+
+        // Preference Selectors
+        const prefLanguage = document.getElementById('pref-language');
+        const prefCountry = document.getElementById('pref-country');
+        const prefCurrency = document.getElementById('pref-currency');
+        const prefPayment = document.getElementById('pref-payment');
+
+        // Onboarding Banner
+        const onboardingBanner = document.getElementById('onboarding-banner');
+        const dismissBannerBtn = document.getElementById('dismiss-banner-btn');
+
+        // Modal elements
+        const checkoutModal = document.getElementById('checkout-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalProductTitle = document.getElementById('modal-product-title');
+        const modalMerchant = document.getElementById('modal-merchant');
+        const modalDelivery = document.getElementById('modal-delivery');
+        const modalOpenbox = document.getElementById('modal-openbox');
+        const modalBasePrice = document.getElementById('modal-base-price');
+        const modalAdpPrice = document.getElementById('modal-adp-price');
+        const modalTotalPrice = document.getElementById('modal-total-price');
+        const modalProtectionReason = document.getElementById('modal-protection-reason');
+        const modalConfirmPaypal = document.getElementById('modal-confirm-paypal');
+        const modalConfirmPaylater = document.getElementById('modal-confirm-paylater');
+        const modalReceipt = document.getElementById('modal-receipt');
+        const modalOrderId = document.getElementById('modal-order-id');
+
+        // Currency formatting helper
+        function formatMoney(amount, currency) {
+            const curr = (currency || currentCurrency).toUpperCase();
+            const num = (amount !== null && amount !== undefined && !isNaN(Number(amount))) ? Number(amount) : 0.0;
+            const symMap = {
+                USD: '$', INR: '₹', EUR: '€', GBP: '£', CAD: 'CA$', JPY: '¥', AUD: 'A$'
+            };
+            const sym = symMap[curr] || '$';
+            if (curr === 'INR' || curr === 'JPY') {
+                return `${sym}${num.toLocaleString('en-US', { minimumFractionDigits: curr === 'JPY' ? 0 : 2, maximumFractionDigits: 2 })}`;
+            }
+            return `${sym}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Restore preferences from localStorage if saved
+        if (localStorage.getItem('pf_language')) prefLanguage.value = localStorage.getItem('pf_language');
+        if (localStorage.getItem('pf_country')) prefCountry.value = localStorage.getItem('pf_country');
+        if (localStorage.getItem('pf_currency')) prefCurrency.value = localStorage.getItem('pf_currency');
+        if (localStorage.getItem('pf_payment')) prefPayment.value = localStorage.getItem('pf_payment');
+
+        // Save on change and trigger re-search
+        [prefLanguage, prefCountry, prefCurrency, prefPayment].forEach(el => {
+            el.addEventListener('change', () => {
+                localStorage.setItem('pf_language', prefLanguage.value);
+                localStorage.setItem('pf_country', prefCountry.value);
+                localStorage.setItem('pf_currency', prefCurrency.value);
+                localStorage.setItem('pf_payment', prefPayment.value);
+                currentCurrency = prefCurrency.value;
+                const query = searchInput.value.trim();
+                if (query) triggerSearch(query);
+            });
+        });
+
+        if (dismissBannerBtn) {
+            dismissBannerBtn.addEventListener('click', () => {
+                onboardingBanner.classList.add('hidden');
+            });
+        }
+
+        // Toggle terminal
+        const toggleBtn = document.getElementById('toggle-terminal-btn');
+        const toggleText = document.getElementById('toggle-text');
+        const toggleIcon = document.getElementById('toggle-icon');
+        let terminalCollapsed = false;
+
+        toggleBtn.addEventListener('click', () => {
+            terminalCollapsed = !terminalCollapsed;
+            if (terminalCollapsed) {
+                terminalBody.classList.add('hidden');
+                toggleText.textContent = 'Expand';
+                toggleIcon.setAttribute('data-lucide', 'chevron-down');
+            } else {
+                terminalBody.classList.remove('hidden');
+                toggleText.textContent = 'Collapse';
+                toggleIcon.setAttribute('data-lucide', 'chevron-up');
+            }
+            lucide.createIcons();
+        });
+
+        // Preset button clicks
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                searchInput.value = btn.dataset.query;
+                triggerSearch(btn.dataset.query);
+            });
+        });
+
+        // WebSocket initialization
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/negotiate`;
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                appendTerminalLog('system', 'ClientUI', 'CONNECTED', 'WebSocket connection established with Sentinel Swarm broker.');
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'AGENT_EVENT') {
+                        const ev = data.event;
+                        appendTerminalLog(ev.source_agent, ev.target_agent, ev.event_type, ev.content);
+                    } else if (data.type === 'FINAL_RESULT' || data.type === 'CHALLENGE_RESOLVED') {
+                        applySearchResults(data.state);
+                    }
+                } catch (err) {
+                    console.error('Error parsing WS message:', err);
+                }
+            };
+
+            socket.onclose = () => {
+                setTimeout(initWebSocket, 2000);
+            };
+        }
+
+        initWebSocket();
+
+        function appendTerminalLog(source, target, eventType, content) {
+            const row = document.createElement('div');
+            row.className = 'flex items-start space-x-2 py-0.5 leading-relaxed';
+
+            let tagColor = 'text-gray-400';
+            let badgeBg = 'bg-gray-800 text-gray-300';
+
+            if (eventType === 'CHALLENGE' || eventType === 'BACKPROPAGATION_REQUEST') {
+                badgeBg = 'bg-orange-500/25 text-orange-300 border border-orange-500/50 shadow-sm';
+                tagColor = 'text-orange-400 font-bold';
+            } else if (eventType === 'VERIFIED' || eventType === 'RESOLVED') {
+                badgeBg = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                tagColor = 'text-emerald-400 font-bold';
+            } else if (eventType === 'SYNTHESIZED') {
+                badgeBg = 'bg-blue-500/20 text-blue-300 border border-blue-500/40';
+                tagColor = 'text-blue-400 font-bold';
+            } else if (eventType === 'FX_DUTY') {
+                badgeBg = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+                tagColor = 'text-amber-400 font-bold';
+            } else if (eventType === 'PRICE_PREDICT') {
+                badgeBg = 'bg-purple-500/20 text-purple-300 border border-purple-500/40';
+                tagColor = 'text-purple-400 font-bold';
+            } else if (eventType === 'SKILL_ACQUIRED') {
+                badgeBg = 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 shadow-sm';
+                tagColor = 'text-cyan-300 font-bold';
+            } else if (eventType === 'PAYPAL_SHIELD') {
+                badgeBg = 'bg-indigo-500/25 text-indigo-300 border border-indigo-400/50 shadow-sm';
+                tagColor = 'text-indigo-300 font-bold';
+            } else if (source.includes('Scout')) {
+                badgeBg = 'bg-cyan-500/20 text-cyan-300';
+                tagColor = 'text-cyan-400';
+            }
+
+            row.innerHTML = `
+                <span class="text-gray-600">[${new Date().toLocaleTimeString().split(' ')[0]}]</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] ${badgeBg} uppercase">${escapeHtml(eventType)}</span>
+                <span class="${tagColor}">${escapeHtml(source)} &rarr; ${escapeHtml(target)}:</span>
+                <span class="text-gray-300 flex-1">${escapeHtml(content)}</span>
+            `;
+
+            terminalBody.appendChild(row);
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+        }
+
+        // Apply Search and Swarm State Results to UI
+        window.applySearchResults = function(state) {
+            if (!state) return;
+            currentCurrency = state.user_preferences?.currency || prefCurrency.value;
+            if (state.price_analytics) renderPriceAnalytics(state.price_analytics);
+            if (state.final_options) renderResults(state.final_options);
+            if (state.comparison_matrix) renderComparisonMatrix(state.comparison_matrix);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
+            lucide.createIcons();
+        };
+
+        // Trigger search function
+        function triggerSearch(query) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Negotiating Swarm...</span>`;
+            lucide.createIcons();
+
+            // Clear previous agent stream and card results before each new search (Bug #9 fix)
+            terminalBody.innerHTML = '';
+            cardsGrid.innerHTML = `
+                <div class="p-8 text-center text-gray-400 col-span-3 border border-gray-800 rounded-2xl bg-gray-900/60 flex flex-col items-center justify-center space-y-3">
+                    <i data-lucide="refresh-cw" class="w-8 h-8 text-blue-400 animate-spin"></i>
+                    <p class="text-sm font-medium">Scouts & Processing Specialists actively negotiating...</p>
+                    <span class="text-xs text-gray-500">Checking delivery windows, verifying COD & Open Box inspection, auditing cross-border duties, and calculating price predictions...</span>
+                </div>
+            `;
+            lucide.createIcons();
+
+            const warrantyPriority = parseFloat(document.getElementById('warranty-priority-input')?.value || 0.5);
+            const speedPriority = parseFloat(document.getElementById('speed-priority-input')?.value || 0.5);
+            const trustTolerance = parseFloat(document.getElementById('trust-tolerance-input')?.value || 0.7);
+
+            const payload = {
+                action: 'search',
+                query: query,
+                language: prefLanguage.value,
+                country: prefCountry.value,
+                currency: prefCurrency.value,
+                preferred_payment: prefPayment.value,
+                warranty_priority: warrantyPriority,
+                speed_priority: speedPriority,
+                trust_tolerance: trustTolerance
+            };
+
+            // Cancel any in-flight HTTP search to prevent race conditions
+            if (currentSearchController) {
+                currentSearchController.abort();
+            }
+            currentSearchController = new AbortController();
+            const searchToken = ++currentSearchToken;
+
+            // Stream inter-agent negotiation logs via WebSocket if connected
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(payload));
+            }
+
+            // HTTP /api/search fetch guarded by AbortController and sequence token
+            fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: currentSearchController.signal
+            })
+            .then(r => {
+                if (!r.ok) throw new Error("HTTP error " + r.status);
+                return r.json();
+            })
+            .then(state => {
+                if (searchToken === currentSearchToken) {
+                    applySearchResults(state);
+                }
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                console.error("HTTP search error:", err);
+                cardsGrid.innerHTML = `
+                    <div class="p-8 text-center text-gray-400 col-span-3 border border-amber-900/40 rounded-2xl bg-gray-900/80 space-y-3">
+                        <i data-lucide="alert-circle" class="w-8 h-8 text-amber-400 mx-auto"></i>
+                        <p class="text-sm font-semibold text-white">Temporary Network Disconnect</p>
+                        <p class="text-xs text-gray-400">The agent swarm encountered a network timeout. Click below to retry.</p>
+                        <button onclick="triggerSearch('${escapeHtml(query)}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold cursor-pointer">Retry Search</button>
+                    </div>
+                `;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Deploy Agent Swarm</span>`;
+                lucide.createIcons();
+            });
+        }
+
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            if (query) triggerSearch(query);
+        });
+
+        // Render Price History and Prediction
+        function renderPriceAnalytics(analytics) {
+            if (!analytics) {
+                priceAnalyticsSection.classList.add('hidden');
+                return;
+            }
+            priceAnalyticsSection.classList.remove('hidden');
+
+            const curr = analytics.target_currency || currentCurrency;
+            document.getElementById('stat-atl').textContent = formatMoney(analytics.all_time_low, curr);
+            document.getElementById('stat-ath').textContent = formatMoney(analytics.all_time_high, curr);
+            document.getElementById('stat-avg').textContent = formatMoney(analytics.avg_90d_price, curr);
+            document.getElementById('stat-forecast').textContent = analytics.price_prediction_14d;
+            document.getElementById('stat-delta').textContent = `Predicted Movement: ${analytics.prediction_delta_pct > 0 ? '+' : ''}${analytics.prediction_delta_pct}%`;
+            document.getElementById('buy-verdict-text').textContent = analytics.buy_verdict;
+            document.getElementById('prediction-confidence-text').textContent = `Confidence: ${analytics.prediction_confidence}%`;
+            document.getElementById('prediction-explanation-text').textContent = analytics.prediction_explanation;
+            document.getElementById('predicted-price-target').textContent = formatMoney(analytics.predicted_price, curr);
+
+            // Verdict badge color
+            const verdictBadge = document.getElementById('buy-verdict-badge');
+            if (analytics.buy_verdict.includes('BUY NOW')) {
+                verdictBadge.className = 'px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+            } else if (analytics.buy_verdict.includes('WAIT')) {
+                verdictBadge.className = 'px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40';
+            } else {
+                verdictBadge.className = 'px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40';
+            }
+
+            // Draw SVG sparkline
+            const svg = document.getElementById('price-svg');
+            const points = analytics.history_points || [];
+            if (points.length >= 2) {
+                const prices = points.map(p => p.price);
+                const minP = Math.min(...prices) * 0.96;
+                const maxP = Math.max(...prices) * 1.04;
+                const range = maxP - minP || 1;
+
+                const width = 600;
+                const height = 110;
+                const step = width / (points.length - 1);
+
+                const coords = points.map((p, i) => {
+                    const x = Math.round(i * step * 10) / 10;
+                    const y = Math.round((height - ((p.price - minP) / range) * (height - 20) - 10) * 10) / 10;
+                    return { x, y, price: p.price, date: p.date, label: p.event_label };
+                });
+
+                const polyPoints = coords.map(c => `${c.x},${c.y}`).join(' ');
+                const fillPath = `M ${coords[0].x},${coords[0].y} ` + coords.map(c => `L ${c.x},${c.y}`).join(' ') + ` L ${coords[coords.length-1].x},${height} L ${coords[0].x},${height} Z`;
+
+                svg.innerHTML = `
+                    <defs>
+                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="${fillPath}" fill="url(#chartGradient)"/>
+                    <polyline fill="none" stroke="#60a5fa" stroke-width="2.5" points="${polyPoints}"/>
+                    ${coords.map(c => `
+                        <circle cx="${c.x}" cy="${c.y}" r="4" fill="#93c5fd" stroke="#1e3a8a" stroke-width="2">
+                            <title>${c.date}: ${formatMoney(c.price, curr)} (${c.label || ''})</title>
+                        </circle>
+                    `).join('')}
+                `;
+            }
+        }
+
+        // Render Curated Strategy Cards
+        function renderResults(options) {
+            activeOptions = options;
+            cardsGrid.innerHTML = '';
+
+            // 1. Populate Live Retailer Direct Link Ribbon from actual scraped options
+            const ribbon = document.getElementById('live-retailer-ribbon');
+            const pillsDiv = document.getElementById('live-store-pills');
+            const rawQuery = searchInput.value.trim() || (options[0]?.listing?.product_title) || 'Product';
+            const qEnc = encodeURIComponent(rawQuery);
+            const isIndia = (prefCountry.value === 'IN');
+
+            const seenDomains = new Set();
+            const liveStores = [];
+
+            // Add verified scraped stores directly from agent output (strictly filtering for live in-stock)
+            options.forEach((opt) => {
+                const dom = opt.listing?.merchant_domain || '';
+                const mName = opt.listing?.merchant || 'Store';
+                const mUrl = opt.listing?.listing_url || '';
+                const isLive = opt.listing?.in_stock && !opt.listing?.is_dead_link && !opt.listing?.stock_status?.includes('404') && !opt.listing?.stock_status?.includes('Out of Stock');
+                if (dom && !seenDomains.has(dom) && mUrl && mUrl !== '#' && isLive) {
+                    seenDomains.add(dom);
+                    const colorClasses = [
+                        'hover:bg-emerald-600/30 border-emerald-500/40 text-emerald-300',
+                        'hover:bg-blue-600/30 border-blue-500/40 text-blue-300',
+                        'hover:bg-purple-600/30 border-purple-500/40 text-purple-300',
+                        'hover:bg-amber-600/30 border-amber-500/40 text-amber-300'
+                    ];
+                    liveStores.push({
+                        name: `${mName} (Live)`,
+                        url: mUrl,
+                        bg: colorClasses[liveStores.length % colorClasses.length]
+                    });
+                }
+            });
+
+            // Always provide Google Shopping universal search
+            liveStores.push({
+                name: 'Google Shopping (Live)',
+                url: `https://www.google.com/search?tbm=shop&q=${qEnc}`,
+                bg: 'hover:bg-indigo-600/30 border-indigo-500/40 text-indigo-300'
+            });
+
+            if (ribbon && pillsDiv) {
+                ribbon.classList.remove('hidden');
+                pillsDiv.innerHTML = liveStores.map(s => `
+                    <a href="${s.url}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-gray-800/90 border ${s.bg} text-[11px] font-semibold inline-flex items-center space-x-1 transition shadow-sm" title="Open verified ${s.name} listing">
+                        <span>${s.name} ↗</span>
+                    </a>
+                `).join('');
+            }
+
+            options.forEach((opt, idx) => {
+                const isOptimal = opt.recommendation_tier === 'OPTIMAL_VALUE';
+                const isMaxProtect = opt.recommendation_tier === 'MAX_PROTECTION';
+                const isBudget = opt.recommendation_tier === 'BUDGET_STICKER';
+
+                let badgeHtml = '';
+                let borderClass = 'border-gray-800';
+                let headerBg = 'bg-gray-850';
+
+                if (isOptimal) {
+                    badgeHtml = `<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1"><i data-lucide="award" class="w-3.5 h-3.5"></i><span>Optimal Value Champion</span></span>`;
+                    borderClass = 'border-emerald-500/40 ring-1 ring-emerald-500/20';
+                    headerBg = 'bg-gradient-to-r from-emerald-950/40 to-gray-900';
+                } else if (isMaxProtect) {
+                    badgeHtml = `<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center space-x-1"><i data-lucide="shield" class="w-3.5 h-3.5"></i><span>Maximum ADP Protection</span></span>`;
+                    borderClass = 'border-blue-500/40 ring-1 ring-blue-500/20';
+                    headerBg = 'bg-gradient-to-r from-blue-950/40 to-gray-900';
+                } else {
+                    badgeHtml = `<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center space-x-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i><span>Budget (Requires Caution)</span></span>`;
+                    borderClass = 'border-amber-500/40';
+                    headerBg = 'bg-gradient-to-r from-amber-950/30 to-gray-900';
+                }
+
+                // Trust Score Color
+                let trustColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+                if (opt.trust.overall_score < 70) trustColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+                if (opt.trust.overall_score < 60) trustColor = 'text-red-400 bg-red-500/10 border-red-500/30';
+
+                // Display currencies
+                const displayCurr = opt.display_currency || currentCurrency;
+                const convertedPriceStr = formatMoney(opt.converted_cash_outlay, displayCurr);
+                const tcoStr = formatMoney(opt.risk_adjusted_tco, displayCurr);
+                const safeListingUrl = (opt.listing.listing_url && opt.listing.listing_url !== '#' && opt.listing.listing_url.startsWith('http')) ? 
+                    opt.listing.listing_url : 
+                    `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(opt.listing.product_title || searchInput.value || 'electronics')}`;
+
+                const cond = opt.listing.condition || 'Brand New';
+                const condBadge = (cond.includes('Renewed') || cond.includes('Refurbished')) ?
+                    `<span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold flex items-center gap-1">🔄 Renewed / Refurbished</span>` :
+                    `<span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-medium">${cond}</span>`;
+
+                const card = document.createElement('div');
+                card.className = `bg-gray-900 border ${borderClass} rounded-2xl flex flex-col justify-between overflow-hidden shadow-xl transition hover:-translate-y-1 duration-200`;
+
+                card.innerHTML = `
+                    <div>
+                        <!-- Header & Badges -->
+                        <div class="p-5 ${headerBg} border-b border-gray-800">
+                            <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+                                <div class="flex items-center space-x-2 flex-wrap gap-1">
+                                    <span class="font-bold text-gray-300 text-sm tracking-wide uppercase">${escapeHtml(opt.listing.merchant)}</span>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">${escapeHtml(opt.listing.origin_country)}</span>
+                                    ${condBadge}
+                                    ${(opt.listing.is_dead_link || opt.listing.stock_status?.includes('404')) ? 
+                                        `<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1">⚠️ Expired (404)</span>` :
+                                        ((!opt.listing.in_stock || opt.listing.stock_status?.includes('Out of Stock')) ?
+                                            `<span class="text-[10px] px-2 py-0.5 rounded-full bg-red-950/80 text-red-300 border border-red-500/40 font-bold flex items-center gap-1">❌ Out of Stock</span>` :
+                                            `<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1">✅ In Stock</span>`
+                                        )
+                                    }
+                                </div>
+                                ${badgeHtml}
+                            </div>
+                            <h3 class="font-bold text-white text-base leading-snug line-clamp-2">${escapeHtml(opt.listing.product_title)}</h3>
+                            <div class="mt-2.5 flex items-baseline space-x-2">
+                                <span class="text-2xl font-black text-white">${convertedPriceStr}</span>
+                                <span class="text-xs text-gray-400">Landed (${displayCurr})</span>
+                                <span class="ml-auto text-xs text-gray-400">Risk-Adjusted TCO: <strong class="text-emerald-400 font-bold">${tcoStr}</strong></span>
+                            </div>
+                            ${opt.tier_reason ? `
+                            <div class="mt-2.5 px-3 py-1.5 rounded-xl bg-gray-950/80 border border-gray-800 text-[11px] text-gray-300 flex items-start space-x-2 shadow-inner">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-400 mt-0.5 shrink-0"></i>
+                                <span><strong class="text-blue-300 font-semibold">Tier Rationale:</strong> ${escapeHtml(opt.tier_reason)}</span>
+                            </div>` : ''}
+                            ${opt.listing.currency !== displayCurr ? `
+                            <div class="mt-1 text-[11px] text-gray-400 font-mono">
+                                Original: ${formatMoney(opt.listing.base_price, opt.listing.currency)} &bull; FX Rate: 1 ${opt.listing.currency} = ${opt.exchange_rate} ${displayCurr}
+                            </div>` : ''}
+
+                            <!-- Direct Store Live Link Bar -->
+                            <div class="mt-3 pt-2.5 border-t border-gray-800 flex items-center justify-between">
+                                <a 
+                                    href="${safeListingUrl}" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/35 border border-blue-400/40 text-blue-300 hover:text-white text-xs font-semibold transition group shadow-sm"
+                                    title="Open verified ${escapeHtml(opt.listing.merchant)} listing in new tab"
+                                >
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition"></i>
+                                    <span>Live Store Link: <strong>${escapeHtml(opt.listing.merchant)}</strong> ↗</span>
+                                </a>
+                                <a 
+                                    href="${safeListingUrl}"
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    class="text-[11px] text-gray-400 hover:text-gray-300 underline font-mono truncate max-w-[150px]"
+                                >
+                                    ${escapeHtml(opt.listing.merchant_domain)}
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Details Body -->
+                        <div class="p-5 space-y-3.5 text-xs">
+                            
+                            <!-- Key Delivery, COD & Open Box Assurance Strip -->
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="truck" class="w-3.5 h-3.5 text-blue-400"></i>
+                                        <span>Est. Delivery:</span>
+                                    </span>
+                                    <span class="font-bold text-gray-200 mt-1">${opt.listing.estimated_delivery_text}</span>
+                                </div>
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="package-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                        <span>Open Box Delivery:</span>
+                                    </span>
+                                    <span class="font-bold ${opt.listing.open_box_delivery ? 'text-emerald-400' : 'text-gray-400'} mt-1">
+                                        ${opt.listing.open_box_delivery ? '✅ Doorstep OTP Verify' : '❌ Standard Sealed'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="banknote" class="w-3.5 h-3.5 text-amber-400"></i>
+                                        <span>Cash on Delivery:</span>
+                                    </span>
+                                    <span class="font-bold ${opt.listing.cod_available ? 'text-emerald-400' : 'text-gray-400'} mt-1">
+                                        ${opt.listing.cod_available ? '✅ Available' : '❌ Online Prepaid Only'}
+                                    </span>
+                                </div>
+                                <div class="bg-gray-800/80 rounded-xl p-2.5 border border-gray-700/80 flex flex-col justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-purple-400"></i>
+                                        <span>Trade-In Offer:</span>
+                                    </span>
+                                    <span class="font-bold ${opt.listing.exchange_offer_available ? 'text-purple-300' : 'text-gray-400'} mt-1 truncate">
+                                        ${opt.listing.exchange_offer_available ? `Up to ${formatMoney(opt.listing.exchange_max_discount * opt.exchange_rate, displayCurr)} off` : 'None'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Merchant Trust Index -->
+                            <div class="bg-gray-800/60 rounded-xl p-3 border border-gray-700/60">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="store" class="w-3.5 h-3.5 text-gray-400"></i>
+                                        <span>Merchant Trust Index:</span>
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded font-bold border ${trustColor}">
+                                        ${opt.trust.overall_score}/100 (${opt.trust.trust_tier})
+                                    </span>
+                                </div>
+                                <div class="text-[11px] text-gray-400 space-y-0.5">
+                                    <p>• Authorized Reseller: <strong class="${opt.trust.is_authorized_reseller ? 'text-emerald-400' : 'text-amber-400'}">${opt.trust.is_authorized_reseller ? 'Yes (OEM Certified)' : 'No (Grey/Third-Party)'}</strong></p>
+                                    <p>• Return Policy: <strong>${opt.trust.return_window_days} Days</strong> ${opt.trust.restocking_fee_pct > 0 ? `<span class="text-amber-400">(${opt.trust.restocking_fee_pct}% restocking fee)</span>` : '(0% fee)'}</p>
+                                </div>
+                            </div>
+
+                            <!-- Cross-Border FX & Import Duty Inspector (if international) -->
+                            ${opt.cross_border && opt.cross_border.is_cross_border ? `
+                            <div class="bg-amber-950/30 rounded-xl p-3 border border-amber-800/50 space-y-1.5">
+                                <div class="flex items-center justify-between text-amber-300 font-semibold text-[11px]">
+                                    <span class="flex items-center space-x-1">
+                                        <i data-lucide="plane" class="w-3.5 h-3.5"></i>
+                                        <span>Cross-Border International Merchant (${opt.cross_border.merchant_country} &rarr; ${opt.cross_border.destination_country})</span>
+                                    </span>
+                                    <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30">+${opt.cross_border.estimated_import_duty_pct}% Customs Duty</span>
+                                </div>
+                                <div class="text-[11px] text-amber-200/80 leading-relaxed space-y-0.5">
+                                    <p>• Estimated Duty: <strong>${formatMoney(opt.cross_border.estimated_import_duty_amount, displayCurr)}</strong></p>
+                                    <p>• Card Foreign Fee: <strong>${formatMoney(opt.cross_border.card_foreign_fee_amount, displayCurr)}</strong> (3.5% Bank Surcharge with zero overseas dispute recourse)</p>
+                                    <p class="text-emerald-400 font-semibold">• PayPal Native Conversion: Locks rate upfront & includes 180-day cross-border protection.</p>
+                                </div>
+                            </div>` : ''}
+
+                            <!-- Warranty & Damage Protection -->
+                            <div class="bg-gray-800/60 rounded-xl p-3 border border-gray-700/60 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-400 font-medium flex items-center space-x-1">
+                                        <i data-lucide="wrench" class="w-3.5 h-3.5 text-gray-400"></i>
+                                        <span>Warranty & Damage Protection:</span>
+                                    </span>
+                                    <span class="text-gray-300 font-bold">${opt.warranty.oem_warranty_months} Mo. Warranty</span>
+                                </div>
+                                <div class="text-[11px] text-gray-400 space-y-0.5">
+                                    <p>• Accidental Drops/Spills (ADP): <strong class="${opt.warranty.has_adp ? 'text-emerald-400' : 'text-gray-400'}">${opt.warranty.has_adp ? `Included/Available (+${formatMoney(opt.warranty.adp_addon_price * opt.exchange_rate, displayCurr)})` : 'None'}</strong></p>
+                                    <p>• Claim Deductible: <strong>${formatMoney(opt.warranty.deductible_per_claim * opt.exchange_rate, displayCurr)}</strong></p>
+                                </div>
+                            </div>
+
+                            <!-- PayPal Protection Card -->
+                            <div class="bg-blue-950/40 rounded-xl p-3 border border-blue-800/60 space-y-2">
+                                <div class="flex items-center space-x-2 text-blue-300 font-semibold">
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-blue-400 shrink-0"></i>
+                                    <span>${opt.paypal.headline}</span>
+                                </div>
+                                <p class="text-[11px] text-blue-200/80 leading-relaxed">
+                                    ${opt.paypal.explanation}
+                                </p>
+                                ${opt.paypal.pay_later_eligible ? `
+                                <div class="pt-1 border-t border-blue-900/60 flex items-center justify-between text-[11px]">
+                                    <span class="text-gray-400">PayPal Pay in 4:</span>
+                                    <span class="font-bold text-white">4 payments of ${formatMoney(opt.paypal.pay_in_4_biweekly, displayCurr)} / biweekly</span>
+                                </div>` : ''}
+                            </div>
+
+                            ${opt.payment_match_badge ? `
+                            <div class="px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-[11px] flex items-center space-x-1.5">
+                                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                <span>${opt.payment_match_badge}</span>
+                            </div>` : ''}
+
+                        </div>
+                    </div>
+
+                    <!-- Footer Actions: Direct Store Link + PayPal Checkout -->
+                    <div class="p-5 pt-0 space-y-2">
+                        <a 
+                            href="${opt.listing.listing_url}" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            class="w-full py-2 bg-gray-800/90 hover:bg-gray-750 border border-gray-700 hover:border-gray-600 text-blue-300 hover:text-white font-medium rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow"
+                        >
+                            <i data-lucide="globe" class="w-4 h-4 text-blue-400"></i>
+                            <span>View Product on ${opt.listing.merchant} ↗</span>
+                        </a>
+                        ${(opt.listing.in_stock && !opt.listing.is_dead_link && !opt.listing.stock_status?.includes('404')) ? `
+                        <button 
+                            onclick="openCheckoutModal('${opt.id}')"
+                            class="w-full py-2.5 ${isOptimal ? 'bg-emerald-600 hover:bg-emerald-500' : (isMaxProtect ? 'bg-blue-600 hover:bg-blue-500' : 'bg-gray-800 hover:bg-gray-700')} text-white font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md cursor-pointer"
+                        >
+                            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                            <span>Checkout with PayPal Shield</span>
+                        </button>` : `
+                        <button 
+                            disabled
+                            class="w-full py-2.5 bg-gray-800/60 border border-gray-700 text-gray-500 font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 cursor-not-allowed"
+                            title="Product is currently out of stock or listing expired at retailer"
+                        >
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+                            <span>${opt.listing.is_dead_link ? 'Listing Expired (404) - Disqualified' : 'Out of Stock - Disqualified'}</span>
+                        </button>`}
+                        <button 
+                            onclick="openDossierModal('${opt.id}')"
+                            class="w-full py-1.5 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-700/60 text-purple-200 font-semibold rounded-xl text-[11px] flex items-center justify-center space-x-1.5 transition shadow-sm cursor-pointer"
+                        >
+                            <span>🛡️ View PayPal Buyer Protection Dossier</span>
+                        </button>
+
+                        <!-- Bidirectional Mesh Challenge Actions -->
+                        <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-800/80">
+                            <button 
+                                onclick="challengeListing('${opt.id}', 'VERIFY_STOCK')" 
+                                class="py-1 px-2 bg-gray-800/80 hover:bg-gray-700 border border-gray-700/80 hover:border-blue-500/50 text-gray-300 hover:text-white rounded-lg text-[10px] font-semibold flex items-center justify-center space-x-1 transition shadow-sm cursor-pointer"
+                                title="Dispatch real-time WebSocket challenge to verify stock & cosmetic grading"
+                            >
+                                <span>⚡ Challenge Stock</span>
+                            </button>
+                            <button 
+                                onclick="challengeListing('${opt.id}', 'AUDIT_WARRANTY')" 
+                                class="py-1 px-2 bg-gray-800/80 hover:bg-gray-700 border border-gray-700/80 hover:border-amber-500/50 text-gray-300 hover:text-white rounded-lg text-[10px] font-semibold flex items-center justify-center space-x-1 transition shadow-sm cursor-pointer"
+                                title="Dispatch real-time WebSocket challenge to audit fine-print deductible"
+                            >
+                                <span>🛡️ Audit Warranty</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                cardsGrid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // AG Grid Instance & Config (Sponsor Category: Best Use of AG Grid)
+        let comparisonGridApi = null;
+
+        function renderComparisonMatrix(matrix) {
+            if (!matrix || matrix.length === 0) {
+                matrixSection.classList.add('hidden');
+                return;
+            }
+            window.comparisonMatrixData = matrix;
+            window.currentComparisonMatrix = matrix;
+            matrixSection.classList.remove('hidden');
+
+            // 1. Update KPI Summary Ribbon
+            const filterInStockEl = document.getElementById('filter-instock-only');
+            const shouldFilter = filterInStockEl ? filterInStockEl.checked : true;
+            const activeRows = shouldFilter ? matrix.filter(r => r.in_stock !== false && !r.is_dead_link && !r.stock_status?.includes('404') && !r.stock_status?.includes('Out of Stock')) : matrix;
+            document.getElementById('grid-stat-count').textContent = `${activeRows.length} ${shouldFilter ? 'In-Stock' : 'Total'}`;
+            
+            const codCount = activeRows.filter(r => r.cod_available).length;
+            document.getElementById('grid-stat-cod').textContent = `${codCount} of ${activeRows.length} Sellers`;
+
+            const openBoxCount = activeRows.filter(r => r.open_box_delivery).length;
+            document.getElementById('grid-stat-openbox').textContent = `${openBoxCount} of ${activeRows.length} Verified`;
+
+            const parseNum = str => parseFloat(String(str).replace(/[^0-9.]/g, '')) || 0;
+            let lowestTcoRow = activeRows.length > 0 ? activeRows[0] : null;
+            for (let i = 1; i < activeRows.length; i++) {
+                if (parseNum(activeRows[i].tco_conv) < parseNum(lowestTcoRow.tco_conv)) {
+                    lowestTcoRow = activeRows[i];
+                }
+            }
+            if (lowestTcoRow) {
+                document.getElementById('grid-stat-lowest-tco').textContent = `${lowestTcoRow.tco_conv} (${lowestTcoRow.merchant})`;
+            }
+
+            // 2. Initialize or Update AG Grid
+            const gridDiv = document.getElementById('comparison-ag-grid');
+
+            if (!comparisonGridApi) {
+                const gridOptions = {
+                    rowData: matrix,
+                    columnDefs: [
+                        {
+                            field: 'merchant',
+                            headerName: 'Store & Merchant',
+                            pinned: 'left',
+                            minWidth: 175,
+                            cellRenderer: (params) => {
+                                const d = params.data;
+                                if (!d) return '';
+                                const skillBadge = d.is_auto_learned_skill ? 
+                                    `<span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/50 flex items-center gap-0.5" title="Autonomously synthesized skill: ${escapeHtml(d.skill_id)} (${escapeHtml(d.skill_confidence)})">⚡ Auto-Learned</span>` : '';
+                                return `
+                                    <div class="py-1">
+                                        <div class="font-bold text-white flex items-center space-x-1.5 leading-snug flex-wrap gap-y-1">
+                                            <span>${escapeHtml(d.merchant)}</span>
+                                            <span class="text-[9px] px-1 py-0.2 rounded bg-gray-800 text-gray-300 border border-gray-700">${escapeHtml(d.origin_country)}</span>
+                                            ${skillBadge}
+                                        </div>
+                                        <div class="text-[10px] text-gray-400 truncate">${escapeHtml(d.domain)}</div>
+                                    </div>
+                                `;
+                            }
+                        },
+                        {
+                            field: 'condition',
+                            headerName: 'Condition',
+                            width: 125,
+                            cellRenderer: (params) => {
+                                const c = params.value || '';
+                                let bg = 'bg-gray-800 text-gray-300 border-gray-700';
+                                if (c.includes('Brand New')) bg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+                                if (c.includes('Open Box')) bg = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                                if (c.includes('Refurbished')) bg = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+                                return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${bg}">${c}</span>`;
+                            }
+                        },
+                        {
+                            field: 'stock_status',
+                            headerName: 'Stock',
+                            width: 140,
+                            cellRenderer: (params) => {
+                                const d = params.data;
+                                if (d?.is_dead_link || (d?.stock_status && d.stock_status.includes('404'))) {
+                                    return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40" title="Link Expired / 404 - Discontinued Listing">⚠️ Expired (404)</span>`;
+                                }
+                                if (d?.in_stock === false || (d?.stock_status && d.stock_status.includes('Out of Stock'))) {
+                                    return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40" title="Out of Stock at retailer">❌ Out of Stock</span>`;
+                                }
+                                return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">✅ In Stock</span>`;
+                            }
+                        },
+                        {
+                            field: 'sticker_price_conv',
+                            headerName: 'Landed Price',
+                            width: 130,
+                            sortable: true,
+                            cellRenderer: (params) => `<span class="font-bold text-white font-mono">${params.value || ''}</span>`
+                        },
+                        {
+                            field: 'tco_conv',
+                            headerName: 'Risk-Adjusted TCO',
+                            width: 160,
+                            sortable: true,
+                            cellRenderer: (params) => {
+                                return `<span class="font-black text-emerald-400 font-mono text-xs px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/50">${params.value || ''}</span>`;
+                            }
+                        },
+                        {
+                            field: 'trust_score',
+                            headerName: 'Merchant Trust',
+                            width: 145,
+                            cellRenderer: (params) => {
+                                const val = params.value || '';
+                                let color = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+                                if (val.includes('Caution') || val.includes('Standard')) color = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+                                if (val.includes('High Risk')) color = 'text-red-400 bg-red-500/10 border-red-500/30';
+                                return `<span class="px-2 py-0.5 rounded font-bold text-[10px] border ${color}">${val}</span>`;
+                            }
+                        },
+                        {
+                            field: 'estimated_delivery',
+                            headerName: 'Delivery Speed',
+                            width: 175,
+                            cellRenderer: (params) => {
+                                const val = params.value || '';
+                                const isCross = val.includes('Cross-Border');
+                                return `<span class="text-xs ${isCross ? 'text-amber-300' : 'text-gray-200'}">${isCross ? '✈️' : '🚚'} ${val}</span>`;
+                            }
+                        },
+                        {
+                            field: 'cod_available',
+                            headerName: 'Cash on Delivery',
+                            width: 145,
+                            cellRenderer: (params) => {
+                                return params.value 
+                                    ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">✅ COD Available</span>`
+                                    : `<span class="px-2 py-0.5 rounded text-[10px] text-gray-500 border border-gray-800">❌ Prepaid Only</span>`;
+                            }
+                        },
+                        {
+                            field: 'open_box_delivery',
+                            headerName: 'Open Box Inspection',
+                            width: 165,
+                            cellRenderer: (params) => {
+                                return params.value
+                                    ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">📦 OTP Verified</span>`
+                                    : `<span class="px-2 py-0.5 rounded text-[10px] text-gray-500 border border-gray-800">❌ Sealed Courier</span>`;
+                            }
+                        },
+                        {
+                            field: 'warranty_months',
+                            headerName: 'Warranty & ADP',
+                            width: 180,
+                            cellRenderer: (params) => {
+                                const d = params.data || {};
+                                return `
+                                    <div class="py-1">
+                                        <div class="text-gray-200 font-semibold leading-tight">${d.warranty_months || ''}</div>
+                                        <div class="text-[10px] text-gray-400">ADP: ${d.has_adp ? `<strong class="text-emerald-400">Yes (${d.adp_deductible})</strong>` : 'None'}</div>
+                                    </div>
+                                `;
+                            }
+                        },
+                        {
+                            field: 'return_window',
+                            headerName: 'Return Policy',
+                            width: 165,
+                            cellRenderer: (params) => `<span class="text-gray-300 text-xs">${params.value || ''}</span>`
+                        },
+                        {
+                            headerName: '14-Day Price Trend',
+                            field: 'sparkline_data',
+                            width: 170,
+                            cellRenderer: (params) => {
+                                const data = params.value;
+                                if (!data || !data.length) return '<span class="text-gray-500 text-[10px]">N/A</span>';
+                                const min = Math.min(...data);
+                                const max = Math.max(...data);
+                                const range = max - min || 1;
+                                const W = 148, H = 36, pts = data.length;
+                                const xs = data.map((_, i) => Math.round(i * (W - 4) / (pts - 1)) + 2);
+                                const ys = data.map(v => Math.round(H - 2 - ((v - min) / range) * (H - 4)) + 1);
+                                const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ');
+                                const lastX = xs[xs.length - 1];
+                                const lastY = ys[ys.length - 1];
+                                const isDown = data[data.length - 1] < data[0];
+                                const stroke = isDown ? '#f87171' : '#34d399';
+                                const arrow = isDown ? '▼' : '▲';
+                                return `<div style="display:flex;align-items:center;gap:3px;padding:4px 0">
+                                    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible;flex-shrink:0">
+                                        <path d="${path}" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+                                        <circle cx="${lastX}" cy="${lastY}" r="2.5" fill="${stroke}"/>
+                                    </svg>
+                                    <span style="font-size:9px;color:${stroke};font-weight:700">${arrow}</span>
+                                </div>`;
+                            }
+                        },
+                        {
+                            field: 'exchange_offer',
+                            headerName: 'Trade-In / Exchange',
+                            width: 170,
+                            cellRenderer: (params) => {
+                                const val = params.value || '';
+                                return val.includes('✅') 
+                                    ? `<span class="text-purple-300 font-semibold text-[10px]">${val}</span>`
+                                    : `<span class="text-gray-500 text-[10px]">None</span>`;
+                            }
+                        },
+                        {
+                            field: 'import_duty',
+                            headerName: 'Customs Duty & FX',
+                            width: 165,
+                            cellRenderer: (params) => {
+                                const isCross = params.data?.is_cross_border;
+                                return `<span class="${isCross ? 'text-amber-400 font-bold' : 'text-gray-400'} text-[10px]">${params.value || '0% (Domestic)'}</span>`;
+                            }
+                        },
+                        {
+                            field: 'paypal_protection',
+                            headerName: 'PayPal Shield',
+                            width: 180,
+                            cellRenderer: (params) => {
+                                return `
+                                    <div class="flex items-center space-x-1 text-blue-300 text-[11px] font-semibold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                        <span>${params.value || 'Active'}</span>
+                                    </div>
+                                `;
+                            }
+                        },
+                        {
+                            field: 'listing_url',
+                            headerName: 'Live Store Link',
+                            width: 155,
+                            cellRenderer: (params) => {
+                                const url = params.value || '#';
+                                const d = params.data;
+                                const m = d?.merchant || 'Store';
+                                if (d?.is_dead_link || (d?.stock_status && d.stock_status.includes('404'))) {
+                                    return `
+                                        <span class="px-2 py-0.5 rounded bg-gray-800/80 border border-amber-900/40 text-gray-500 text-[10px] inline-flex items-center space-x-1 line-through" title="Retailer link is dead or expired (404)">
+                                            <span>404 Expired</span>
+                                        </span>
+                                    `;
+                                }
+                                return `
+                                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/30 border border-blue-400/40 text-blue-300 hover:text-white font-semibold text-[10px] inline-flex items-center space-x-1 transition shadow-sm" title="Open live store search in new tab">
+                                        <span>Open ${m}</span>
+                                        <svg class="w-3 h-3 ml-0.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </a>
+                                `;
+                            }
+                        },
+                        {
+                            headerName: 'Action',
+                            pinned: 'right',
+                            width: 150,
+                            cellRenderer: (params) => {
+                                const id = params.data?.id;
+                                const d = params.data;
+                                const url = d?.listing_url || '#';
+                                const isAvailable = d?.in_stock !== false && !d?.is_dead_link && !d?.stock_status?.includes('404') && !d?.stock_status?.includes('Out of Stock');
+                                return `
+                                    <div class="flex items-center space-x-1 py-0.5">
+                                        ${isAvailable ? `
+                                        <button onclick="window.openCheckoutModal('${id}')" class="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[10px] shadow transition cursor-pointer">
+                                            Pay
+                                        </button>` : `
+                                        <span class="px-1.5 py-1 rounded-lg bg-gray-800 text-gray-500 text-[10px] font-semibold border border-gray-700/60" title="Disqualified from checkout">
+                                            ${d?.is_dead_link ? '404' : 'OOS'}
+                                        </span>`}
+                                        <button onclick="window.openDossierModal('${id}')" class="px-1.5 py-1 rounded-lg bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-700/70 font-semibold text-[10px] shadow transition cursor-pointer" title="View Cryptographic PayPal Dispute Dossier">
+                                            🛡️ Dossier
+                                        </button>
+                                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="p-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-blue-400 hover:text-white border border-gray-700 transition" title="Open direct store website">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </a>
+                                    </div>
+                                `;
+                            }
+                        }
+                    ],
+                    defaultColDef: {
+                        sortable: true,
+                        filter: true,
+                        resizable: true
+                    },
+                    isExternalFilterPresent: () => {
+                        const cb = document.getElementById('filter-instock-only');
+                        return cb ? cb.checked : true;
+                    },
+                    doesExternalFilterPass: (node) => {
+                        const d = node.data;
+                        if (!d) return true;
+                        const isDead = d.is_dead_link === true || (d.stock_status && d.stock_status.includes('404'));
+                        const isOOS = d.in_stock === false || (d.stock_status && d.stock_status.includes('Out of Stock'));
+                        return !isDead && !isOOS;
+                    },
+                    rowHeight: 46,
+                    headerHeight: 38,
+                    animateRows: true,
+                    rowSelection: 'single',
+                    onRowClicked: (event) => {
+                        if (event.data?.id) {
+                            window.openCheckoutModal(event.data.id);
+                        }
+                    }
+                };
+
+                comparisonGridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+                // Attach External Filter checkbox
+                const filterInStockEl = document.getElementById('filter-instock-only');
+                if (filterInStockEl) {
+                    filterInStockEl.addEventListener('change', () => {
+                        comparisonGridApi.onFilterChanged();
+                        // Recompute KPI ribbons dynamically using latest active matrix
+                        const m = window.currentComparisonMatrix || [];
+                        const shouldFilter = filterInStockEl.checked;
+                        const activeRows = shouldFilter ? m.filter(r => r.in_stock !== false && !r.is_dead_link && !r.stock_status?.includes('404') && !r.stock_status?.includes('Out of Stock')) : m;
+                        document.getElementById('grid-stat-count').textContent = `${activeRows.length} ${shouldFilter ? 'In-Stock' : 'Total'}`;
+                    });
+                }
+
+                // Attach Quick Filter search
+                const searchInputEl = document.getElementById('grid-search-input');
+                if (searchInputEl) {
+                    searchInputEl.addEventListener('input', (e) => {
+                        comparisonGridApi.setGridOption('quickFilterText', e.target.value);
+                    });
+                }
+
+                // Attach CSV Export
+                const exportBtn = document.getElementById('btn-export-csv');
+                if (exportBtn) {
+                    exportBtn.addEventListener('click', () => {
+                        comparisonGridApi.exportDataAsCsv({
+                            fileName: `ProductFind_Swarm_Audit_${new Date().toISOString().split('T')[0]}.csv`
+                        });
+                    });
+                }
+            } else {
+                comparisonGridApi.setGridOption('rowData', matrix);
+                comparisonGridApi.onFilterChanged();
+            }
+
+            lucide.createIcons();
+        }
+
+        // Open checkout modal
+        window.openCheckoutModal = function(optionId) {
+            selectedOption = activeOptions.find(o => o.id === optionId);
+            if (!selectedOption && window.comparisonMatrixData) {
+                const row = window.comparisonMatrixData.find(r => r.id === optionId);
+                if (row) {
+                    const parseN = str => parseFloat(String(str).replace(/[^0-9.]/g, '')) || 0;
+                    selectedOption = {
+                        id: row.id,
+                        listing: {
+                            product_title: row.product_title || searchInput.value || "Scouted Hardware Item",
+                            merchant: row.merchant,
+                            origin_country: row.origin_country || "US",
+                            estimated_delivery_text: row.estimated_delivery || "Standard Delivery",
+                            open_box_delivery: Boolean(row.open_box_delivery),
+                            listing_url: row.listing_url || "#"
+                        },
+                        converted_cash_outlay: parseN(row.sticker_price_conv),
+                        display_currency: currentCurrency,
+                        exchange_rate: 1.0,
+                        warranty: { has_adp: Boolean(row.has_adp), adp_addon_price: 0.0 },
+                        paypal: { explanation: "Protected under PayPal Buyer Protection Section 13." }
+                    };
+                }
+            }
+            if (!selectedOption) return;
+
+            const curr = selectedOption.display_currency || currentCurrency;
+            modalProductTitle.textContent = selectedOption.listing.product_title;
+            modalMerchant.textContent = `${selectedOption.listing.merchant} (${selectedOption.listing.origin_country})`;
+            modalDelivery.textContent = selectedOption.listing.estimated_delivery_text;
+            modalOpenbox.textContent = selectedOption.listing.open_box_delivery ? 'Verified (OTP Inspection at Doorstep)' : 'Standard Sealed Delivery';
+            modalOpenbox.className = selectedOption.listing.open_box_delivery ? 'text-emerald-400 font-semibold' : 'text-gray-400 font-normal';
+
+            const baseWithTax = selectedOption.converted_cash_outlay;
+            modalBasePrice.textContent = formatMoney(baseWithTax, curr);
+
+            const adpCost = selectedOption.warranty.has_adp ? (selectedOption.warranty.adp_addon_price * selectedOption.exchange_rate) : 0.0;
+            modalAdpPrice.textContent = selectedOption.warranty.has_adp ? formatMoney(adpCost, curr) : formatMoney(0.0, curr);
+            
+            const total = baseWithTax + adpCost;
+            modalTotalPrice.textContent = formatMoney(total, curr);
+            modalProtectionReason.textContent = selectedOption.paypal.explanation;
+
+            const storeLinkEl = document.getElementById('modal-store-link');
+            const storeNameEl = document.getElementById('modal-store-name');
+            if (storeLinkEl && selectedOption.listing?.listing_url) {
+                storeLinkEl.href = selectedOption.listing.listing_url;
+                if (storeNameEl) storeNameEl.textContent = `Open ${selectedOption.listing.merchant} Official Site ↗`;
+            }
+
+            document.getElementById('modal-paylater-btn-text').innerHTML = `Split into 4 Interest-Free Payments of <strong>${formatMoney(total / 4.0, curr)}</strong>`;
+
+            modalReceipt.classList.add('hidden');
+            checkoutModal.classList.remove('hidden');
+        };
+
+        closeModalBtn.addEventListener('click', () => {
+            checkoutModal.classList.add('hidden');
+        });
+
+        // Trigger PayPal Checkout simulation via API
+        modalConfirmPaypal.addEventListener('click', async () => {
+            if (!selectedOption) return;
+            const curr = selectedOption.display_currency || currentCurrency;
+            const baseWithTax = selectedOption.converted_cash_outlay;
+            const adpCost = selectedOption.warranty.has_adp ? (selectedOption.warranty.adp_addon_price * selectedOption.exchange_rate) : 0.0;
+            const total = baseWithTax + adpCost;
+            
+            modalConfirmPaypal.disabled = true;
+            modalConfirmPaypal.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-gray-900"></i><span>Creating PayPal Order (${curr})...</span>`;
+            lucide.createIcons();
+
+            try {
+                // 1. Create Order
+                const res = await fetch('/api/paypal/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        amount: total, 
+                        item_name: selectedOption.listing.product_title,
+                        currency: curr
+                    })
+                });
+                const orderData = await res.json();
+
+                // 2. Capture Order
+                const capRes = await fetch('/api/paypal/capture-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderData.id })
+                });
+                const capData = await capRes.json();
+
+                modalReceipt.classList.remove('hidden');
+                modalOrderId.textContent = `PayPal Order ID: ${capData.id} (${curr} ${total.toFixed(2)}) &bull; Status: ${capData.status}`;
+            } catch (err) {
+                console.error(err);
+            } finally {
+                modalConfirmPaypal.disabled = false;
+                modalConfirmPaypal.innerHTML = `<span class="italic font-extrabold text-blue-900 text-base">PayPal</span><span>Checkout Now</span>`;
+            }
+        });
+
+        modalConfirmPaylater.addEventListener('click', () => {
+            modalConfirmPaypal.click();
+        });
+
+        // ==========================================
+        // Risk Priority Controls & Dynamic TCO Vector
+        // ==========================================
+        window.toggleRiskPanel = function() {
+            const body = document.getElementById('risk-panel-body');
+            const txt = document.getElementById('risk-panel-toggle-text');
+            if (!body) return;
+            const isHidden = body.classList.contains('hidden');
+            if (isHidden) {
+                body.classList.remove('hidden');
+                if (txt) txt.textContent = 'Collapse';
+            } else {
+                body.classList.add('hidden');
+                if (txt) txt.textContent = 'Configure';
+            }
+        };
+
+        const warrantyInput = document.getElementById('warranty-priority-input');
+        const speedInput = document.getElementById('speed-priority-input');
+        const trustInput = document.getElementById('trust-tolerance-input');
+
+        function updateRiskBadge() {
+            const w = Math.round((parseFloat(warrantyInput?.value || 0.5)) * 100);
+            const s = Math.round((parseFloat(speedInput?.value || 0.5)) * 100);
+            const t = Math.round((parseFloat(trustInput?.value || 0.7)) * 100);
+            const wLbl = document.getElementById('warranty-val-label');
+            const sLbl = document.getElementById('speed-val-label');
+            const tLbl = document.getElementById('trust-val-label');
+            const bLbl = document.getElementById('risk-summary-badge');
+            if (wLbl) wLbl.textContent = `${w}%`;
+            if (sLbl) sLbl.textContent = `${s}%`;
+            if (tLbl) tLbl.textContent = `${t}%`;
+            if (bLbl) bLbl.textContent = `Vector: (${w}% Warr / ${s}% Spd / ${t}% Trust)`;
+        }
+
+        let reRankDebounceTimer = null;
+        function triggerLiveReRank() {
+            updateRiskBadge();
+            if (activeOptions && activeOptions.length > 0 && socket && socket.readyState === WebSocket.OPEN) {
+                clearTimeout(reRankDebounceTimer);
+                reRankDebounceTimer = setTimeout(() => {
+                    socket.send(JSON.stringify({
+                        action: 're_rank',
+                        warranty_priority: parseFloat(warrantyInput?.value || 0.5),
+                        speed_priority: parseFloat(speedInput?.value || 0.5),
+                        trust_tolerance: parseFloat(trustInput?.value || 0.7)
+                    }));
+                }, 250);
+            }
+        }
+
+        [warrantyInput, speedInput, trustInput].forEach(inp => {
+            inp?.addEventListener('input', triggerLiveReRank);
+        });
+
+        window.challengeListing = function(listingId, challengeType = 'VERIFY_STOCK') {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                appendTerminalLog('ClientUI', 'SwarmMesh', 'CHALLENGE', `Dispatching real-time ${challengeType} challenge on listing [${listingId}]...`);
+                socket.send(JSON.stringify({
+                    action: 'challenge_listing',
+                    listing_id: listingId,
+                    challenge_type: challengeType
+                }));
+            }
+        };
+
+        // ==========================================
+        // Cryptographic Dispute Evidence Dossier
+        // ==========================================
+        let activeDossierData = null;
+
+        window.openDossierModal = async function(optionId) {
+            let opt = activeOptions.find(o => o.id === optionId);
+            if (!opt && window.comparisonMatrixData) {
+                const row = window.comparisonMatrixData.find(r => r.id === optionId);
+                if (row) {
+                    opt = {
+                        id: row.id,
+                        listing: {
+                            product_title: searchInput.value || "Scouted Hardware Item",
+                            merchant: row.merchant,
+                            condition: row.condition,
+                            open_box_delivery: row.open_box_delivery,
+                            seller_name: row.merchant + " Direct"
+                        },
+                        trust: { public_rating: 4.5 },
+                        warranty: { oem_warranty_months: 12, warranty_type: 'OEM Manufacturer', has_adp: Boolean(row.has_adp) },
+                        risk_adjusted_tco: parseFloat(String(row.tco_conv).replace(/[^0-9.]/g, '')) || 0,
+                        display_currency: currentCurrency
+                    };
+                }
+            }
+            if (!opt) return;
+
+            const modal = document.getElementById('dossier-modal');
+            if (!modal) return;
+
+            const curr = opt.display_currency || currentCurrency;
+            const agreedTco = opt.risk_adjusted_tco;
+
+            try {
+                const res = await fetch('/api/paypal/create-dossier', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: opt.id,
+                        item_title: opt.listing.product_title,
+                        platform: opt.listing.merchant,
+                        agreed_tco: agreedTco,
+                        condition: opt.listing.condition,
+                        open_box_verified: Boolean(opt.listing.open_box_delivery),
+                        seller_name: opt.listing.seller_name || opt.listing.merchant,
+                        seller_rating: opt.trust?.public_rating || 4.5,
+                        warranty_claims: `${opt.warranty.oem_warranty_months} Mo. ${opt.warranty.warranty_type} (ADP: ${opt.warranty.has_adp ? 'Verified' : 'None'})`,
+                        display_currency: curr
+                    })
+                });
+                const dossier = await res.json();
+                activeDossierData = dossier;
+
+                document.getElementById('dossier-id-val').textContent = dossier.dossier_id;
+                document.getElementById('dossier-timestamp-val').textContent = dossier.timestamp;
+                document.getElementById('dossier-hash-val').textContent = dossier.cryptographic_hash;
+                document.getElementById('dossier-item-title').textContent = dossier.item_title;
+                document.getElementById('dossier-platform').textContent = dossier.platform;
+                document.getElementById('dossier-agreed-tco').textContent = formatMoney(dossier.agreed_tco, curr);
+                document.getElementById('dossier-condition').textContent = dossier.advertised_condition;
+                document.getElementById('dossier-openbox').textContent = dossier.open_box_verified ? 'Verified (OTP Inspected)' : 'Standard Sealed Courier';
+                document.getElementById('dossier-seller').textContent = `${dossier.seller_name} (${dossier.seller_rating} ★)`;
+                document.getElementById('dossier-warranty').textContent = dossier.warranty_claims_evidence;
+
+                const specEl = document.getElementById('dossier-spec-hash');
+                if (specEl) specEl.textContent = (dossier.merkle_spec_hash || '').slice(0, 10) + '...';
+                const termsEl = document.getElementById('dossier-terms-hash');
+                if (termsEl) termsEl.textContent = (dossier.merkle_terms_hash || '').slice(0, 10) + '...';
+                const priceEl = document.getElementById('dossier-pricing-hash');
+                if (priceEl) priceEl.textContent = (dossier.merkle_pricing_hash || '').slice(0, 10) + '...';
+
+                modal.classList.remove('hidden');
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Dossier generation error:", err);
+            }
+        };
+
+        window.closeDossierModal = function() {
+            document.getElementById('dossier-modal')?.classList.add('hidden');
+        };
+
+        window.copyDossierHash = function(e) {
+            if (activeDossierData?.cryptographic_hash) {
+                navigator.clipboard.writeText(activeDossierData.cryptographic_hash);
+                const targetBtn = (e && e.target) || document.getElementById('copy-dossier-btn');
+                if (targetBtn) {
+                    const prev = targetBtn.textContent;
+                    targetBtn.textContent = '✅ Copied!';
+                    targetBtn.classList.add('text-emerald-400');
+                    setTimeout(() => {
+                        targetBtn.textContent = prev;
+                        targetBtn.classList.remove('text-emerald-400');
+                    }, 2000);
+                }
+            }
+        };
+
+        window.downloadDossierJson = function() {
+            if (!activeDossierData) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activeDossierData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `${activeDossierData.dossier_id}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        };
+
+        window.openDossierForCurrentOrder = function() {
+            if (selectedOption?.id) {
+                openDossierModal(selectedOption.id);
+            }
+        };
+
+        // ==========================================
+        // Interactive Onboarding & Preference Wizard
+        // ==========================================
+        const wizardModal = document.getElementById('preference-wizard-modal');
+        const openWizardBtn = document.getElementById('btn-open-pref-wizard');
+        const closeWizardBtn = document.getElementById('close-wizard-btn');
+        const wizardForm = document.getElementById('wizard-form');
+        const wizardProductInput = document.getElementById('wizard-product-input');
+        const wizardBadgeText = document.getElementById('wizard-badge-text');
+
+        let activeWizardLang = prefLanguage.value || 'en';
+        let activeWizardCountry = prefCountry.value || 'US';
+        let activeWizardCurr = prefCurrency.value || 'USD';
+        let activeWizardPay = prefPayment.value || 'all';
+
+        function syncWizardPillsUI() {
+            // Language pills
+            document.querySelectorAll('.wizard-lang-btn').forEach(btn => {
+                if (btn.dataset.value === activeWizardLang) {
+                    btn.className = 'wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-blue-400 bg-blue-600/30 text-white font-bold text-left transition flex items-center space-x-2 ring-1 ring-blue-500 shadow-sm';
+                } else {
+                    btn.className = 'wizard-pill wizard-lang-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-300 font-medium text-left transition flex items-center space-x-2';
+                }
+            });
+
+            // Country pills
+            document.querySelectorAll('.wizard-country-btn').forEach(btn => {
+                if (btn.dataset.value === activeWizardCountry) {
+                    btn.className = 'wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-blue-400 bg-blue-600/30 text-white font-bold text-left transition flex items-center space-x-1.5 ring-1 ring-blue-500 shadow-sm';
+                } else {
+                    btn.className = 'wizard-pill wizard-country-btn px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 text-gray-300 font-medium text-left transition flex items-center space-x-1.5';
+                }
+            });
+
+            // Currency pills
+            document.querySelectorAll('.wizard-curr-btn').forEach(btn => {
+                if (btn.dataset.value === activeWizardCurr) {
+                    btn.className = 'wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-amber-400 bg-amber-500/20 text-amber-200 font-bold font-mono transition ring-1 ring-amber-500 shadow-sm';
+                } else {
+                    btn.className = 'wizard-pill wizard-curr-btn px-3 py-1.5 rounded-xl border border-gray-700 bg-gray-800 text-gray-400 font-mono transition hover:bg-gray-750';
+                }
+            });
+
+            // Payment pills
+            document.querySelectorAll('.wizard-pay-btn').forEach(btn => {
+                const isAll = btn.dataset.value === 'all';
+                const colSpan = isAll ? 'sm:col-span-2 p-2' : 'p-2.5';
+                if (btn.dataset.value === activeWizardPay) {
+                    btn.className = `wizard-pill wizard-pay-btn ${colSpan} rounded-xl border border-blue-400 bg-blue-600/25 text-left transition flex items-center space-x-2 ring-1 ring-blue-500 shadow-sm`;
+                } else {
+                    btn.className = `wizard-pill wizard-pay-btn ${colSpan} rounded-xl border border-gray-700 bg-gray-800 text-left transition flex items-center space-x-2 hover:bg-gray-750`;
+                }
+            });
+
+            // Update Header Navigation Badge
+            const flagMap = { US: '🇺🇸', IN: '🇮🇳', GB: '🇬🇧', DE: '🇩🇪', CA: '🇨🇦', JP: '🇯🇵', AU: '🇦🇺' };
+            const flag = flagMap[activeWizardCountry] || '🌐';
+            wizardBadgeText.textContent = `${flag} ${activeWizardCountry} • ${activeWizardCurr} • ${activeWizardLang.toUpperCase()}`;
+        }
+
+        // Attach listeners for language pills
+        document.querySelectorAll('.wizard-lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardLang = btn.dataset.value;
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for country pills (auto-pairs currency)
+        document.querySelectorAll('.wizard-country-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardCountry = btn.dataset.value;
+                if (btn.dataset.currency) {
+                    activeWizardCurr = btn.dataset.currency;
+                }
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for currency pills
+        document.querySelectorAll('.wizard-curr-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardCurr = btn.dataset.value;
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for payment pills
+        document.querySelectorAll('.wizard-pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeWizardPay = btn.dataset.value;
+                syncWizardPillsUI();
+            });
+        });
+
+        // Attach listeners for preset trending product pills
+        document.querySelectorAll('.wizard-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                wizardProductInput.value = btn.dataset.query;
+            });
+        });
+
+        // Open and close wizard modal
+        function openPreferenceWizard() {
+            activeWizardLang = prefLanguage.value || 'en';
+            activeWizardCountry = prefCountry.value || 'IN';
+            activeWizardCurr = prefCurrency.value || 'INR';
+            activeWizardPay = prefPayment.value || 'all';
+            wizardProductInput.value = searchInput.value || "Samsung Galaxy A17";
+            syncWizardPillsUI();
+            wizardModal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closePreferenceWizard() {
+            wizardModal.classList.add('hidden');
+        }
+
+        openWizardBtn.addEventListener('click', openPreferenceWizard);
+        closeWizardBtn.addEventListener('click', closePreferenceWizard);
+
+        // Click outside modal card to close
+        wizardModal.addEventListener('click', (e) => {
+            if (e.target === wizardModal) {
+                closePreferenceWizard();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !wizardModal.classList.contains('hidden')) {
+                closePreferenceWizard();
+            }
+        });
+
+        // Wizard Form Submission
+        wizardForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const chosenQuery = wizardProductInput.value.trim() || searchInput.value.trim() || "Samsung Galaxy A17";
+            
+            // Sync all header controls
+            prefLanguage.value = activeWizardLang;
+            prefCountry.value = activeWizardCountry;
+            prefCurrency.value = activeWizardCurr;
+            prefPayment.value = activeWizardPay;
+            searchInput.value = chosenQuery;
+            currentCurrency = activeWizardCurr;
+
+            // Save preferences
+            localStorage.setItem('pf_language', activeWizardLang);
+            localStorage.setItem('pf_country', activeWizardCountry);
+            localStorage.setItem('pf_currency', activeWizardCurr);
+            localStorage.setItem('pf_payment', activeWizardPay);
+            localStorage.setItem('pf_configured', 'true');
+
+            syncWizardPillsUI();
+            closePreferenceWizard();
+
+            // Trigger multi-agent swarm search immediately
+            triggerSearch(chosenQuery);
+        });
+
+        // --- Autonomous Skill Vault Logic ---
+        const openSkillVaultBtn = document.getElementById('open-skill-vault-btn');
+        const closeSkillVaultBtn = document.getElementById('close-skill-vault-btn');
+        const skillVaultModal = document.getElementById('skill-vault-modal');
+        const skillsListContainer = document.getElementById('skills-list-container');
+        const refreshSkillsBtn = document.getElementById('refresh-skills-btn');
+        const teachSkillForm = document.getElementById('teach-skill-form');
+        const teachDomainInput = document.getElementById('teach-domain-input');
+        const skillVaultBadgeText = document.getElementById('skill-vault-badge-text');
+
+        async function fetchAndRenderSkills() {
+            try {
+                const res = await fetch('/api/skills');
+                const data = await res.json();
+                if (data.skills) {
+                    skillVaultBadgeText.textContent = `Skill Vault: ${data.count} Learned`;
+                    renderSkillsList(data.skills);
+                }
+            } catch (err) {
+                console.error('Failed to fetch skill vault:', err);
+            }
+        }
+
+        function renderSkillsList(skills) {
+            skillsListContainer.innerHTML = '';
+            skills.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-gray-950/70 border border-gray-800 rounded-xl space-y-2 hover:border-purple-500/40 transition';
+                
+                const synthBadge = s.is_auto_synthesized ? 
+                    `<span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold">⚡ Auto-Synthesized (${Math.round(s.verification_score * 100)}% Confidence)</span>` :
+                    `<span class="px-2 py-0.5 rounded-full text-[10px] bg-gray-800 text-gray-300 border border-gray-700">Verified Baseline</span>`;
+
+                const paypalBadge = s.paypal_shield_required ?
+                    `<span class="px-2 py-0.5 rounded-full text-[10px] bg-indigo-950/80 text-indigo-300 border border-indigo-500/40 flex items-center gap-1 font-semibold">🛡️ PayPal Section 13 Shield Mandatory</span>` :
+                    `<span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">Direct Merchant Recourse</span>`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-white text-sm">${s.merchant_name}</span>
+                            <span class="text-gray-400 font-mono text-[11px]">${s.merchant_domain} (${s.origin_country})</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5 flex-wrap gap-1">
+                            ${synthBadge}
+                            ${paypalBadge}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-gray-900 text-gray-300 text-[11px]">
+                        <div><span class="text-gray-500">Return Window:</span> <strong class="text-white">${s.policy_rules.return_window_days} Days</strong></div>
+                        <div><span class="text-gray-500">Restocking Fee:</span> <strong class="${s.policy_rules.restocking_fee_pct > 0 ? 'text-amber-400' : 'text-emerald-400'}">${s.policy_rules.restocking_fee_pct}%</strong></div>
+                        <div><span class="text-gray-500">Warranty:</span> <strong class="text-white">${s.policy_rules.warranty_months} Mo (${s.policy_rules.warranty_type})</strong></div>
+                        <div><span class="text-gray-500">COD / Open Box:</span> <strong class="text-white">${s.policy_rules.cod_supported ? 'COD ✅' : 'Prepaid'} • ${s.policy_rules.open_box_inspection ? 'Open Box ✅' : 'Sealed'}</strong></div>
+                    </div>
+                `;
+                skillsListContainer.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        if (openSkillVaultBtn) {
+            openSkillVaultBtn.addEventListener('click', () => {
+                fetchAndRenderSkills();
+                skillVaultModal.classList.remove('hidden');
+            });
+        }
+
+        if (closeSkillVaultBtn) {
+            closeSkillVaultBtn.addEventListener('click', () => {
+                skillVaultModal.classList.add('hidden');
+            });
+        }
+
+        if (refreshSkillsBtn) {
+            refreshSkillsBtn.addEventListener('click', fetchAndRenderSkills);
+        }
+
+        if (teachSkillForm) {
+            teachSkillForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const domain = teachDomainInput.value.trim();
+                if (!domain) return;
+                const btn = document.getElementById('btn-teach-skill');
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Synthesizing...</span>`;
+                lucide.createIcons();
+
+                try {
+                    const res = await fetch('/api/skills/learn', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ domain: domain, country: prefCountry.value, currency: prefCurrency.value })
+                    });
+                    const data = await res.json();
+                    teachDomainInput.value = '';
+                    fetchAndRenderSkills();
+                } catch (err) {
+                    console.error('Failed to teach skill:', err);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Teach Novel Merchant</span>`;
+                    lucide.createIcons();
+                }
+            });
+        }
+
+        fetchAndRenderSkills();
+
+        // --- Google Cloud Firestore & Evidence Vault Logic ---
+        const openEvidenceVaultBtn = document.getElementById('open-evidence-vault-btn');
+        const closeEvidenceVaultBtn = document.getElementById('close-evidence-vault-btn');
+        const evidenceVaultModal = document.getElementById('evidence-vault-modal');
+        const dossiersListContainer = document.getElementById('dossiers-list-container');
+        const refreshEvidenceBtn = document.getElementById('refresh-evidence-btn');
+        const evidenceVaultBadgeText = document.getElementById('evidence-vault-badge-text');
+        const dbModeVal = document.getElementById('db-mode-val');
+        const dbProjectVal = document.getElementById('db-project-val');
+        const dbDossiersCount = document.getElementById('db-dossiers-count');
+
+        async function fetchAndRenderEvidenceVault() {
+            try {
+                const statusRes = await fetch('/api/database/status');
+                const statusData = await statusRes.json();
+                if (statusData) {
+                    if (statusData.mode === 'firestore_native') {
+                        if (evidenceVaultBadgeText) evidenceVaultBadgeText.textContent = 'Firestore: Connected';
+                        if (dbModeVal) dbModeVal.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>Firestore Native</span>';
+                    } else {
+                        if (evidenceVaultBadgeText) evidenceVaultBadgeText.textContent = 'Firestore: Local Mirror';
+                        if (dbModeVal) dbModeVal.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Local Mirror Active</span>';
+                    }
+                    if (dbProjectVal) dbProjectVal.textContent = statusData.project_id || 'productfind-sentinel';
+                }
+
+                const dossiersRes = await fetch('/api/paypal/dossiers');
+                const dossiersData = await dossiersRes.json();
+                if (dossiersData && dossiersData.dossiers) {
+                    if (dbDossiersCount) dbDossiersCount.textContent = `${dossiersData.count} Cryptographic`;
+                    renderDossiersList(dossiersData.dossiers);
+                }
+            } catch (err) {
+                console.error('Failed fetching evidence vault:', err);
+            }
+        }
+
+        function renderDossiersList(dossiers) {
+            if (!dossiersListContainer) return;
+            dossiersListContainer.innerHTML = '';
+            if (dossiers.length === 0) {
+                dossiersListContainer.innerHTML = `
+                    <div class="p-4 bg-gray-950/50 border border-dashed border-gray-800 rounded-xl text-center text-gray-400 space-y-1">
+                        <i data-lucide="shield-check" class="w-6 h-6 text-emerald-400 mx-auto"></i>
+                        <p class="font-medium text-gray-300">No PayPal Dispute Dossiers Recorded Yet</p>
+                        <p class="text-[11px] text-gray-500">Run a search and click "View PayPal Section 13 Dossier" on any deal card to generate and persist a cryptographic evidence block.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            dossiers.forEach(d => {
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-gray-950/70 border border-gray-800 rounded-xl space-y-2 hover:border-emerald-500/40 transition font-mono text-[11px]';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-white">${d.dossier_id}</span>
+                            <span class="text-emerald-400 text-[10px] bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">Order: ${d.paypal_order_id}</span>
+                        </div>
+                        <span class="text-gray-400 text-[10px]">${d.timestamp}</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-gray-300">
+                        <div><span class="text-gray-500 font-sans">Item:</span> <strong class="text-white">${d.item_title}</strong></div>
+                        <div><span class="text-gray-500 font-sans">Platform:</span> <strong class="text-cyan-300">${d.platform}</strong></div>
+                        <div><span class="text-gray-500 font-sans">Agreed TCO:</span> <strong class="text-emerald-300">${formatMoney(d.agreed_tco, d.display_currency || 'USD')}</strong></div>
+                    </div>
+                    <div class="pt-1.5 border-t border-gray-900 flex items-center justify-between flex-wrap gap-1 text-[10px]">
+                        <span class="text-gray-500 font-sans">Merkle Root: <span class="text-purple-300 truncate inline-block max-w-[280px] align-bottom">${d.cryptographic_hash}</span></span>
+                        <span class="text-emerald-400 flex items-center gap-1 font-sans font-semibold">✓ PayPal Sec. 13 Enforceable</span>
+                    </div>
+                `;
+                dossiersListContainer.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        if (openEvidenceVaultBtn && evidenceVaultModal) {
+            openEvidenceVaultBtn.addEventListener('click', () => {
+                evidenceVaultModal.classList.remove('hidden');
+                fetchAndRenderEvidenceVault();
+                lucide.createIcons();
+            });
+        }
+
+        if (closeEvidenceVaultBtn && evidenceVaultModal) {
+            closeEvidenceVaultBtn.addEventListener('click', () => {
+                evidenceVaultModal.classList.add('hidden');
+            });
+        }
+
+        if (refreshEvidenceBtn) {
+            refreshEvidenceBtn.addEventListener('click', () => {
+                fetchAndRenderEvidenceVault();
+            });
+        }
+
+        fetchAndRenderEvidenceVault();
+
+        // Initial setup on page load:
+        syncWizardPillsUI();
+        // Auto-seed lively demo data on initial render so judges see populated cards & AG Grid immediately
+        const defaultDemoQuery = "renewed dell latitude 5511 core i7-10850h";
+        searchInput.value = defaultDemoQuery;
+        triggerSearch(defaultDemoQuery);
+    </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "skill_id": "skill_boutique_tech_de_v1",
+  "merchant_name": "Boutique-tech",
+  "merchant_domain": "boutique-tech.de",
+  "origin_country": "DE",
+  "currency": "EUR",
+  "is_auto_synthesized": true,
+  "verification_score": 0.95,
+  "learned_at": "2026-11-02T05:43:57Z",
+  "success_count": 1,
+  "policy_rules": {
+    "return_window_days": 14,
+    "restocking_fee_pct": 15.0,
+    "warranty_type": "Authorized Brand Warranty",
+    "warranty_months": 24,
+    "cod_supported": false,
+    "cod_fee": 0.0,
+    "open_box_inspection": false,
+    "exchange_offered": false,
+    "supported_payments": [
+      "PayPal",
+      "Credit Card"
+    ]
+  },
+  "paypal_shield_required": true,
+  "synthesized_code": "# Autonomously Synthesized E-Commerce Parsing Skill: skill_boutique_tech_de_v1\n# Target Domain: boutique-tech.de (DE / EUR)\ndef audit_merchant_boutique_tech_de(listing):\n    return {\n        'return_days': 14,\n        'restocking_fee_pct': 15.0,\n        'warranty_type': 'Authorized Brand Warranty',\n        'paypal_protection_mandate': True\n    }\n",
+  "sample_url": "https://www.boutique-tech.de"
+}
