@@ -160,11 +160,11 @@ class FXService:
                 paypal_conversion_total=converted_base,
                 card_total_estimated=converted_base,
                 savings_with_paypal=0.0,
+                paypal_fx_savings_or_shield="No cross-border risk (domestic order).",
                 recommendation=f"Domestic order within {dest_country}. Zero import duties and zero foreign transaction fees."
             )
 
         # Cross-border purchase: Check statutory De Minimis thresholds
-        # CIF in USD for international trade threshold comparison
         cif_usd = self.convert_amount(base_price + shipping_cost, orig_curr, "USD")
         duty_pct = IMPORT_DUTY_MATRIX.get((merchant_country, dest_country), 15.0)
         de_minimis_note = ""
@@ -227,11 +227,14 @@ class FXService:
             converted_base_price=converted_base,
             estimated_import_duty_pct=duty_pct,
             estimated_import_duty_amount=duty_amount,
+            foreign_card_surcharge_pct=card_fee_pct,
+            foreign_card_surcharge_amount=card_fee_amount,
             card_foreign_fee_pct=card_fee_pct,
             card_foreign_fee_amount=card_fee_amount,
             paypal_conversion_rate=paypal_rate,
             paypal_conversion_total=paypal_total,
             card_total_estimated=card_total,
             savings_with_paypal=savings,
+            paypal_fx_savings_or_shield="PayPal 180-day Cross-Border Buyer Protection & upfront locked exchange rate.",
             recommendation=recommendation
         )

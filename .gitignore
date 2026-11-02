@@ -11,4 +11,5 @@ ENV/
 .DS_Store
 .vscode/
 .idea/
+.agents/
 diagnostic.py

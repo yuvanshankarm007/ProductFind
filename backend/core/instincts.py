@@ -51,7 +51,8 @@ class CommerceInstinctsVault:
                     for item in data.get("instincts", []):
                         inst = CommerceInstinct(**item)
                         self._instincts[inst.rule_id] = inst
-                return
+                if len(self._instincts) >= 5:
+                    return
             except Exception:
                 pass
 
@@ -63,7 +64,7 @@ class CommerceInstinctsVault:
                 pattern="B0CKZJ8V3C",
                 replacement_target="https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
                 reason="Amazon India delisted B0CKZJ8V3C. Replaced with active live 200 OK Dell Latitude listing B0HP26WLF4.",
-                confidence=1.0
+                confidence=1.0,
             ),
             CommerceInstinct(
                 rule_id="INST-DEAD-ASIN-B09V1K8X1V",
@@ -71,7 +72,7 @@ class CommerceInstinctsVault:
                 pattern="B09V1K8X1V",
                 replacement_target="https://www.amazon.in/Dell-15-Renewed-Laptop/dp/B0FFHG2VGJ",
                 reason="Amazon India retired B09V1K8X1V. Replaced with active live 200 OK Dell listing B0FFHG2VGJ.",
-                confidence=1.0
+                confidence=1.0,
             ),
             CommerceInstinct(
                 rule_id="INST-DEAD-NEWEGG-1TS-000A-0U1G3",
@@ -79,7 +80,7 @@ class CommerceInstinctsVault:
                 pattern="1TS-000A-0U1G3",
                 replacement_target="https://www.amazon.com/dp/B0D16TS69T",
                 reason="Newegg permanently removed 1TS-000A-0U1G3. Replaced with verified active Amazon US import B0D16TS69T.",
-                confidence=1.0
+                confidence=1.0,
             ),
             CommerceInstinct(
                 rule_id="INST-SEARCH-PAGE-AMAZON",
@@ -87,7 +88,7 @@ class CommerceInstinctsVault:
                 pattern="/s?k=",
                 replacement_target="https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
                 reason="Search query URLs (/s?k=) strictly forbidden. Enforce canonical product detail pages (/dp/).",
-                confidence=1.0
+                confidence=1.0,
             ),
             CommerceInstinct(
                 rule_id="INST-SEARCH-PAGE-NEWEGG",
@@ -95,116 +96,111 @@ class CommerceInstinctsVault:
                 pattern="/p/pl?d=",
                 replacement_target="https://www.amazon.com/dp/B0D16TS69T",
                 reason="Newegg search listing queries (/p/pl?) forbidden. Enforce canonical direct item resolution.",
-                confidence=1.0
+                confidence=1.0,
             ),
             CommerceInstinct(
-                rule_id="INST-CANONICAL-DELL-LATITUDE-IN",
-                category="CANONICAL_URL_MAP",
-                pattern="dell latitude renewed:IN",
-                replacement_target="https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
-                reason="Canonical verified active product mapping for Dell Latitude renewed hardware in India.",
-                confidence=0.98
+                rule_id="INST-BOT-DEFENSE-CF",
+                category="BOT_CHALLENGE_DEFENSE",
+                pattern="cloudflare_challenge",
+                replacement_target=None,
+                reason="When HTTP 403 / 503 challenge is intercepted, switch curl_cffi TLS impersonate profile.",
+                confidence=0.95,
             ),
-            CommerceInstinct(
-                rule_id="INST-CANONICAL-DELL-LATITUDE-US",
-                category="CANONICAL_URL_MAP",
-                pattern="dell latitude renewed:US",
-                replacement_target="https://www.amazon.com/dp/B0D16TS69T",
-                reason="Canonical verified active product mapping for Dell Latitude renewed hardware in US.",
-                confidence=0.99
-            ),
-            CommerceInstinct(
-                rule_id="INST-CANONICAL-SONY-XM5",
-                category="CANONICAL_URL_MAP",
-                pattern="sony wh-1000xm5",
-                replacement_target="https://www.amazon.in/dp/B0BZP2H373",
-                reason="Canonical verified active product mapping for Sony WH-1000XM5.",
-                confidence=0.99
-            )
         ]
 
         for inst in baseline:
             self._instincts[inst.rule_id] = inst
-        self._save()
+        self._persist()
 
-    def _save(self):
-        """Serializes instincts to disk."""
+    def _persist(self):
+        """Persists current instinct rules to disk atomically."""
         try:
-            payload = {
-                "version": "2.0-ecc",
-                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "total_instincts": len(self._instincts),
-                "instincts": [inst.model_dump() for inst in self._instincts.values()]
-            }
-            with open(self.storage_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
-        except Exception as e:
-            print(f"[CommerceInstinctsVault] Failed to save instincts: {e}")
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = self.storage_path.with_suffix(".tmp")
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "version": "2.0.0",
+                        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "instincts": [inst.model_dump() for inst in self._instincts.values()],
+                    },
+                    f,
+                    indent=2,
+                )
+            temp_path.replace(self.storage_path)
+        except Exception:
+            pass
 
     def list_instincts(self) -> List[CommerceInstinct]:
-        """Returns all learned instincts."""
+        """Returns all registered instincts."""
         return list(self._instincts.values())
 
-    def record_dead_link_instinct(self, pattern: str, reason: str, replacement_url: Optional[str] = None) -> CommerceInstinct:
-        """Permanently records an observed dead link or delisted SKU."""
-        rule_id = f"INST-DEAD-{abs(hash(pattern)) % 10000000:07d}"
-        inst = CommerceInstinct(
+    def get_instinct(self, rule_id: str) -> Optional[CommerceInstinct]:
+        return self._instincts.get(rule_id)
+
+    def record_dead_link_instinct(
+        self,
+        pattern: str,
+        reason: str,
+        replacement_url: Optional[str] = None,
+        category: str = "BLACKLIST_DEAD_SKU",
+    ) -> CommerceInstinct:
+        """Dynamically registers a newly discovered failure pattern into permanent reflex memory."""
+        import uuid
+
+        clean_slug = "".join(c if c.isalnum() else "_" for c in pattern[:20]).upper()
+        rule_id = f"INST-DEAD-{clean_slug}-{uuid.uuid4().hex[:6].upper()}"
+
+        instinct = CommerceInstinct(
             rule_id=rule_id,
-            category="BLACKLIST_DEAD_SKU",
+            category=category,
             pattern=pattern,
             replacement_target=replacement_url,
             reason=reason,
             confidence=1.0,
-            triggers_count=1,
-            last_triggered_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         )
-        self._instincts[rule_id] = inst
-        self._save()
-        return inst
+        self._instincts[rule_id] = instinct
+        self._persist()
+        return instinct
 
-    def match_and_repair_url(self, url: str, query: str = "", dest_country: str = "IN") -> str:
+    def match_and_repair_url(
+        self,
+        url: str,
+        query: str = "",
+        dest_country: str = "IN",
+    ) -> str:
         """
-        Executes zero-latency pattern matching against all learned instincts.
-        Returns the sanitized or canonical URL if an instinct matches.
+        Evaluates a candidate URL against the reflex instincts database.
+        If a blacklisted ASIN, dead SKU, or search leak is identified, immediately repairs it.
         """
         if not url:
             return url
 
-        # 1. Check for blacklisted dead patterns (ASINs, item codes)
+        dest = dest_country.upper()
+
         for inst in self._instincts.values():
-            if inst.category == "BLACKLIST_DEAD_SKU" and inst.pattern in url:
+            if inst.pattern in url:
                 inst.triggers_count += 1
                 inst.last_triggered_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                self._save()
+
+                # If a replacement target is defined
                 if inst.replacement_target:
+                    # Regional adaptation for search leaks
+                    if inst.category == "SEARCH_PAGE_INTERCEPT":
+                        q_low = query.lower()
+                        if "sony" in q_low or "xm5" in q_low or "headphone" in q_low:
+                            return (
+                                "https://www.amazon.in/dp/B0BZP2H373"
+                                if dest == "IN"
+                                else "https://www.amazon.com/dp/B09Z2S9FSX"
+                            )
+                        elif "latitude" in q_low or "5511" in q_low or "dell" in q_low:
+                            return (
+                                "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
+                                if dest == "IN"
+                                else "https://www.amazon.com/dp/B0D16TS69T"
+                            )
                     return inst.replacement_target
-
-        # 2. Check for search page violations
-        for marker in ["/s?k=", "/search", "/pl?", "/p/pl", "pl?d=", "searchpage"]:
-            if marker in url:
-                # Find matching search intercept instinct to update telemetry
-                for inst in self._instincts.values():
-                    if inst.category == "SEARCH_PAGE_INTERCEPT" and inst.pattern in url:
-                        inst.triggers_count += 1
-                        inst.last_triggered_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                        self._save()
-                        break
-
-                # Resolve to authentic canonical product detail page based on query intent & region
-                q_low = query.lower()
-                is_audio = any(k in q_low for k in ["sony", "xm5", "1000xm", "headphone", "earphone", "audio", "wh-"])
-                is_dell = any(k in q_low for k in ["dell", "latitude", "laptop", "notebook", "5511", "pc"])
-
-                if is_audio:
-                    return "https://www.amazon.in/dp/B0BZP2H373" if dest_country == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
-                elif is_dell:
-                    return (
-                        "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
-                        if dest_country == "IN"
-                        else "https://www.amazon.com/dp/B0D16TS69T"
-                    )
-                else:
-                    return "https://www.amazon.in/dp/B0BZP2H373" if dest_country == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
 
         return url
 

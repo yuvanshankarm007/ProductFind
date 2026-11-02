@@ -6,7 +6,7 @@ and detects fake/inflated MSRP discounts using a numpy moving-average baseline.
 Produces 11-point sparkline arrays for AG Grid cell renderers.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import re
 import random
 import hashlib
@@ -42,7 +42,6 @@ class SentinelPricePredictor:
 
         # Build 90-day daily price series with sticky retail regimes & promo dips
         days = 90
-        # Baseline regular retail price (starts slightly higher at launch window)
         regular_price = candidate_price * float(rng.uniform(1.04, 1.10))
         daily_prices = np.full(days, regular_price)
 
@@ -88,7 +87,6 @@ class SentinelPricePredictor:
             # Flag fake discount if claimed MSRP is >2.0 std deviations or >20% above 90-day median
             if z_score > 2.0 or claimed_msrp > (baseline_median * 1.20):
                 is_fake = True
-                # True discount evaluated against regulatory 30-day baseline benchmark
                 effective_baseline = min(baseline_median, lowest_prior_30d * 1.05)
                 true_discount_pct = max(
                     0.0,
@@ -98,12 +96,10 @@ class SentinelPricePredictor:
                 true_discount_pct = advertised_discount_pct
 
         # --- 14-day Econometric Prediction ---
-        # 7-day Exponential Moving Average (EMA)
         weights = np.exp(np.linspace(-1.0, 0.0, 7))
         weights /= weights.sum()
         ema_7d = float(np.dot(history_series[-7:], weights))
 
-        # Mean reversion momentum: Deceptive fake discounts take top alert priority
         if is_fake:
             drift = float(rng.uniform(-0.03, 0.01))
             recommendation = (
@@ -112,7 +108,6 @@ class SentinelPricePredictor:
             )
             buy_verdict = "AVOID FAKE DISCOUNT"
         elif percentile_rank <= 15.0:
-            # Bottom 15% percentile: Strong support band, prices typically rebound 2-4%
             drift = float(rng.uniform(0.01, 0.04))
             recommendation = (
                 f"BUY NOW: Historical ATL Window. Price is in the bottom {percentile_rank:.0f}th "
@@ -181,7 +176,6 @@ class PricePredictorAgent:
             except Exception:
                 pass
 
-        # Calibration based on product category & title (audio checked before phone so 'headphones' won't match 'phone')
         if any(w in title_lower for w in ["headphone", "earbud", "earphone", "audio", "sony wh", "xm5", "airpods", "bose"]):
             expected_delta_pct = -8.5
             prediction_trend = "Probable Clearance Drop"
@@ -202,7 +196,7 @@ class PricePredictorAgent:
             )
             buy_verdict = "BUY NOW (Competitive Carrier Subsidy)"
 
-        elif any(re.search(r'\b' + re.escape(w) + r'\b', title_lower) for w in ["macbook", "laptop", "thinkpad", "dell xps", "notebook", "zenbook"]):
+        elif any(re.search(r'\b' + re.escape(w) + r'\b', title_lower) for w in ["macbook", "laptop", "thinkpad", "dell xps", "notebook", "zenbook", "latitude"]):
             expected_delta_pct = 2.4
             prediction_trend = "Inventory Depletion / Likely Rise"
             confidence = 92
@@ -242,7 +236,6 @@ class PricePredictorAgent:
             )
             buy_verdict = "FAIR VALUE (BUY OR SET ALERT)"
 
-        # Generate realistic 90-day history trajectory anchored to current_best_price
         c_price = max(10.0, current_best_price)
         history_factors = [
             ("-90d", 1.12, "Launch MSRP Window"),
@@ -267,7 +260,6 @@ class PricePredictorAgent:
         avg_90d = round(sum(raw_prices) / len(raw_prices), 2)
         predicted_price = round(c_price * (1.0 + (expected_delta_pct / 100.0)), 2)
 
-        # Build AG Grid-ready sparkline from history points + prediction
         sparkline_pts = [p for p in raw_prices]
         sparkline_pts.append(predicted_price)
 
@@ -289,6 +281,5 @@ class PricePredictorAgent:
             sparkline=sparkline_pts,
         )
 
-        # Cache in Google Cloud Memorystore / Firestore
         gcp_db_service.cache_prediction(query_hash, analytics.model_dump(), ttl_seconds=3600)
         return analytics

@@ -290,10 +290,11 @@ class StrategyCompiler:
         # 1. OPTIMAL VALUE CHAMPION (In-stock domestic verified retailer with zero import customs risk)
         domestic_candidates = [opt for opt in live_verified_pool if opt.listing.origin_country == preferences.country]
         if domestic_candidates:
-            optimal = sorted(domestic_candidates, key=lambda x: x.risk_adjusted_tco)[0]
+            candidate_optimal = sorted(domestic_candidates, key=lambda x: x.risk_adjusted_tco)[0]
         else:
-            optimal = sorted(live_verified_pool, key=lambda x: x.risk_adjusted_tco)[0]
+            candidate_optimal = sorted(live_verified_pool, key=lambda x: x.risk_adjusted_tco)[0]
 
+        optimal = candidate_optimal.model_copy(deep=True)
         optimal.recommendation_tier = "OPTIMAL_VALUE"
         optimal.tier_reason = f"Lowest net risk TCO ({self.fx.format_price(optimal.risk_adjusted_tco, curr)}) combining verified merchant warranty, fair price, and verified live in-stock inventory."
         optimal.rank = 1
@@ -306,7 +307,7 @@ class StrategyCompiler:
                 pool_prot,
                 key=lambda x: (not x.warranty.has_adp, not x.warranty.covers_drops, -x.trust.overall_score)
             )
-            max_protect = by_protection[0]
+            max_protect = by_protection[0].model_copy(deep=True)
             max_protect.recommendation_tier = "MAX_PROTECTION"
             w_desc = f"{max_protect.warranty.oem_warranty_months}-Mo Warranty" + (" + Complete ADP Protection" if max_protect.warranty.has_adp else "")
             max_protect.tier_reason = f"Selected for highest buyer protection: {w_desc} with {max_protect.trust.overall_score}/100 seller trust rating (verified in stock)."
@@ -327,10 +328,7 @@ class StrategyCompiler:
 
         if pool_budget:
             candidate_budget = sorted(pool_budget, key=lambda x: x.converted_cash_outlay)[0]
-            if candidate_budget.id == max_protect.id or candidate_budget.id == optimal.id:
-                budget = candidate_budget.model_copy(deep=True)
-            else:
-                budget = candidate_budget
+            budget = candidate_budget.model_copy(deep=True)
             budget.recommendation_tier = "BUDGET_STICKER"
             budget.tier_reason = f"Lowest initial cash outlay ({self.fx.format_price(budget.converted_cash_outlay, curr)}) among verified live in-stock retailers."
             budget.rank = 3

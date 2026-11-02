@@ -4,7 +4,6 @@ Unit and Integration Test Suite for Autonomous Self-Testing, Self-Fixing & Learn
 
 import pytest
 import asyncio
-import httpx
 from fastapi.testclient import TestClient
 
 from backend.server import app
@@ -15,7 +14,6 @@ from backend.agents.autonomous_self_healer import (
     AutonomousOrchestrator,
     autonomous_healer
 )
-
 
 @pytest.mark.asyncio
 async def test_autonomous_self_tester_diagnostic():
@@ -36,12 +34,11 @@ async def test_autonomous_self_tester_diagnostic():
         assert sub.status in ("HEALTHY", "DEGRADED", "AUTO_REPAIRED", "ANOMALY_DETECTED")
         assert len(sub.details) > 5
 
-
 @pytest.mark.asyncio
 async def test_autonomous_self_fixer_auto_repair():
     """Verifies that the auto-repair engine can heal degradations and maintain a verified fix log."""
     fixer = AutonomousSelfFixer()
-    
+
     # Test specific heuristic healing
     stealth_fix = await fixer.heal_stealth_browser("Simulated Akamai Challenge")
     assert stealth_fix.subsystem == "stealth_browser"
@@ -61,12 +58,11 @@ async def test_autonomous_self_fixer_auto_repair():
     for r in repairs:
         assert r.verification_status == "VERIFIED_HEALTHY"
 
-
 @pytest.mark.asyncio
 async def test_autonomous_continuous_learner():
     """Verifies that the continuous learner discovers uncataloged domains and distills skills."""
     learner = AutonomousContinuousLearner()
-    
+
     # Discover and distill a novel candidate
     record = await learner.discover_and_learn_domain("vijaysales.com", country="IN", currency="INR")
     assert record.domain == "vijaysales.com"
@@ -82,7 +78,6 @@ async def test_autonomous_continuous_learner():
         assert b.confidence >= 0.80
         assert b.persisted is True
 
-
 @pytest.mark.asyncio
 async def test_autonomous_orchestrator_closed_loop():
     """Verifies the closed-loop orchestrator (Audit -> Detect -> Heal -> Re-Audit)."""
@@ -92,7 +87,6 @@ async def test_autonomous_orchestrator_closed_loop():
     assert report.overall_health_score >= 80.0
     assert len(report.recent_repairs) >= 1
     assert report.learned_skills_count >= 3
-
 
 def test_system_rest_endpoints():
     """Verifies FastAPI REST endpoints for self-testing, self-fixing, and continuous learning."""

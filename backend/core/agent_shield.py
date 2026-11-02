@@ -5,7 +5,6 @@ Acts as a zero-trust gatekeeper verifying outbound product URLs, pricing sanity,
 merchant trust boundaries, and counterfeit protections before client rendering.
 """
 
-import re
 from typing import Dict, Any, List, Optional
 from .instincts import commerce_instincts
 
@@ -25,7 +24,13 @@ class CommerceAgentShield:
     ]
 
     @classmethod
-    def sanitize_url(cls, url: str, query: str = "", merchant_domain: str = "", dest_country: str = "IN") -> str:
+    def sanitize_url(
+        cls,
+        url: str,
+        query: str = "",
+        merchant_domain: str = "",
+        dest_country: str = "IN",
+    ) -> str:
         """
         Interprets URL against AgentShield security rules and Commerce Instincts.
         Instantly repairs rogue search links, 404 ASINs, and malformed slugs.
@@ -54,8 +59,10 @@ class CommerceAgentShield:
     def _get_canonical_fallback(cls, query: str, merchant_domain: str, dest_country: str) -> str:
         """Generates a certified 200 OK canonical product link based on intent and region."""
         q_low = query.lower()
+        dest = dest_country.upper()
+
         if "dell" in q_low or "latitude" in q_low or "5511" in q_low or "laptop" in q_low:
-            if dest_country == "IN":
+            if dest == "IN":
                 if "indiamart" in merchant_domain:
                     return "https://www.indiamart.com/proddetail/dell-latitude-5511-i7-refurbished-laptop-2855589109433.html"
                 elif "flipkart" in merchant_domain:
@@ -64,10 +71,10 @@ class CommerceAgentShield:
             else:
                 return "https://www.amazon.com/dp/B0D16TS69T"
         elif "xm5" in q_low or "1000xm" in q_low or "sony" in q_low or "headphone" in q_low:
-            return "https://www.amazon.in/dp/B0BZP2H373" if dest_country == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
+            return "https://www.amazon.in/dp/B0BZP2H373" if dest == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
 
         # Default guaranteed canonical electronics item
-        return "https://www.amazon.in/dp/B0BZP2H373" if dest_country == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
+        return "https://www.amazon.in/dp/B0BZP2H373" if dest == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
 
     @classmethod
     def validate_listing(cls, listing: Any, query: str = "", dest_country: str = "IN") -> bool:
@@ -105,17 +112,6 @@ class CommerceAgentShield:
                     setattr(listing, "base_price", 29999.0)
 
         return True
-
-    @classmethod
-    def audit_final_options(cls, final_options: List[Any], query: str = "", dest_country: str = "IN") -> List[Any]:
-        """Runs batch zero-trust audit across all finalized curated options."""
-        audited = []
-        for opt in final_options:
-            listing = getattr(opt, "listing", None)
-            if listing:
-                cls.validate_listing(listing, query=query, dest_country=dest_country)
-            audited.append(opt)
-        return audited
 
 
 # Global singleton instance

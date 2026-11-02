@@ -1,17 +1,27 @@
 """
 FastAPI Server & WebSocket Streaming Gateway for ProductFind / PayPal Sentinel AI.
-Hosts the agent orchestration, PayPal developer API endpoints, multi-currency FX service,
-and real-time event bus.
+Hosts agent orchestration, PayPal developer API endpoints, multi-currency FX service,
+and real-time session-isolated event streaming.
 """
 
 import os
+import sys
 import json
 import asyncio
+
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
+from contextlib import asynccontextmanager
 
 from .core.bus import EventBus
 from .coordinator import SentinelCoordinator
@@ -22,92 +32,74 @@ from .schemas import RiskPreferences, DisputeDossier
 from .agents.adaptive_skill_learner import AdaptiveSkillLearner, SkillVault, AdaptiveSkill
 from .agents.autonomous_self_healer import autonomous_healer
 from .core.gcp_db import gcp_db_service
+from .core.instincts import commerce_instincts
 
-import socket
-import threading
-from contextlib import asynccontextmanager
+_relay_server = None
 
-_relay_started = False
-_relay_lock = threading.Lock()
-
-def start_ipv6_loopback_relay(port: int = 8000) -> None:
+async def run_ipv6_relay(port: int = 8000):
     """
-    Seamless IPv6 loopback relay listening on [::1]:port that proxies to 127.0.0.1:port.
-    Resolves the Windows Chromium/Brave localhost binding issue where Chrome/Brave queries [::1] first
-    and raises ERR_CONNECTION_REFUSED when Uvicorn is bound to IPv4 0.0.0.0.
+    Asynchronous IPv6 loopback relay: listens on [::1]:port and forwards to 127.0.0.1:port.
+    Handles Chromium/Brave IPv6 preference on Windows without unbounded thread spawning.
     """
-    global _relay_started
-    with _relay_lock:
-        if _relay_started:
-            return
-        _relay_started = True
-
-    def handle_client(client_sock: socket.socket):
-        target = None
+    async def handle_relay(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         try:
-            target = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            target.settimeout(5.0)
-            target.connect(('127.0.0.1', port))
-            target.settimeout(None)
-            client_sock.settimeout(None)
-
-            def pipe(src, dst):
+            target_reader, target_writer = await asyncio.open_connection("127.0.0.1", port)
+            async def forward(src: asyncio.StreamReader, dst: asyncio.StreamWriter):
                 try:
-                    while True:
-                        d = src.recv(16384)
-                        if not d:
-                            break
-                        dst.sendall(d)
+                    while data := await src.read(16384):
+                        dst.write(data)
+                        await dst.drain()
                 except Exception:
                     pass
                 finally:
                     try:
-                        dst.shutdown(socket.SHUT_WR)
+                        if hasattr(dst, "can_write_eof") and dst.can_write_eof():
+                            dst.write_eof()
                     except Exception:
                         pass
 
-            t1 = threading.Thread(target=pipe, args=(client_sock, target), daemon=True)
-            t2 = threading.Thread(target=pipe, args=(target, client_sock), daemon=True)
-            t1.start()
-            t2.start()
-
-            def cleanup():
-                t1.join(timeout=30)
-                t2.join(timeout=30)
-                try: client_sock.close()
-                except Exception: pass
-                if target:
-                    try: target.close()
-                    except Exception: pass
-
-            threading.Thread(target=cleanup, daemon=True).start()
+            await asyncio.gather(
+                forward(reader, target_writer),
+                forward(target_reader, writer),
+                return_exceptions=True
+            )
         except Exception:
-            try: client_sock.close()
-            except Exception: pass
-            if target:
-                try: target.close()
-                except Exception: pass
+            pass
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+            try:
+                target_writer.close()
+                await target_writer.wait_closed()
+            except Exception:
+                pass
 
-    def server_loop():
-        try:
-            srv = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            srv.bind(('::1', port))
-            srv.listen(100)
-            print(f"[IPv6 Relay] Seamless loopback relay active: [::1]:{port} -> 127.0.0.1:{port}")
-            while True:
-                client_sock, _ = srv.accept()
-                threading.Thread(target=handle_client, args=(client_sock,), daemon=True).start()
-        except Exception as e:
-            print(f"[IPv6 Relay] Info: {e}")
+    try:
+        server = await asyncio.start_server(handle_relay, "::1", port)
+        print(f"[IPv6 Relay] Bound loopback server on [::1]:{port} -> 127.0.0.1:{port}")
+        return server
+    except Exception as e:
+        print(f"[IPv6 Relay] Status / Note: {e}")
+        return None
 
-    threading.Thread(target=server_loop, daemon=True).start()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _relay_server
     port = int(os.getenv("PORT", 8000))
-    start_ipv6_loopback_relay(port)
+    _relay_server = await run_ipv6_relay(port)
     yield
+    if _relay_server:
+        try:
+            _relay_server.close()
+            await _relay_server.wait_closed()
+            print("[IPv6 Relay] Cleanly shut down.")
+        except Exception:
+            pass
+
 
 app = FastAPI(
     title="ProductFind AI",
@@ -124,8 +116,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from fastapi.responses import FileResponse, Response
-
 # Global instances
 global_bus = EventBus()
 coordinator = SentinelCoordinator(global_bus)
@@ -133,52 +123,14 @@ paypal_svc = PayPalService()
 skill_vault = SkillVault()
 skill_learner = AdaptiveSkillLearner(skill_vault)
 
+
+# Request schemas
 class LearnSkillRequest(BaseModel):
     domain: str
     content: Optional[str] = ""
     country: Optional[str] = "US"
     currency: Optional[str] = "USD"
 
-@app.get("/api/skills")
-async def list_skills():
-    """Lists all autonomously acquired merchant and policy evaluation skills."""
-    skills = skill_vault.list_skills()
-    return {
-        "count": len(skills),
-        "skills": [s.model_dump() for s in skills]
-    }
-
-@app.get("/api/skills/{domain}")
-async def get_skill(domain: str):
-    """Retrieves an autonomous skill by merchant domain."""
-    skill = skill_vault.get_skill(domain)
-    if not skill:
-        raise HTTPException(status_code=404, detail=f"No skill acquired for domain '{domain}'")
-    return skill.model_dump()
-
-@app.post("/api/skills/learn")
-async def learn_skill(req: LearnSkillRequest):
-    """
-    On-demand autonomous skill acquisition for any novel e-commerce merchant.
-    """
-    skill = skill_learner.discover_and_learn_merchant(
-        domain=req.domain,
-        page_html_or_text=req.content or f"{req.domain} online store return policy 14 days warranty",
-        country=req.country,
-        currency=req.currency
-    )
-    return {
-        "status": "success",
-        "message": f"Autonomously synthesized and verified skill for '{skill.merchant_name}'",
-        "skill": skill.model_dump()
-    }
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    fav_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public", "favicon.svg")
-    if os.path.exists(fav_path):
-        return FileResponse(fav_path, media_type="image/svg+xml")
-    return Response(status_code=204)
 
 class SearchRequest(BaseModel):
     query: str
@@ -191,13 +143,16 @@ class SearchRequest(BaseModel):
     speed_priority: Optional[float] = 0.5
     trust_tolerance: Optional[float] = 0.7
 
+
 class CreateOrderRequest(BaseModel):
     amount: float
     item_name: str
     currency: Optional[str] = "USD"
 
+
 class CaptureOrderRequest(BaseModel):
     order_id: str
+
 
 class CreateDossierRequest(BaseModel):
     order_id: str
@@ -210,6 +165,26 @@ class CreateDossierRequest(BaseModel):
     seller_rating: Optional[float] = 4.5
     warranty_claims: Optional[str] = "1-Year OEM Coverage"
     display_currency: Optional[str] = "USD"
+
+
+class SelfLearnRequest(BaseModel):
+    domains: Optional[List[str]] = None
+
+
+class LearnInstinctRequest(BaseModel):
+    pattern: str
+    reason: str
+    replacement_target: Optional[str] = None
+
+
+# Endpoints
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    fav_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public", "favicon.svg")
+    if os.path.exists(fav_path):
+        return FileResponse(fav_path, media_type="image/svg+xml")
+    return Response(status_code=204)
+
 
 @app.get("/api/health")
 async def health_check():
@@ -232,87 +207,14 @@ async def health_check():
         ]
     }
 
+
 @app.get("/api/database/status")
 async def get_db_status():
-    """Returns cloud database and cache connectivity and telemetry."""
     return gcp_db_service.get_status()
 
-class SelfLearnRequest(BaseModel):
-    domains: Optional[List[str]] = None
-
-@app.get("/api/system/health")
-async def get_system_health():
-    """Returns comprehensive diagnostic audit report across all agent swarm subsystems."""
-    report = await autonomous_healer.tester.run_full_diagnostic()
-    report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
-    return report.model_dump()
-
-@app.post("/api/system/self-test")
-async def trigger_self_test():
-    """Triggers on-demand synthetic self-test across all 5 subsystems."""
-    report = await autonomous_healer.tester.run_full_diagnostic()
-    report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
-    return {
-        "status": "success",
-        "report": report.model_dump()
-    }
-
-@app.post("/api/system/self-fix")
-async def trigger_self_fix():
-    """Executes closed-loop self-testing and automated heuristic repair."""
-    report = await autonomous_healer.run_comprehensive_audit_and_heal()
-    return {
-        "status": "success",
-        "report": report.model_dump(),
-        "repairs_applied": [r.model_dump() for r in report.recent_repairs]
-    }
-
-@app.post("/api/system/self-learn")
-async def trigger_self_learn(req: Optional[SelfLearnRequest] = None):
-    """Executes continuous discovery and autonomous skill distillation over unindexed merchant candidates."""
-    domains = req.domains if req else None
-    learned = await autonomous_healer.learner.run_discovery_cycle(domains)
-    return {
-        "status": "success",
-        "skills_acquired": [s.model_dump() for s in learned],
-        "total_skills_in_vault": len(autonomous_healer.learner.skill_learner.vault.list_skills())
-    }
-
-@app.get("/api/system/repairs")
-async def get_repair_history():
-    """Returns autonomous self-healing fix records."""
-    return [r.model_dump() for r in autonomous_healer.fixer.fix_history]
-
-@app.get("/api/system/instincts")
-async def get_system_instincts():
-    """Returns learned ECC-style operational instincts and negative failure patterns."""
-    from .core.instincts import commerce_instincts
-    instincts = commerce_instincts.list_instincts()
-    return {
-        "status": "success",
-        "total_instincts": len(instincts),
-        "instincts": [inst.model_dump() for inst in instincts]
-    }
-
-class LearnInstinctRequest(BaseModel):
-    pattern: str
-    reason: str
-    replacement_target: Optional[str] = None
-
-@app.post("/api/system/instincts/learn")
-async def add_system_instinct(req: LearnInstinctRequest):
-    """Crystallizes a new operational instinct or negative pattern into persistent memory."""
-    from .core.instincts import commerce_instincts
-    inst = commerce_instincts.record_dead_link_instinct(
-        pattern=req.pattern,
-        reason=req.reason,
-        replacement_url=req.replacement_target
-    )
-    return {"status": "success", "instinct": inst.model_dump()}
 
 @app.get("/api/preferences")
 async def get_preferences():
-    """Returns available localized preferences."""
     return {
         "languages": SUPPORTED_LANGUAGES,
         "countries": {
@@ -337,14 +239,18 @@ async def get_preferences():
         }
     }
 
+
 @app.post("/api/search")
 async def api_search(req: SearchRequest):
-    """Trigger agent swarm search via HTTP with dynamic risk preferences."""
+    """Trigger agent swarm search via HTTP with dynamic risk preferences and session isolation."""
     risk_prefs = RiskPreferences(
         warranty_priority=req.warranty_priority if req.warranty_priority is not None else 0.5,
         speed_priority=req.speed_priority if req.speed_priority is not None else 0.5,
         trust_tolerance=req.trust_tolerance if req.trust_tolerance is not None else 0.7,
     )
+    # Session-isolated clear: does NOT wipe other concurrent active sessions!
+    global_bus.clear(session_id=req.session_id)
+
     state = await coordinator.execute_search(
         query=req.query,
         language=req.language or "en",
@@ -356,9 +262,105 @@ async def api_search(req: SearchRequest):
     )
     return state.model_dump()
 
+
+@app.get("/api/skills")
+async def list_skills():
+    skills = skill_vault.list_skills()
+    return {
+        "count": len(skills),
+        "skills": [s.model_dump() for s in skills]
+    }
+
+
+@app.get("/api/skills/{domain}")
+async def get_skill(domain: str):
+    skill = skill_vault.get_skill(domain)
+    if not skill:
+        raise HTTPException(status_code=404, detail=f"No skill acquired for domain '{domain}'")
+    return skill.model_dump()
+
+
+@app.post("/api/skills/learn")
+@app.post("/api/skills/teach")
+async def learn_skill(req: LearnSkillRequest):
+    skill = skill_learner.discover_and_learn_merchant(
+        domain=req.domain,
+        page_html_or_text=req.content or f"{req.domain} online store return policy 14 days warranty",
+        country=req.country,
+        currency=req.currency
+    )
+    return {
+        "status": "success",
+        "message": f"Autonomously synthesized and verified skill for '{skill.merchant_name}'",
+        "skill": skill.model_dump()
+    }
+
+
+@app.get("/api/system/health")
+async def get_system_health():
+    report = await autonomous_healer.tester.run_full_diagnostic()
+    report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
+    return report.model_dump()
+
+
+@app.post("/api/system/self-test")
+async def trigger_self_test():
+    report = await autonomous_healer.tester.run_full_diagnostic()
+    report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
+    return {
+        "status": "success",
+        "report": report.model_dump()
+    }
+
+
+@app.post("/api/system/self-fix")
+async def trigger_self_fix():
+    report = await autonomous_healer.run_comprehensive_audit_and_heal()
+    return {
+        "status": "success",
+        "report": report.model_dump(),
+        "repairs_applied": [r.model_dump() for r in report.recent_repairs]
+    }
+
+
+@app.post("/api/system/self-learn")
+async def trigger_self_learn(req: Optional[SelfLearnRequest] = None):
+    domains = req.domains if req else None
+    learned = await autonomous_healer.learner.run_discovery_cycle(domains)
+    return {
+        "status": "success",
+        "skills_acquired": [s.model_dump() for s in learned],
+        "total_skills_in_vault": len(autonomous_healer.learner.skill_learner.vault.list_skills())
+    }
+
+
+@app.get("/api/system/repairs")
+async def get_repair_history():
+    return [r.model_dump() for r in autonomous_healer.fixer.fix_history]
+
+
+@app.get("/api/system/instincts")
+async def get_system_instincts():
+    instincts = commerce_instincts.list_instincts()
+    return {
+        "status": "success",
+        "total_instincts": len(instincts),
+        "instincts": [inst.model_dump() for inst in instincts]
+    }
+
+
+@app.post("/api/system/instincts/learn")
+async def add_system_instinct(req: LearnInstinctRequest):
+    inst = commerce_instincts.record_dead_link_instinct(
+        pattern=req.pattern,
+        reason=req.reason,
+        replacement_url=req.replacement_target
+    )
+    return {"status": "success", "instinct": inst.model_dump()}
+
+
 @app.post("/api/paypal/create-dossier")
 async def api_create_dossier(req: CreateDossierRequest):
-    """Generate cryptographic dispute evidence dossier for PayPal Buyer Protection Section 13."""
     dossier = PayPalEvidenceSentinel.create_dispute_dossier(
         order_id=req.order_id,
         item_title=req.item_title,
@@ -375,26 +377,26 @@ async def api_create_dossier(req: CreateDossierRequest):
     gcp_db_service.save_dossier(req.order_id, dossier_data)
     return dossier_data
 
+
 @app.get("/api/paypal/dossiers")
 async def list_dispute_dossiers(limit: int = 50):
-    """Lists all cryptographic dispute dossiers stored in Google Cloud Firestore."""
     dossiers = gcp_db_service.list_dossiers(limit=limit)
     return {
         "count": len(dossiers),
         "dossiers": dossiers
     }
 
+
 @app.get("/api/paypal/dossiers/{order_id}")
 async def get_dispute_dossier(order_id: str):
-    """Retrieves an evidentiary cryptographic dispute dossier by PayPal Order ID."""
     dossier = gcp_db_service.get_dossier(order_id)
     if not dossier:
         raise HTTPException(status_code=404, detail=f"No dispute dossier found for order '{order_id}'")
     return dossier
 
+
 @app.post("/api/paypal/create-order")
 async def api_create_order(req: CreateOrderRequest):
-    """Generate PayPal v2 Order in requested currency."""
     try:
         order = await paypal_svc.create_order(
             amount=req.amount,
@@ -407,9 +409,9 @@ async def api_create_order(req: CreateOrderRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/paypal/capture-order")
 async def api_capture_order(req: CaptureOrderRequest):
-    """Capture PayPal Order."""
     try:
         capture = await paypal_svc.capture_order(order_id=req.order_id)
         if isinstance(capture, dict):
@@ -420,16 +422,18 @@ async def api_capture_order(req: CaptureOrderRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.websocket("/ws/negotiate")
-async def websocket_endpoint(websocket: WebSocket):
-    """Full-duplex WebSocket for streaming live inter-agent negotiations with task shielding."""
-    await websocket.accept()
-    q = global_bus.subscribe()
 
+@app.websocket("/ws/negotiate")
+async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = None):
+    """Full-duplex WebSocket for streaming live inter-agent negotiations with session routing."""
+    await websocket.accept()
+
+    current_session = session_id or "ws-session"
+    q = global_bus.subscribe(session_id=current_session)
     active_tasks = set()
-    consumer_task = None
 
     async def event_forwarder():
+        nonlocal q
         try:
             while True:
                 event = await q.get()
@@ -437,7 +441,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "AGENT_EVENT",
                     "event": event.model_dump()
                 }))
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, WebSocketDisconnect):
             pass
         except Exception:
             pass
@@ -450,8 +454,9 @@ async def websocket_endpoint(websocket: WebSocket):
             data_text = await websocket.receive_text()
             try:
                 data = json.loads(data_text)
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError, Exception):
                 continue
+
             action = data.get("action")
 
             if action == "search":
@@ -460,14 +465,19 @@ async def websocket_endpoint(websocket: WebSocket):
                 country = data.get("country", "US")
                 currency = data.get("currency", "USD")
                 preferred_payment = data.get("preferred_payment", "all")
-                session_id = data.get("session_id", "ws-session")
+                requested_session = data.get("session_id", current_session)
+
+                if requested_session != current_session:
+                    global_bus.unsubscribe(q, session_id=current_session)
+                    current_session = requested_session
+                    q = global_bus.subscribe(session_id=current_session)
+
                 risk_prefs = RiskPreferences(
                     warranty_priority=float(data.get("warranty_priority", 0.5)),
                     speed_priority=float(data.get("speed_priority", 0.5)),
                     trust_tolerance=float(data.get("trust_tolerance", 0.7)),
                 )
 
-                # Execute swarm in background and stream results
                 async def run_swarm():
                     try:
                         state = await coordinator.execute_search(
@@ -476,14 +486,14 @@ async def websocket_endpoint(websocket: WebSocket):
                             country=country,
                             currency=currency,
                             preferred_payment=preferred_payment,
-                            session_id=session_id,
+                            session_id=current_session,
                             risk_prefs=risk_prefs
                         )
                         await websocket.send_text(json.dumps({
                             "type": "FINAL_RESULT",
                             "state": state.model_dump()
                         }))
-                    except asyncio.CancelledError:
+                    except (asyncio.CancelledError, WebSocketDisconnect):
                         pass
                     except Exception as err:
                         try:
@@ -499,12 +509,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 swarm_task.add_done_callback(active_tasks.discard)
 
             elif action == "re_rank":
+                requested_session = data.get("session_id", current_session)
                 risk_prefs = RiskPreferences(
                     warranty_priority=float(data.get("warranty_priority", 0.5)),
                     speed_priority=float(data.get("speed_priority", 0.5)),
                     trust_tolerance=float(data.get("trust_tolerance", 0.7)),
                 )
-                updated_state = await coordinator.re_rank_current_state(risk_prefs)
+                updated_state = await coordinator.re_rank_current_state(risk_prefs, session_id=requested_session)
                 if updated_state:
                     await websocket.send_text(json.dumps({
                         "type": "FINAL_RESULT",
@@ -512,9 +523,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     }))
 
             elif action == "challenge_listing":
+                requested_session = data.get("session_id", current_session)
                 listing_id = data.get("listing_id")
                 challenge_type = data.get("challenge_type", "VERIFY_STOCK")
-                updated_state = await coordinator.challenge_listing(listing_id, challenge_type)
+                updated_state = await coordinator.challenge_listing(listing_id, challenge_type, session_id=requested_session)
                 if updated_state:
                     await websocket.send_text(json.dumps({
                         "type": "CHALLENGE_RESOLVED",
@@ -529,15 +541,16 @@ async def websocket_endpoint(websocket: WebSocket):
         for t in list(active_tasks):
             t.cancel()
         active_tasks.clear()
-        global_bus.unsubscribe(q)
+        global_bus.unsubscribe(q, session_id=current_session)
 
-# Mount frontend build or public assets
+
+# Mount frontend assets
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("backend.server:app", host="0.0.0.0", port=port, reload=True)
-

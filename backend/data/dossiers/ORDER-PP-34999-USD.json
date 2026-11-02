@@ -1,0 +1,21 @@
+{
+  "dossier_id": "DOSSIER-ORDER-PP-4A9266",
+  "paypal_order_id": "ORDER-PP-34999-USD",
+  "timestamp": "2026-11-02T17:49:55.855931Z",
+  "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
+  "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
+  "item_title": "Sony WH-1000XM5 Premium Headphones",
+  "platform": "Best Buy",
+  "agreed_tco": 349.99,
+  "advertised_condition": "Brand New",
+  "open_box_verified": true,
+  "seller_name": "Best Buy Official",
+  "seller_rating": 4.8,
+  "warranty_claims_evidence": "1-Year OEM Coverage",
+  "merkle_spec_hash": "822dba79be44852e0142526c319cf2d07b62f7246c018be8a593404ac53e1b6b",
+  "merkle_terms_hash": "8346c9b52e117d93353856ca747ad7b2084a5707c456564faacaa6cc7ba13f68",
+  "merkle_pricing_hash": "8e9db952ba9c6ebcd796074960f1a88c18768e5325fd38821999b1a8dcba37c1",
+  "cryptographic_hash": "4a92665bee36b26bad29304baa39693dd1e5318385eff065c5ec311d5c916122",
+  "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
+  "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
+}

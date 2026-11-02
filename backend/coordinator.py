@@ -8,7 +8,7 @@ dynamic risk-weighted TCO calculation.
 
 import asyncio
 import time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from .core.state import (
     BlackboardState,
     ScrapedListing,
@@ -45,13 +45,28 @@ class SentinelCoordinator:
         self.compiler = StrategyCompiler(bus, self.fx_svc)
         self.predictor = PricePredictorAgent(self.fx_svc)
         self.hooks = SwarmLifecycleHooks(bus=bus)
+        self._session_states: Dict[str, BlackboardState] = {}
         self._last_state = None
+
+    def _get_scoped_components(self, session_id: str):
+        """Returns session-scoped bus and wired agent swarms for thread-safe session isolation."""
+        if hasattr(self.bus, "get_session_scope"):
+            scoped_bus = self.bus.get_session_scope(session_id)
+        else:
+            scoped_bus = self.bus
+        scouts = ScoutSwarm(scoped_bus, fx_svc=self.fx_svc)
+        processors = ProcessingSwarm(scoped_bus, scouts, self.fx_svc, self.paypal_svc)
+        compiler = StrategyCompiler(scoped_bus, self.fx_svc)
+        hooks = SwarmLifecycleHooks(bus=scoped_bus)
+        return scoped_bus, scouts, processors, compiler, hooks
 
     async def _run_scouts_with_circuit_breaker(
         self,
         query: str,
         destination_country: str,
         language: str,
+        scouts: Optional[ScoutSwarm] = None,
+        bus: Optional[EventBus] = None,
     ) -> List[ScrapedListing]:
         """
         Wraps the Tier-1 scout swarm in a circuit-breaker.
@@ -60,9 +75,12 @@ class SentinelCoordinator:
         to the scout swarm's built-in synthetic listings (is_mock=True path),
         so the demo never stalls or crashes.
         """
+        active_scouts = scouts or self.scouts
+        active_bus = bus or self.bus
+
         try:
             listings = await asyncio.wait_for(
-                self.scouts.search(
+                active_scouts.search(
                     query=query,
                     destination_country=destination_country,
                     language=language,
@@ -71,7 +89,7 @@ class SentinelCoordinator:
             )
             return listings
         except asyncio.TimeoutError:
-            await self.bus.emit(
+            await active_bus.emit(
                 source="CircuitBreaker",
                 target="Coordinator",
                 event_type="CIRCUIT_BREAKER",
@@ -81,7 +99,7 @@ class SentinelCoordinator:
                 ),
             )
         except Exception as exc:
-            await self.bus.emit(
+            await active_bus.emit(
                 source="CircuitBreaker",
                 target="Coordinator",
                 event_type="CIRCUIT_BREAKER",
@@ -90,7 +108,7 @@ class SentinelCoordinator:
 
         # Fallback: re-run with the scout's instant cached semantic data path
         try:
-            listings = await self.scouts.search(
+            listings = await active_scouts.search(
                 query=query,
                 destination_country=destination_country,
                 language=language,
@@ -130,10 +148,13 @@ class SentinelCoordinator:
             user_preferences=preferences
         )
 
-        # 0. Lifecycle Hook: Pre-Search Ingestion & Geographic Calibration (ECC Pattern)
-        await self.hooks.pre_search(query=query, country=country, currency=currency)
+        # Acquire session-isolated bus and agent instances
+        scoped_bus, scouts, processors, compiler, hooks = self._get_scoped_components(session_id)
 
-        await self.bus.emit(
+        # 0. Lifecycle Hook: Pre-Search Ingestion & Geographic Calibration (ECC Pattern)
+        await hooks.pre_search(query=query, country=country, currency=currency)
+
+        await scoped_bus.emit(
             source="Coordinator",
             target="Swarm",
             event_type="DISPATCH",
@@ -150,9 +171,11 @@ class SentinelCoordinator:
             query=query,
             destination_country=preferences.country,
             language=preferences.language,
+            scouts=scouts,
+            bus=scoped_bus,
         )
         # Lifecycle Hook: Post-Scout AgentShield Zero-Trust Link & Price Audit (ECC Pattern)
-        listings = await self.hooks.post_scout(raw_listings, query=query, dest_country=preferences.country)
+        listings = await hooks.post_scout(raw_listings, query=query, dest_country=preferences.country)
         state.raw_listings = listings
 
         # 2. Tier 2: Parallel Specialist Processing with Feedback Loops
@@ -162,16 +185,16 @@ class SentinelCoordinator:
         paypal_evals: Dict[str, PayPalProtectionAssessment] = {}
 
         for listing in listings:
-            w_analysis = await self.processors.analyze_warranty_and_adp(listing, language=preferences.language)
+            w_analysis = await processors.analyze_warranty_and_adp(listing, language=preferences.language)
             warranties[listing.id] = w_analysis
 
-            t_rating = await self.processors.evaluate_merchant_trust(listing, language=preferences.language)
+            t_rating = await processors.evaluate_merchant_trust(listing, language=preferences.language)
             trust_ratings[listing.merchant] = t_rating
 
-            cb_analysis = await self.processors.evaluate_cross_border_fx_and_duties(listing, preferences)
+            cb_analysis = await processors.evaluate_cross_border_fx_and_duties(listing, preferences)
             cross_border_evals[listing.id] = cb_analysis
 
-            p_eval = await self.processors.evaluate_paypal_synergy(
+            p_eval = await processors.evaluate_paypal_synergy(
                 listing,
                 w_analysis,
                 t_rating,
@@ -198,7 +221,7 @@ class SentinelCoordinator:
         )
         state.price_analytics = price_analysis
 
-        await self.bus.emit(
+        await scoped_bus.emit(
             source="PricePredictorAgent",
             target="CompilerSwarm",
             event_type="PRICE_PREDICT",
@@ -217,14 +240,14 @@ class SentinelCoordinator:
         for listing in listings:
             # A. Dead Link / 404 Discontinued SKU Challenge
             if getattr(listing, "is_dead_link", False) or getattr(listing, "http_status", 200) in (404, 410) or "404" in str(listing.stock_status):
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="ScoutProbeSubAgent",
                     target="StrategyCompilerSubAgent",
                     event_type="CHALLENGE",
                     content=f"DEAD LINK / 404 DISCONTINUED CHALLENGE: Listing [{listing.id}] at '{listing.merchant}' failed HTTP verification (Status: {getattr(listing, 'http_status', 404)} - {listing.stock_status}). Disqualifying from recommendation slots.",
                     payload={"listing_id": listing.id, "status": getattr(listing, "http_status", 404), "action": "DISQUALIFY"}
                 )
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="StrategyCompilerSubAgent",
                     target="ScoutProbeSubAgent",
                     event_type="RESOLVED",
@@ -234,14 +257,14 @@ class SentinelCoordinator:
 
             # B. Stock Depletion Challenge (Refurbished Specialist -> Compiler)
             elif not listing.in_stock or not getattr(listing, "is_available", True) or "Out of Stock" in str(listing.stock_status):
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="RefurbishedSpecialistSubAgent",
                     target="StrategyCompilerSubAgent",
                     event_type="CHALLENGE",
                     content=f"STOCK DEPLETION CHALLENGE: Listing [{listing.id}] at '{listing.merchant}' is confirmed {listing.stock_status}. Challenging compiler to disqualify from winning recommendation slots.",
                     payload={"listing_id": listing.id, "stock_status": listing.stock_status}
                 )
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="StrategyCompilerSubAgent",
                     target="RefurbishedSpecialistSubAgent",
                     event_type="RESOLVED",
@@ -249,18 +272,18 @@ class SentinelCoordinator:
                     payload={"listing_id": listing.id, "action": "DISQUALIFIED"}
                 )
 
-            # B. Price Anomaly Challenge (Price Predictor -> Scout Swarm)
+            # C. Price Anomaly Challenge (Price Predictor -> Scout Swarm)
             conv_price = self.fx_svc.convert_amount(listing.base_price, listing.currency, preferences.currency)
             if price_analysis.avg_90d_price > 0 and conv_price > (price_analysis.avg_90d_price * 1.40):
                 delta_pct = ((conv_price - price_analysis.avg_90d_price) / price_analysis.avg_90d_price) * 100
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="PricePredictorSubAgent",
                     target="DomesticScoutSubAgent",
                     event_type="CHALLENGE",
                     content=f"PRICE ANOMALY CHALLENGE: Listing [{listing.id}] at '{listing.merchant}' ({self.fx_svc.format_price(conv_price, preferences.currency)}) is +{delta_pct:.0f}% above 90-day moving average. Challenging scout to verify spec differences.",
                     payload={"listing_id": listing.id, "price": conv_price}
                 )
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="DomesticScoutSubAgent",
                     target="PricePredictorSubAgent",
                     event_type="RESOLVED",
@@ -268,17 +291,17 @@ class SentinelCoordinator:
                     payload={"listing_id": listing.id}
                 )
 
-            # C. Cross-Border PayPal Underwriting Challenge (Duty Agent -> PayPal Agent)
+            # D. Cross-Border PayPal Underwriting Challenge (Duty Agent -> PayPal Agent)
             cb = cross_border_evals.get(listing.id)
             if cb and cb.is_cross_border:
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="CrossBorderDutySubAgent",
                     target="PayPalProtectionSubAgent",
                     event_type="CHALLENGE",
                     content=f"Cross-border import detected for [{listing.id}] from {listing.origin_country}. Mandating PayPal Section 13 protection and Pay in 4 terms.",
                     payload={"listing_id": listing.id}
                 )
-                await self.bus.emit(
+                await scoped_bus.emit(
                     source="PayPalProtectionSubAgent",
                     target="StrategyCompilerSubAgent",
                     event_type="RESOLVED",
@@ -287,7 +310,7 @@ class SentinelCoordinator:
                 )
 
         # 5. Tier 3: Strategy Compilation with dynamic risk preference weighting
-        final_options, comp_matrix = await self.compiler.compile_and_curate(
+        final_options, comp_matrix = await compiler.compile_and_curate(
             listings=listings,
             warranties=warranties,
             trust_ratings=trust_ratings,
@@ -298,14 +321,14 @@ class SentinelCoordinator:
         )
 
         # Lifecycle Hook: Pre-Render Final Audit & AgentShield Verification (ECC Pattern)
-        final_options = await self.hooks.pre_render(final_options, query=query, dest_country=preferences.country)
+        final_options = await hooks.pre_render(final_options, query=query, dest_country=preferences.country)
 
         state.final_options = final_options
         state.comparison_matrix = comp_matrix
         state.is_complete = True
-        state.events = self.bus.get_logs()
+        state.events = scoped_bus.get_logs()
 
-        await self.bus.emit(
+        await scoped_bus.emit(
             source="Coordinator",
             target="ClientUI",
             event_type="RESOLVED",
@@ -315,19 +338,23 @@ class SentinelCoordinator:
             )
         )
 
+        self._session_states[session_id] = state
         self._last_state = state
         return state
 
-    async def re_rank_current_state(self, risk_prefs: RiskPreferences):
+    async def re_rank_current_state(self, risk_prefs: RiskPreferences, session_id: Optional[str] = None):
         """
         Dynamically re-evaluates risk-weighted TCO and strategic curations across the existing
         blackboard state in response to live client parameter changes (Horizontal/Vertical Re-arbitration).
         """
-        if not self._last_state or not self._last_state.raw_listings:
+        target_session = session_id or (self._last_state.session_id if self._last_state else "sess-default")
+        state = self._session_states.get(target_session) or self._last_state
+
+        if not state or not state.raw_listings:
             return None
 
-        state = self._last_state
-        final_options, comp_matrix = await self.compiler.compile_and_curate(
+        scoped_bus, _, _, compiler, hooks = self._get_scoped_components(state.session_id)
+        final_options, comp_matrix = await compiler.compile_and_curate(
             listings=state.raw_listings,
             warranties=state.warranty_analyses,
             trust_ratings=state.trust_ratings,
@@ -336,33 +363,38 @@ class SentinelCoordinator:
             preferences=state.user_preferences,
             risk_prefs=risk_prefs,
         )
-        final_options = await self.hooks.pre_render(
+        final_options = await hooks.pre_render(
             final_options,
             query=state.search_query,
             dest_country=state.user_preferences.country
         )
         state.final_options = final_options
         state.comparison_matrix = comp_matrix
-        state.events = self.bus.get_logs()
+        state.events = scoped_bus.get_logs()
+        self._session_states[state.session_id] = state
+        self._last_state = state
         return state
 
-    async def challenge_listing(self, listing_id: str, challenge_type: str = "VERIFY_STOCK"):
+    async def challenge_listing(self, listing_id: str, challenge_type: str = "VERIFY_STOCK", session_id: Optional[str] = None):
         """
         Executes a targeted horizontal or vertical challenge from the client or an auditor agent
         against a specific listing in the active blackboard state.
         """
-        if not self._last_state or not self._last_state.raw_listings:
+        target_session = session_id or (self._last_state.session_id if self._last_state else "sess-default")
+        state = self._session_states.get(target_session) or self._last_state
+
+        if not state or not state.raw_listings:
             return None
 
-        state = self._last_state
         matching = [l for l in state.raw_listings if l.id == listing_id]
         if not matching:
             return state
 
         target_listing = matching[0]
+        scoped_bus, _, _, _, _ = self._get_scoped_components(state.session_id)
 
         if challenge_type == "VERIFY_STOCK":
-            await self.bus.emit(
+            await scoped_bus.emit(
                 source="ClientAuditor",
                 target="RefurbishedSpecialistSubAgent",
                 event_type="CHALLENGE",
@@ -371,7 +403,7 @@ class SentinelCoordinator:
             )
             is_in_stock = target_listing.in_stock
             status = "In Stock" if is_in_stock else "Out of Stock"
-            await self.bus.emit(
+            await scoped_bus.emit(
                 source="RefurbishedSpecialistSubAgent",
                 target="StrategyCompilerSubAgent",
                 event_type="RESOLVED",
@@ -380,7 +412,7 @@ class SentinelCoordinator:
             )
 
         elif challenge_type == "AUDIT_WARRANTY":
-            await self.bus.emit(
+            await scoped_bus.emit(
                 source="ClientAuditor",
                 target="WarrantyAdpAuditorSubAgent",
                 event_type="CHALLENGE",
@@ -390,7 +422,7 @@ class SentinelCoordinator:
             w = state.warranty_analyses.get(target_listing.id)
             deductible = w.deductible_per_claim if w else 0.0
             covers_drops = w.covers_drops if w else False
-            await self.bus.emit(
+            await scoped_bus.emit(
                 source="WarrantyAdpAuditorSubAgent",
                 target="ClientAuditor",
                 event_type="RESOLVED",
@@ -399,7 +431,7 @@ class SentinelCoordinator:
             )
 
         elif challenge_type == "PAYPAL_SHIELD":
-            await self.bus.emit(
+            await scoped_bus.emit(
                 source="ClientAuditor",
                 target="PayPalProtectionSubAgent",
                 event_type="CHALLENGE",
@@ -408,7 +440,7 @@ class SentinelCoordinator:
             )
             p = state.paypal_evaluations.get(target_listing.id)
             tier = p.buyer_protection_tier if p else "Standard Protection"
-            await self.bus.emit(
+            await scoped_bus.emit(
                 source="PayPalProtectionSubAgent",
                 target="ClientAuditor",
                 event_type="RESOLVED",
@@ -416,5 +448,7 @@ class SentinelCoordinator:
                 payload={"listing_id": target_listing.id, "protection_tier": tier}
             )
 
-        state.events = self.bus.get_logs()
+        state.events = scoped_bus.get_logs()
+        self._session_states[state.session_id] = state
+        self._last_state = state
         return state

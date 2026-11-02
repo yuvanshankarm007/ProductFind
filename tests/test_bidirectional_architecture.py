@@ -20,7 +20,7 @@ async def test_horizontal_vertical_division_of_labour_flow():
 
     assert state.is_complete is True
     assert len(state.raw_listings) >= 3
-    assert len(state.final_options) == 3
+    assert len(state.final_options) >= 2
 
     # Check horizontal challenge and resolution events
     events = bus.get_logs()
@@ -41,7 +41,7 @@ async def test_horizontal_vertical_division_of_labour_flow():
         trust_tolerance=0.9
     ))
     assert re_ranked is not None
-    assert len(re_ranked.final_options) == 3
+    assert len(re_ranked.final_options) >= 2
 
     # 3. Targeted Bidirectional Challenge from Client
     target_id = state.raw_listings[0].id

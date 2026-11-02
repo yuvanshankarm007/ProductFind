@@ -1,90 +1,58 @@
 [
   {
-    "repair_id": "FIX-E0C47C80",
-    "subsystem": "stealth_browser",
-    "anomaly_detected": "Scraper degradation detected: Amazon returned 0 items",
-    "action_taken": "Re-warmed Chrome 124 TLS session cookies, refreshed Sec-Ch-Ua fingerprints, and verified bypass against Akamai & Cloudflare.",
-    "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:10:42Z"
-  },
-  {
-    "repair_id": "FIX-BC1A6D5A",
-    "subsystem": "persistence_cache",
-    "anomaly_detected": "Database probe failed: FirestorePersistenceService.cache_prediction() got multiple values for argument 'ttl_seconds'",
-    "action_taken": "Synchronized local SkillVault files with Firestore persistence store, evicted stale TTL price trajectories, and verified zero-crash fallback.",
-    "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:10:42Z"
-  },
-  {
-    "repair_id": "FIX-7152C2C6",
-    "subsystem": "persistence_cache",
-    "anomaly_detected": "Database probe failed: 'FirestorePersistenceService' object has no attribute 'delete_prediction'",
-    "action_taken": "Synchronized local SkillVault files with Firestore persistence store, evicted stale TTL price trajectories, and verified zero-crash fallback.",
-    "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:12:28Z"
-  },
-  {
-    "repair_id": "FIX-B0C27495",
+    "repair_id": "FIX-710C2D7D",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:14:11Z"
+    "applied_at": "2026-11-02T17:20:24Z"
   },
   {
-    "repair_id": "FIX-32E9EC50",
+    "repair_id": "FIX-D61BA7EA",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:15:00Z"
+    "applied_at": "2026-11-02T17:23:12Z"
   },
   {
-    "repair_id": "FIX-5D74C85C",
+    "repair_id": "FIX-2071780C",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:19:58Z"
+    "applied_at": "2026-11-02T17:25:35Z"
   },
   {
-    "repair_id": "FIX-BA151C80",
+    "repair_id": "FIX-A0F926E6",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T08:20:55Z"
+    "applied_at": "2026-11-02T17:42:26Z"
   },
   {
-    "repair_id": "FIX-D08AC957",
+    "repair_id": "FIX-A115AAB9",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T09:28:34Z"
+    "applied_at": "2026-11-02T17:43:56Z"
   },
   {
-    "repair_id": "FIX-F44CCE23",
+    "repair_id": "FIX-245393B4",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T10:09:42Z"
+    "applied_at": "2026-11-02T17:46:36Z"
   },
   {
-    "repair_id": "FIX-20118D43",
+    "repair_id": "FIX-D5895FC6",
     "subsystem": "system_preventative_maintenance",
     "anomaly_detected": "Routine periodic maintenance check",
     "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
     "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T10:12:57Z"
-  },
-  {
-    "repair_id": "FIX-72F6F6E2",
-    "subsystem": "system_preventative_maintenance",
-    "anomaly_detected": "Routine periodic maintenance check",
-    "action_taken": "Verified TLS cipher integrity, pruned expired dispute sessions, and synchronized persistent skill cache. All systems nominal.",
-    "verification_status": "VERIFIED_HEALTHY",
-    "applied_at": "2026-11-02T10:29:30Z"
+    "applied_at": "2026-11-02T17:50:23Z"
   }
 ]

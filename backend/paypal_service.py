@@ -1,7 +1,7 @@
 """
 PayPal Sandbox Service, Protection Engine, and Dispute Evidence Vault.
 Integrates PayPal Orders v2 API, multi-currency conversion, Pay in 4 calculation,
-Cross-Border Buyer Protection risk analysis, and cryptographic dispute dossier generation.
+Cross-Border Buyer Protection risk analysis, and Merkle tree dispute dossier generation.
 """
 
 import os
@@ -12,6 +12,7 @@ import httpx
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from .schemas import DisputeDossier
+
 
 class PayPalService:
     def __init__(self):
@@ -221,7 +222,7 @@ class PayPalEvidenceSentinel:
 
     The dossier protects the buyer under PayPal Buyer Protection (Section 13)
     by locking in: advertised condition, seller identity, warranty claims, and
-    the agreed Risk-Adjusted TCO — all as a SHA-256-signed JSON blob.
+    the agreed Risk-Adjusted TCO — all as a SHA-256-signed Merkle tree digest.
     """
 
     @staticmethod
@@ -265,7 +266,7 @@ class PayPalEvidenceSentinel:
         }
         pricing_hash = hashlib.sha256(json.dumps(pricing_leaf, sort_keys=True).encode("utf-8")).hexdigest()
 
-        # 4. Root Merkle Hash (Combining spec, terms, and pricing leaves)
+        # 4. Root Merkle Hash (Combining spec, terms, and pricing leaves + order_id + timestamp)
         merkle_root_payload = {
             "spec_hash": spec_hash,
             "terms_hash": terms_hash,
@@ -293,3 +294,16 @@ class PayPalEvidenceSentinel:
             merkle_pricing_hash=pricing_hash,
             cryptographic_hash=sig_hash,
         )
+
+    @staticmethod
+    def verify_dossier_integrity(dossier: DisputeDossier) -> bool:
+        """Verifies that the root Merkle hash matches the leaf cryptographic chain."""
+        expected_root_payload = {
+            "spec_hash": dossier.merkle_spec_hash,
+            "terms_hash": dossier.merkle_terms_hash,
+            "pricing_hash": dossier.merkle_pricing_hash,
+            "order_id": dossier.paypal_order_id,
+            "timestamp": dossier.timestamp
+        }
+        expected_root_hash = hashlib.sha256(json.dumps(expected_root_payload, sort_keys=True).encode("utf-8")).hexdigest()
+        return dossier.cryptographic_hash == expected_root_hash

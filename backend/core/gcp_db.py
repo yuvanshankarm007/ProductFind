@@ -111,7 +111,6 @@ class FirestorePersistenceService:
     # =========================================================================
     def save_skill(self, domain: str, skill_data: Dict[str, Any]) -> bool:
         """Persists an autonomous merchant skill to Firestore with disk mirror."""
-        # Always update local cache & disk mirror for zero-crash offline readiness
         self._local_skills[domain] = skill_data
         try:
             file_path = os.path.join(self.skills_dir, f"{domain}.json")
@@ -120,7 +119,6 @@ class FirestorePersistenceService:
         except Exception as e:
             logger.warning(f"[LocalSkill] Failed writing disk mirror: {e}")
 
-        # Firestore Cloud Persistence
         if self.is_connected and self.client:
             try:
                 doc_ref = self.client.collection("merchants_skills").document(domain)
@@ -229,7 +227,6 @@ class FirestorePersistenceService:
                 logger.warning(f"[GCP Firestore] Error listing dossiers: {e}. Using local fallback.")
 
         dossiers = list(self._local_dossiers.values())
-        # Sort by timestamp descending
         dossiers.sort(key=lambda d: d.get("timestamp", ""), reverse=True)
         return dossiers[:limit]
 
