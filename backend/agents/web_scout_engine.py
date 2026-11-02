@@ -161,7 +161,10 @@ class LiveWebScoutEngine:
                 ])
                 accessory_stop_words = [
                     'case', 'cover', 'silicone', 'cushion', 'replacement pad', 'ear pad',
-                    'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter'
+                    'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter',
+                    'hinge kit', 'lcd replacement', 'screen replacement', 'top assembly', 'lcd screen display',
+                    'spare part', 'repair kit', 'replacement battery', 'housing shell', 'trackpad replacement',
+                    'keyboard replacement'
                 ]
 
                 # Every Flipkart product listing is tagged with data-id="PRODUCT_ID"
@@ -365,7 +368,10 @@ class LiveWebScoutEngine:
             ])
             accessory_stop_words = [
                 'case', 'cover', 'silicone', 'cushion', 'replacement pad', 'ear pad',
-                'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter', 'hinge kit'
+                'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter',
+                'hinge kit', 'lcd replacement', 'screen replacement', 'top assembly', 'lcd screen display',
+                'spare part', 'repair kit', 'replacement battery', 'housing shell', 'trackpad replacement',
+                'keyboard replacement'
             ]
 
             items = []
@@ -404,6 +410,16 @@ class LiveWebScoutEngine:
                 # Filter accessories unless explicitly requested
                 title_lower = raw_title.lower()
                 if not has_accessory_intent and any(w in title_lower for w in accessory_stop_words):
+                    continue
+
+                # Brand & query relevance filter: eliminate sponsored cross-brand ads
+                brand_keywords = [b for b in ['dell', 'sony', 'apple', 'hp', 'lenovo', 'asus', 'samsung', 'acer'] if b in q_lower]
+                if brand_keywords and not any(b in title_lower for b in brand_keywords):
+                    continue
+                # Specific series check (e.g. latitude or xm5)
+                if 'latitude' in q_lower and not any(k in title_lower for k in ['latitude', 'dell']):
+                    continue
+                if 'xm5' in q_lower and not any(k in title_lower for k in ['xm5', '1000xm5', 'sony']):
                     continue
 
                 # 3. Live Price
@@ -725,15 +741,25 @@ class LiveWebScoutEngine:
                         if not any(re.search(r'\b' + re.escape(m) + r'\b', t_lower) for m in model_digits):
                             continue
 
-                    # Extract price from snippet or title
+                    # Extract price and currency from snippet or title
                     full_text = f"{raw_title} {snip}"
-                    p_matches = re.findall(r'(?:₹|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]+)?)', full_text)
+                    p_matches = re.findall(r'(₹|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]+)?)', full_text)
                     extracted_price = None
-                    for pm in p_matches:
+                    extracted_curr = "INR" if dest_country == "IN" else "USD"
+                    for sym, num_str in p_matches:
                         try:
-                            val = float(pm.replace(",", ""))
+                            val = float(num_str.replace(",", ""))
+                            curr_sym = "INR" if any(s in sym.lower() for s in ["₹", "rs", "inr"]) else "USD"
+                            # Normalize currency to destination country context
+                            if dest_country == "IN" and curr_sym == "USD":
+                                val = val * 84.0
+                                curr_sym = "INR"
+                            elif dest_country != "IN" and curr_sym == "INR":
+                                val = val / 84.0
+                                curr_sym = "USD"
                             if min_bound <= val <= max_bound and val not in [2023.0, 2024.0, 2025.0, 2026.0]:
                                 extracted_price = val
+                                extracted_curr = curr_sym
                                 break
                         except Exception:
                             pass
@@ -757,6 +783,7 @@ class LiveWebScoutEngine:
                         "domain": domain,
                         "merchant": merchant_name,
                         "price": extracted_price,
+                        "currency": extracted_curr,
                         "in_stock": True,
                         "stock_status": "In Stock",
                         "snippet": snip,
@@ -1370,31 +1397,44 @@ class LiveWebScoutEngine:
         snippets = []
         scraped_products = []
 
-        # Concurrently scout Flipkart, Amazon, and Open Web via stealth browser engine
+        # Concurrently scout Flipkart (for India), Amazon, and Open Web via stealth browser engine
         min_p = sem["min_inr"] if dest == "IN" else sem["min_usd"]
         max_p = sem["max_inr"] if dest == "IN" else sem["max_usd"]
 
-        flip_task = self.scrape_flipkart_live(query, min_bound=sem["min_inr"], max_bound=sem["max_inr"])
+        flip_task = self.scrape_flipkart_live(query, min_bound=sem["min_inr"], max_bound=sem["max_inr"]) if dest == "IN" else None
         amz_task = self.scrape_amazon_live(query, dest_country=dest, min_bound=min_p, max_bound=max_p)
         stealth_task = self.search_open_web_stealth(query, dest_country=dest, min_bound=min_p, max_bound=max_p)
 
-        flip_res, amz_res, stealth_res = await asyncio.gather(flip_task, amz_task, stealth_task, return_exceptions=True)
+        tasks = [t for t in [flip_task, amz_task, stealth_task] if t is not None]
+        gathered_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        flip_items = flip_res.get("products", []) if (isinstance(flip_res, dict) and flip_res.get("found")) else []
+        idx = 0
+        flip_items = []
+        if flip_task is not None:
+            flip_res = gathered_results[idx]
+            idx += 1
+            flip_items = flip_res.get("products", []) if (isinstance(flip_res, dict) and flip_res.get("found")) else []
+        
+        amz_res = gathered_results[idx]
+        idx += 1
         amz_items = amz_res.get("products", []) if (isinstance(amz_res, dict) and amz_res.get("found")) else []
+
+        stealth_res = gathered_results[idx] if idx < len(gathered_results) else []
         stealth_items = stealth_res if isinstance(stealth_res, list) else []
 
         combined = []
         seen_urls = set()
 
-        # Add Flipkart items
+        # Add Flipkart items (tagged currency INR)
         for it in flip_items:
+            it["currency"] = "INR"
             if it["url"] not in seen_urls:
                 seen_urls.add(it["url"])
                 combined.append(it)
 
-        # Add Amazon items
+        # Add Amazon items (currency matches dest)
         for it in amz_items:
+            it["currency"] = "INR" if dest == "IN" else "USD"
             if it["url"] not in seen_urls:
                 seen_urls.add(it["url"])
                 combined.append(it)
@@ -1420,13 +1460,28 @@ class LiveWebScoutEngine:
             # Sort by relevance if available
             priced_items.sort(key=lambda x: x.get("relevance", 0.0), reverse=True)
             primary = priced_items[0]
-            title = primary["title"]
-            if dest == "IN":
-                final_inr = primary["price"]
-                final_usd = _inr_to_usd(primary["price"])
+            # Preserve high-accuracy semantic title if primary is a generic or partial title
+            if sem.get("title") and any(b in query.lower() for b in ["dell", "sony", "apple", "latitude", "xm5"]):
+                title = sem["title"]
             else:
-                final_usd = primary["price"]
-                final_inr = _usd_to_inr(primary["price"])
+                title = primary["title"]
+            
+            p_price = primary["price"]
+            p_curr = primary.get("currency", "INR" if dest == "IN" else "USD")
+            if dest == "IN":
+                if p_curr == "USD":
+                    final_inr = _usd_to_inr(p_price)
+                    final_usd = p_price
+                else:
+                    final_inr = p_price
+                    final_usd = _inr_to_usd(p_price)
+            else:
+                if p_curr == "INR":
+                    final_usd = _inr_to_usd(p_price)
+                    final_inr = p_price
+                else:
+                    final_usd = p_price
+                    final_inr = _usd_to_inr(p_price)
             calibrated = True
 
         # Fallback to search_web if still zero items

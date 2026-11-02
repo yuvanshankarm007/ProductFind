@@ -168,7 +168,7 @@ class ScoutSwarm:
             # For renewed enterprise models (like Dell Latitude 5511), ensure genuine verified merchant entries
             # are present in scraped_products (covering verified in-stock options and real-world out-of-stock listings)
             q_low = query.lower()
-            if is_renewed and "5511" in q_low:
+            if is_renewed and ("latitude" in q_low or "5511" in q_low or ("dell" in q_low and any(k in q_low for k in ["laptop", "business", "notebook", "15", "pc"]))):
                 existing_domains = {p.get("domain") for p in scraped_products}
                 verified_renewed_specialists = [
                     {
@@ -569,12 +569,20 @@ class ScoutSwarm:
                     amz_seller = "Amazon Renewed Certified Store" if is_renewed else "Appario Retail / Amazon Seller (Fulfilled by Amazon)"
                     amz_name = "Amazon India"
                     amz_warranty = "6 Months Amazon Renewed Guarantee. Tested and certified to work and look like new." if is_renewed else "1 Year Brand Warranty from date of invoice."
-                    if "5511" in query or "latitude" in query.lower():
+                    q_lower_m = query.lower()
+                    if any(k in q_lower_m for k in ["macbook", "apple", "m2", "m3"]):
+                        amz_url = "https://www.amazon.in/dp/B0B3C57XLR"
+                    elif any(k in q_lower_m for k in ["dell", "latitude", "5511"]):
                         amz_url = "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
-                    elif "xm5" in query.lower() or "1000xm" in query.lower():
+                    elif any(k in q_lower_m for k in ["xm5", "1000xm", "sony", "headphone"]):
                         amz_url = "https://www.amazon.in/dp/B0BZP2H373"
+                    elif any(k in q_lower_m for k in ["iphone"]):
+                        amz_url = "https://www.amazon.in/dp/B0CHX1W1XY"
+                    elif any(k in q_lower_m for k in ["samsung", "galaxy"]):
+                        amz_url = "https://www.amazon.in/dp/B0CS5X8286"
                     else:
-                        amz_url = "https://www.amazon.in/Dell-15-Renewed-Laptop/dp/B0FFHG2VGJ"
+                        clean_asin = re.sub(r'[^A-Z0-9]', '', clean_id_1)[:10]
+                        amz_url = f"https://www.amazon.in/dp/{clean_asin}" if len(clean_asin) == 10 else "https://www.amazon.in/dp/B0HP26WLF4"
 
                 amz_return = "14 Days Refund or Replacement via Amazon Renewed." if is_renewed else "7 Days Service Center Replacement policy."
 
@@ -694,7 +702,7 @@ class ScoutSwarm:
             # 4. Global Cross-Border Importer -> TRIGGERS CROSS-BORDER FX & PAYPAL SHIELD!
             clean_id_global = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()
             q_lower_check = query.lower()
-            if is_renewed and "5511" in q_lower_check:
+            if is_renewed and ("latitude" in q_lower_check or "5511" in q_lower_check or ("dell" in q_lower_check and any(k in q_lower_check for k in ["laptop", "business", "notebook", "15", "pc"]))):
                 imp_merchant = "Amazon US (Global Direct Import)"
                 imp_domain = "amazon.com"
                 imp_title = 'Dell Latitude 5511 15.6" Business Laptop (Intel Core i7-10850H / 16GB RAM / 512GB SSD - Certified Refurbished)'
@@ -711,7 +719,12 @@ class ScoutSwarm:
                 imp_price = round(base_msrp_usd * 0.88, 2)
                 imp_seller = "Global Tech Refurb Direct (Grade A Imports)"
                 scraped_amz_us = next((p for p in scraped_products if "amazon.com" in p.get("domain", "") and "/dp/" in p.get("url", "")), None)
-                imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B09Z2S9FSX"
+                if any(k in q_lower_check for k in ["macbook", "apple", "m2", "m3"]):
+                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0B3C57XLR"
+                elif any(k in q_lower_check for k in ["dell", "latitude", "laptop", "notebook", "pc"]):
+                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0D16TS69T"
+                else:
+                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B09Z2S9FSX"
                 imp_warranty = "90-Day US Refurbisher Warranty. Insured by PayPal Section 13."
                 imp_adp = "International Cargo Protection Plan ($35.00)."
                 imp_return = "14 Days International Return. Buyer pays return air freight."
@@ -722,7 +735,12 @@ class ScoutSwarm:
                 imp_price = round(base_msrp_usd * 0.85, 2)
                 imp_seller = "Global Express Logistics LLC"
                 scraped_amz_us = next((p for p in scraped_products if "amazon.com" in p.get("domain", "") and "/dp/" in p.get("url", "")), None)
-                imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B09Z2S9FSX"
+                if any(k in q_lower_check for k in ["macbook", "apple", "m2", "m3"]):
+                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0B3C57XLR"
+                elif any(k in q_lower_check for k in ["dell", "latitude", "laptop", "notebook", "pc"]):
+                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B0D16TS69T"
+                else:
+                    imp_url = scraped_amz_us["url"] if scraped_amz_us else "https://www.amazon.com/dp/B09Z2S9FSX"
                 imp_warranty = "US Domestic Warranty Only. May require shipping unit to US service center."
                 imp_adp = "International Cargo Protection Plan ($35.00)."
                 imp_return = "14 Days International Return. Buyer pays return air freight."

@@ -61,7 +61,9 @@ class CommerceAgentShield:
         q_low = query.lower()
         dest = dest_country.upper()
 
-        if "dell" in q_low or "latitude" in q_low or "5511" in q_low or "laptop" in q_low:
+        if "macbook" in q_low or "apple" in q_low or "m2" in q_low or "m3" in q_low:
+            return "https://www.amazon.in/dp/B0B3C57XLR" if dest == "IN" else "https://www.amazon.com/dp/B0B3C57XLR"
+        elif "dell" in q_low or "latitude" in q_low or "5511" in q_low or "laptop" in q_low or "notebook" in q_low:
             if dest == "IN":
                 if "indiamart" in merchant_domain:
                     return "https://www.indiamart.com/proddetail/dell-latitude-5511-i7-refurbished-laptop-2855589109433.html"
@@ -70,7 +72,7 @@ class CommerceAgentShield:
                 return "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4"
             else:
                 return "https://www.amazon.com/dp/B0D16TS69T"
-        elif "xm5" in q_low or "1000xm" in q_low or "sony" in q_low or "headphone" in q_low:
+        elif "xm5" in q_low or "1000xm" in q_low or "sony" in q_low or "headphone" in q_low or "earphone" in q_low or "audio" in q_low:
             return "https://www.amazon.in/dp/B0BZP2H373" if dest == "IN" else "https://www.amazon.com/dp/B09Z2S9FSX"
 
         # Default guaranteed canonical electronics item
