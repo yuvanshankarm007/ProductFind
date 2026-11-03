@@ -30,6 +30,8 @@ from .agents.tier3_compilers import StrategyCompiler
 from .paypal_service import PayPalService
 from .schemas import RiskPreferences
 from .core.hooks import SwarmLifecycleHooks
+from .core.prompt_learner import PromptLearnerEngine, PromptConstraint
+from .core.instincts import commerce_instincts
 
 # Circuit-breaker timeout (seconds) for the scout live-scrape phase (supports multi-engine stealth web scraping)
 _SCOUT_TIMEOUT = 8.5
@@ -142,8 +144,16 @@ class SentinelCoordinator:
             preferred_payment=preferred_payment
         )
 
+        # Parse query for negative constraints and learn prompt instincts
+        clean_query, prompt_constraints, newly_learned = PromptLearnerEngine.parse_and_learn_from_prompt(
+            raw_prompt=query,
+            instincts_vault=commerce_instincts
+        )
+
         state = BlackboardState(
             search_query=query,
+            clean_query=clean_query,
+            prompt_constraints=prompt_constraints.model_dump() if hasattr(prompt_constraints, "model_dump") else prompt_constraints,
             session_id=session_id,
             user_preferences=preferences
         )
@@ -152,30 +162,45 @@ class SentinelCoordinator:
         scoped_bus, scouts, processors, compiler, hooks = self._get_scoped_components(session_id)
 
         # 0. Lifecycle Hook: Pre-Search Ingestion & Geographic Calibration (ECC Pattern)
-        await hooks.pre_search(query=query, country=country, currency=currency)
+        await hooks.pre_search(query=clean_query, country=country, currency=currency)
+
+        if newly_learned:
+            await scoped_bus.emit(
+                source="SelfHealer",
+                target="Coordinator",
+                event_type="LEARNED_FROM_PROMPT",
+                content=(
+                    f"Self-Healer synthesized {len(newly_learned)} active negative rules from user prompt: "
+                    f"In-Stock={prompt_constraints.in_stock_only}, Zero-404={prompt_constraints.no_404_dead_links}, "
+                    f"Anti-Scam={prompt_constraints.anti_scam}. Clean search target: '{clean_query}'."
+                ),
+                payload={"constraints": prompt_constraints.model_dump(), "new_rules": newly_learned}
+            )
 
         await scoped_bus.emit(
             source="Coordinator",
             target="Swarm",
             event_type="DISPATCH",
             content=(
-                f"Initiating Agent Swarm for '{query}' | Destination: {country} | "
+                f"Initiating Agent Swarm for '{clean_query}' | Destination: {country} | "
                 f"Currency: {currency} | Lang: {language} | Payment: {preferred_payment} | "
                 f"RiskPrefs: warranty={risk_prefs.warranty_priority}, "
-                f"speed={risk_prefs.speed_priority}, trust={risk_prefs.trust_tolerance}."
+                f"speed={risk_prefs.speed_priority}, trust={risk_prefs.trust_tolerance} | "
+                f"NegativeConstraints: in_stock_only={prompt_constraints.in_stock_only}, "
+                f"no_404s={prompt_constraints.no_404_dead_links}, anti_scam={prompt_constraints.anti_scam}."
             )
         )
 
         # 1. Tier 1: Scout Swarm with circuit-breaker
         raw_listings = await self._run_scouts_with_circuit_breaker(
-            query=query,
+            query=clean_query,
             destination_country=preferences.country,
             language=preferences.language,
             scouts=scouts,
             bus=scoped_bus,
         )
         # Lifecycle Hook: Post-Scout AgentShield Zero-Trust Link & Price Audit (ECC Pattern)
-        listings = await hooks.post_scout(raw_listings, query=query, dest_country=preferences.country)
+        listings = await hooks.post_scout(raw_listings, query=clean_query, dest_country=preferences.country, constraints=prompt_constraints)
         state.raw_listings = listings
 
         # 2. Tier 2: Parallel Specialist Processing with Feedback Loops
@@ -321,7 +346,17 @@ class SentinelCoordinator:
         )
 
         # Lifecycle Hook: Pre-Render Final Audit & AgentShield Verification (ECC Pattern)
-        final_options = await hooks.pre_render(final_options, query=query, dest_country=preferences.country)
+        final_options = await hooks.pre_render(final_options, query=clean_query, dest_country=preferences.country, constraints=prompt_constraints)
+
+        # Enforce learned negative constraints on comparison matrix (AG Grid rows)
+        if prompt_constraints.in_stock_only or prompt_constraints.no_404_dead_links:
+            comp_matrix = [
+                row for row in comp_matrix
+                if getattr(row, "in_stock", True)
+                and not getattr(row, "is_dead_link", False)
+                and "out of stock" not in str(getattr(row, "stock_status", "")).lower()
+                and getattr(row, "http_status", 200) != 404
+            ]
 
         state.final_options = final_options
         state.comparison_matrix = comp_matrix

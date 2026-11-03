@@ -1,0 +1,21 @@
+{
+  "dossier_id": "DOSSIER-PP-NOVEL-6FE6B3",
+  "paypal_order_id": "PP-NOVEL-SERVERCART",
+  "timestamp": "2026-11-03T11:08:09.922072Z",
+  "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
+  "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
+  "item_title": "Verified Merchant Listing at Servercart",
+  "platform": "Servercart",
+  "agreed_tco": 114691.63,
+  "advertised_condition": "Brand New / Certified Refurbished",
+  "open_box_verified": true,
+  "seller_name": "Servercart Direct Partner",
+  "seller_rating": 4.8,
+  "warranty_claims_evidence": "Official 1-Year OEM Coverage + 180-Day PayPal Section 13 Escrow",
+  "merkle_spec_hash": "9b9689f15d36e38a49bf1b43ff2fc4b999dac768712d9181626ef937f52c1c72",
+  "merkle_terms_hash": "394710182f6607d8769d7313cc7dbb21c979d01ebceb31550bbc48edd649debe",
+  "merkle_pricing_hash": "eaf8364da0656f8ecaa3b493358e8c51d04bc44c2410922c653ee6bc8cb67b4a",
+  "cryptographic_hash": "6fe6b3334a86f20e73ba0a421df02248446f50506eace124621ed82b4889c06a",
+  "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
+  "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
+}

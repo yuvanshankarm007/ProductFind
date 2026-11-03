@@ -1,14 +1,16 @@
 """
 Commerce Instincts & Operational Rules Engine.
 Inspired by the Everything Claude Code (ECC) persistent instincts & reflex memory architecture.
-Permanently records operational failures (dead links, 404 ASINs, Cloudflare challenges)
-and translates them into deterministic runtime rules so bugs and dead links are never repeated.
+Permanently records operational failures (dead links, 404 ASINs, Cloudflare challenges, scam merchants, out-of-stock inventory)
+and translates them into deterministic runtime rules so bugs, dead links, and scams are never repeated.
 """
 
 import os
+import re
 import json
 import time
-from typing import Dict, Any, List, Optional
+import uuid
+from typing import Dict, Any, List, Optional, Tuple
 from pydantic import BaseModel, Field
 from pathlib import Path
 from .asin_resolver import resolve_canonical_product_url
@@ -16,8 +18,8 @@ from .asin_resolver import resolve_canonical_product_url
 
 class CommerceInstinct(BaseModel):
     rule_id: str
-    category: str  # "BLACKLIST_DEAD_SKU", "CANONICAL_URL_MAP", "SEARCH_PAGE_INTERCEPT", "BOT_CHALLENGE_DEFENSE"
-    pattern: str  # URL snippet, ASIN, or merchant domain
+    category: str  # "BLACKLIST_DEAD_SKU", "CANONICAL_URL_MAP", "SEARCH_PAGE_INTERCEPT", "BOT_CHALLENGE_DEFENSE", "PROMPT_CONSTRAINT_IN_STOCK", "PROMPT_CONSTRAINT_ZERO_404", "PROMPT_CONSTRAINT_ANTI_SCAM", "USER_QUARANTINE_MERCHANT"
+    pattern: str  # URL snippet, ASIN, merchant domain, or prompt directive
     replacement_target: Optional[str] = None
     reason: str
     confidence: float = 1.0
@@ -52,13 +54,35 @@ class CommerceInstinctsVault:
                     for item in data.get("instincts", []):
                         inst = CommerceInstinct(**item)
                         self._instincts[inst.rule_id] = inst
-                if len(self._instincts) >= 5:
-                    return
             except Exception:
                 pass
 
-        # Seed baseline verified instincts (permanently blacklisting expired SKUs identified in tests)
+        # Ensure universal quality and anti-scam / anti-404 / in-stock instincts exist
         baseline = [
+            CommerceInstinct(
+                rule_id="INST-PROMPT-IN-STOCK-UNIVERSAL",
+                category="PROMPT_CONSTRAINT_IN_STOCK",
+                pattern="out_of_stock_prohibited",
+                replacement_target=None,
+                reason="Universal Quality Rule: Purge all out-of-stock inventory. Only verified in-stock deals permitted.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
+                rule_id="INST-PROMPT-ZERO-404-UNIVERSAL",
+                category="PROMPT_CONSTRAINT_ZERO_404",
+                pattern="404_dead_links_prohibited",
+                replacement_target=None,
+                reason="Universal Quality Rule: Zero tolerance for HTTP 404s and broken links. Quarantine immediately.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
+                rule_id="INST-PROMPT-ANTI-SCAM-UNIVERSAL",
+                category="PROMPT_CONSTRAINT_ANTI_SCAM",
+                pattern="scam_merchant_prohibited",
+                replacement_target=None,
+                reason="Universal Quality Rule: Block high-risk counterfeit sellers, unaccredited stores, and trust < 75.",
+                confidence=1.0,
+            ),
             CommerceInstinct(
                 rule_id="INST-DEAD-ASIN-B0CKZJ8V3C",
                 category="BLACKLIST_DEAD_SKU",
@@ -110,7 +134,8 @@ class CommerceInstinctsVault:
         ]
 
         for inst in baseline:
-            self._instincts[inst.rule_id] = inst
+            if inst.rule_id not in self._instincts:
+                self._instincts[inst.rule_id] = inst
         self._persist()
 
     def _persist(self):
@@ -121,8 +146,9 @@ class CommerceInstinctsVault:
             with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(
                     {
-                        "version": "2.0.0",
+                        "version": "2.1.0",
                         "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "total_rules": len(self._instincts),
                         "instincts": [inst.model_dump() for inst in self._instincts.values()],
                     },
                     f,
@@ -147,8 +173,6 @@ class CommerceInstinctsVault:
         category: str = "BLACKLIST_DEAD_SKU",
     ) -> CommerceInstinct:
         """Dynamically registers a newly discovered failure pattern into permanent reflex memory."""
-        import uuid
-
         clean_slug = "".join(c if c.isalnum() else "_" for c in pattern[:20]).upper()
         rule_id = f"INST-DEAD-{clean_slug}-{uuid.uuid4().hex[:6].upper()}"
 
@@ -163,6 +187,37 @@ class CommerceInstinctsVault:
         self._instincts[rule_id] = instinct
         self._persist()
         return instinct
+
+    def record_prompt_instinct(
+        self,
+        prompt_text: str,
+        category: str,
+        pattern: str,
+        reason: str
+    ) -> CommerceInstinct:
+        """Dynamically learns from a user prompt and stores an active negative constraint."""
+        # Check if an instinct with this category and pattern already exists to increment trigger count
+        for inst in self._instincts.values():
+            if inst.category == category and inst.pattern == pattern:
+                inst.triggers_count += 1
+                inst.last_triggered_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                self._persist()
+                return inst
+
+        clean_slug = "".join(c if c.isalnum() else "_" for c in pattern[:16]).upper()
+        rule_id = f"INST-{category[:12]}-{clean_slug}-{uuid.uuid4().hex[:4].upper()}"
+        inst = CommerceInstinct(
+            rule_id=rule_id,
+            category=category,
+            pattern=pattern,
+            reason=reason,
+            confidence=1.0,
+            triggers_count=1,
+            last_triggered_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        )
+        self._instincts[rule_id] = inst
+        self._persist()
+        return inst
 
     def match_and_repair_url(
         self,
@@ -186,16 +241,118 @@ class CommerceInstinctsVault:
 
                 # If a replacement target is defined
                 if inst.replacement_target:
-                    # Regional adaptation for search leaks
                     if inst.category == "SEARCH_PAGE_INTERCEPT":
                         return resolve_canonical_product_url(query=query, dest_country=dest_country)
-                    # For Indian shoppers, do not replace with a US Amazon URL that cannot ship to India
                     if dest == "IN" and "amazon.com" in inst.replacement_target:
                         dom = "indiamart.com" if any(k in (query or "").lower() for k in ["latitude", "dell"]) else "amazon.in"
                         return resolve_canonical_product_url(query=query, merchant_domain=dom, dest_country=dest_country)
                     return inst.replacement_target
 
         return url
+
+    def evaluate_and_quarantine(
+        self,
+        listing: Any,
+        constraints: Optional[Any] = None
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Evaluates a scraped listing against learned prompt instincts and negative constraints.
+        Returns:
+            (is_quarantined: bool, quarantine_reason: Optional[str])
+        """
+        # Helper getters supporting both ScrapedListing dataclass and dict
+        def _get(attr, default=None):
+            if isinstance(listing, dict):
+                return listing.get(attr, default)
+            return getattr(listing, attr, default)
+
+        url = _get("listing_url") or _get("url") or ""
+        in_stock = _get("in_stock", True)
+        stock_status = str(_get("stock_status", "In Stock") or "In Stock").lower()
+        http_status = _get("http_status", 200)
+        is_dead = _get("is_dead_link", False)
+        is_avail = _get("is_available", True)
+        merchant = _get("merchant") or ""
+        merchant_domain = str(_get("merchant_domain") or "").lower()
+        price = _get("base_price") or _get("price") or 0.0
+
+        # Determine whether to enforce in-stock and zero-404 constraints
+        if constraints is not None:
+            if isinstance(constraints, dict):
+                enforce_no_404 = bool(constraints.get("no_404_dead_links", False))
+                enforce_in_stock = bool(constraints.get("in_stock_only", False))
+                banned_domains = constraints.get("banned_domains", [])
+            else:
+                enforce_no_404 = bool(getattr(constraints, "no_404_dead_links", False))
+                enforce_in_stock = bool(getattr(constraints, "in_stock_only", False))
+                banned_domains = getattr(constraints, "banned_domains", [])
+        else:
+            enforce_no_404 = True
+            enforce_in_stock = True
+            banned_domains = []
+
+        # 1. 404 / Dead-Link Check
+        if enforce_no_404 and (is_dead or http_status == 404 or "404" in stock_status):
+            return True, f"Quarantined 404 Dead Link: {url or merchant}"
+
+        # 2. Out-of-Stock Check
+        if enforce_in_stock and (not in_stock or not is_avail or "out of stock" in stock_status or "sold out" in stock_status or price <= 0):
+            return True, f"Quarantined Out-of-Stock Inventory: {merchant} ({stock_status})"
+
+        # 3. User Banned Domain Check
+        for b_dom in banned_domains:
+            if b_dom.lower() in merchant_domain or b_dom.lower() in merchant.lower():
+                return True, f"Quarantined Banned Domain: {merchant} matches user prompt blacklist '{b_dom}'"
+
+        # Check against registered USER_QUARANTINE_MERCHANT instincts
+        for inst in self._instincts.values():
+            if inst.category == "USER_QUARANTINE_MERCHANT":
+                if inst.pattern.lower() in merchant_domain or inst.pattern.lower() in merchant.lower():
+                    inst.triggers_count += 1
+                    inst.last_triggered_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                    return True, f"Quarantined Merchant: Blocked by learned instinct rule {inst.rule_id} ({inst.pattern})"
+
+        # 4. Blacklisted Dead SKU Check
+        for inst in self._instincts.values():
+            if inst.category == "BLACKLIST_DEAD_SKU" and inst.pattern in url:
+                inst.triggers_count += 1
+                inst.last_triggered_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                # If no direct replacement available, quarantine it
+                if not inst.replacement_target:
+                    return True, f"Quarantined Dead SKU: Blocked by rule {inst.rule_id}"
+
+        return False, None
+
+    def quarantine_filter_listings(
+        self,
+        listings: List[Any],
+        constraints: Optional[Any] = None
+    ) -> Tuple[List[Any], List[Dict[str, Any]]]:
+        """
+        Filters a list of listings through the learned quarantine engine.
+        Returns:
+            (retained_verified_listings, quarantined_records)
+        """
+        verified = []
+        quarantined = []
+
+        for l in listings:
+            is_q, reason = self.evaluate_and_quarantine(l, constraints=constraints)
+            if is_q:
+                title = l.get("product_title") if isinstance(l, dict) else getattr(l, "product_title", "Unknown Product")
+                merch = l.get("merchant") if isinstance(l, dict) else getattr(l, "merchant", "Unknown Merchant")
+                quarantined.append({
+                    "merchant": merch,
+                    "title": title,
+                    "reason": reason,
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                })
+            else:
+                verified.append(l)
+
+        # Update disk metrics if any triggers happened
+        self._persist()
+        return verified, quarantined
 
 
 # Global singleton instance

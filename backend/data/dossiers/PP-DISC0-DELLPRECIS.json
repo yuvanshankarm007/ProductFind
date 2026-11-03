@@ -1,0 +1,21 @@
+{
+  "dossier_id": "DOSSIER-PP-DISC0-E6958C",
+  "paypal_order_id": "PP-DISC0-DELLPRECIS",
+  "timestamp": "2026-11-03T11:09:07.003958Z",
+  "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
+  "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
+  "item_title": "Verified Merchant Listing at Serverbasket.com",
+  "platform": "Serverbasket.com",
+  "agreed_tco": 119608.08,
+  "advertised_condition": "Brand New / Certified Refurbished",
+  "open_box_verified": true,
+  "seller_name": "Serverbasket.com Direct Partner",
+  "seller_rating": 4.8,
+  "warranty_claims_evidence": "Official 1-Year OEM Coverage + 180-Day PayPal Section 13 Escrow",
+  "merkle_spec_hash": "ec9b89a7170023e78b0a009da30eeeebc3111c837d619cc06133c3b21949b61f",
+  "merkle_terms_hash": "2279b7fb38db374dacdeca23d35b611c4d606e841fb5b4351381699465f5f6aa",
+  "merkle_pricing_hash": "2d005167291128ff255348cec334e139ae6a783caccc13f40152c5c2a8fcf644",
+  "cryptographic_hash": "e6958c92dca424729da5bd3973b9f73e9a8473f5c18f9781d7fb715c452b4786",
+  "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
+  "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
+}

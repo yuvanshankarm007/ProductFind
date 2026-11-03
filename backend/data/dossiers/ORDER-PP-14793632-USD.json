@@ -1,0 +1,21 @@
+{
+  "dossier_id": "DOSSIER-ORDER-PP-049154",
+  "paypal_order_id": "ORDER-PP-14793632-USD",
+  "timestamp": "2026-11-03T11:07:59.586202Z",
+  "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
+  "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
+  "item_title": "Verified Merchant Listing at Amazon India Direct",
+  "platform": "Amazon India Direct",
+  "agreed_tco": 147936.33,
+  "advertised_condition": "Brand New / Certified Refurbished",
+  "open_box_verified": true,
+  "seller_name": "Amazon India Direct Direct Partner",
+  "seller_rating": 4.8,
+  "warranty_claims_evidence": "Official 1-Year OEM Coverage + 180-Day PayPal Section 13 Escrow",
+  "merkle_spec_hash": "ded7608a7404f5f28886d727193984c67718dccb1b8e17631ef91b78a6db8efc",
+  "merkle_terms_hash": "6a56d5ab9a848a13e03b5699606378119769e2a5ba0f56dee5fda071c4b5c864",
+  "merkle_pricing_hash": "3bdbb4983f7d52133c13eeb46d6b7059ffbcfa280822f1bc234dce7323633bf7",
+  "cryptographic_hash": "0491540369c71827f797e085ed6a5d5d6629b890c62a82df487b15ff3eaa1e7e",
+  "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
+  "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
+}

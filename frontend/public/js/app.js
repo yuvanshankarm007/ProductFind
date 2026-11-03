@@ -10,6 +10,7 @@ import { initializeAgGrid, updateGridData, filterGrid, exportGridCsv } from './a
 import { refreshHud, triggerSelfTest, triggerSelfFix, triggerSelfLearn } from './self_healer_hud.js';
 import { closeDossierModal, openDossierModal } from './merkle_modal.js';
 import { openPayPalCheckoutModal, closePayPalCheckoutModal } from './paypal_checkout_modal.js';
+import { openInstinctsModal, closeInstinctsModal, quarantineMerchantFromUI } from './instincts_modal.js';
 import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
 
@@ -163,6 +164,24 @@ function setupEventListeners() {
         paypalModal.addEventListener('click', (e) => {
             if (e.target === paypalModal) closePayPalCheckoutModal();
         });
+    }
+
+    const btnInstincts = document.getElementById('btn-view-instincts');
+    if (btnInstincts) btnInstincts.addEventListener('click', openInstinctsModal);
+
+    const closeInstincts = document.getElementById('modal-close-instincts');
+    if (closeInstincts) closeInstincts.addEventListener('click', closeInstinctsModal);
+
+    const instinctsModal = document.getElementById('instincts-modal');
+    if (instinctsModal) {
+        instinctsModal.addEventListener('click', (e) => {
+            if (e.target === instinctsModal) closeInstinctsModal();
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => updatePromptBadges(searchInput.value));
+        updatePromptBadges(searchInput.value);
     }
 
     // Clear Terminal Log
@@ -380,6 +399,9 @@ function renderStrategicCards(options) {
                 <button type="button" class="control-btn btn-view-dossier" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" title="Inspect Cryptographic Section 13 Dispute Dossier">
                     🛡️ Dossier
                 </button>
+                <button type="button" class="btn-flag-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-domain="${escapeHtml(listing.merchant_domain || '')}" style="background: transparent; border: 1px solid rgba(244, 63, 94, 0.35); color: #fda4af; border-radius: 6px; padding: 6px 10px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background 0.15s;" title="Teach Self-Healer: Flag & Quarantine Listing">
+                    🚩 Flag
+                </button>
             </div>
         `;
 
@@ -405,6 +427,50 @@ function renderStrategicCards(options) {
             openDossierModal(`PP-${id}`, m, p);
         });
     });
+
+    // Wire 1-Click Prompt Learning & Quarantine Feedback
+    grid.querySelectorAll('.btn-flag-deal').forEach(b => {
+        b.addEventListener('click', async () => {
+            const m = b.getAttribute('data-merchant');
+            const d = b.getAttribute('data-domain');
+            const id = b.getAttribute('data-order-id');
+            const card = b.closest('.deal-card');
+            if (card) {
+                card.style.opacity = '0.3';
+                card.style.pointerEvents = 'none';
+            }
+            await quarantineMerchantFromUI(m, d, id, 'User Flagged 404/Scam/Out-of-Stock');
+            if (card) card.remove();
+        });
+    });
+}
+
+function updatePromptBadges(query) {
+    const bar = document.getElementById('prompt-constraints-bar');
+    if (!bar) return;
+    const q = (query || '').toLowerCase();
+    
+    const hasInStock = /in\s*stock|available|must\s*be\s*in\s*stock/.test(q);
+    const has404 = /no\s*404|no\s*dead|working\s*links|zero\s*404/.test(q);
+    const hasAntiScam = /no\s*scam|avoid\s*scam|reputable|verified|trusted/.test(q);
+    const hasAccessories = /no\s*accessories|no\s*parts|full\s*product/.test(q);
+
+    bar.innerHTML = `
+        <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Active Learned Guardrails:</span>
+        <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px; border-color: ${hasInStock ? '#10b981' : 'rgba(16, 185, 129, 0.4)'}; background: ${hasInStock ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.1)'};">
+            🟢 In-Stock Verified Only ${hasInStock ? '✓ (Enforced via Prompt)' : ''}
+        </span>
+        <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px; border-color: ${has404 ? '#10b981' : 'rgba(16, 185, 129, 0.4)'}; background: ${has404 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.1)'};">
+            🛡️ Zero 404 Dead-Links ${has404 ? '✓ (Enforced via Prompt)' : ''}
+        </span>
+        <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px; border-color: ${hasAntiScam ? '#10b981' : 'rgba(16, 185, 129, 0.4)'}; background: ${hasAntiScam ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.1)'};">
+            🔒 Anti-Scam Shield Active ${hasAntiScam ? '✓ (Enforced via Prompt)' : ''}
+        </span>
+        <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px; border-color: ${hasAccessories ? '#10b981' : 'rgba(16, 185, 129, 0.4)'}; background: ${hasAccessories ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.1)'};">
+            🚫 Accessory Hijack Filter ${hasAccessories ? '✓ (Enforced via Prompt)' : ''}
+        </span>
+    `;
+}
 }
 
 function appendTerminalLog(source, content) {

@@ -117,6 +117,16 @@
                     <button type="button" class="query-tag-btn" data-query="Samsung Galaxy S24 Ultra">📱 Samsung S24 Ultra</button>
                     <button type="button" class="query-tag-btn" data-query="Dell Precision 7820 Workstation">🖥️ Dell Precision 7820</button>
                     <button type="button" class="query-tag-btn" data-query="iPad Pro 11-inch M4">📱 iPad Pro M4</button>
+                    <button type="button" class="query-tag-btn" data-query="Dell Precision 7820 in stock only no 404s" style="border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7;">🛡️ Dell Precision (In-Stock & Zero 404s)</button>
+                </div>
+
+                <!-- Prompt Constraints & Filter Badges -->
+                <div id="prompt-constraints-bar" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center;">
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Active Learned Guardrails:</span>
+                    <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px;">🟢 In-Stock Verified Only</span>
+                    <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px;">🛡️ Zero 404 Dead-Links</span>
+                    <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px;">🔒 Anti-Scam Shield Active</span>
+                    <span class="hud-status-badge status-optimal" style="font-size: 10.5px; padding: 2px 8px;">🚫 Accessory Hijack Filter</span>
                 </div>
 
                 <!-- Dynamic Risk Preference Sliders -->
@@ -176,8 +186,11 @@
                     <button type="button" id="btn-self-fix" class="control-btn" title="Execute closed-loop heuristic automated healing">
                         🔧 1-Click Self-Fix
                     </button>
-                    <button type="button" id="btn-self-learn" class="control-btn btn-primary" title="Trigger autonomous DOM & JSON-LD skill learning">
-                        🧠 1-Click Learn
+                    <button type="button" id="btn-self-learn" class="control-btn" title="Trigger autonomous DOM & JSON-LD skill learning">
+                        ⚡ 1-Click Learn
+                    </button>
+                    <button type="button" id="btn-view-instincts" class="control-btn btn-primary" title="View & Teach Prompt-Learned Instincts & Negative Constraints">
+                        🧠 Prompt Instincts (<span id="hud-instincts-badge">9</span>)
                     </button>
                 </div>
             </div>
@@ -365,6 +378,22 @@
             </div>
             <div id="dossier-modal-content">
                 <!-- Dynamically populated by merkle_modal.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt-Learned Instincts & Reflex Memory Modal -->
+    <div id="instincts-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 680px;">
+            <div class="modal-header">
+                <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">🧠</span>
+                    <span>Self-Healing Reflex Memory & Learned Prompt Rules</span>
+                </div>
+                <button type="button" id="modal-close-instincts" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="instincts-modal-content">
+                <!-- Dynamically populated by instincts_modal.js -->
             </div>
         </div>
     </div>

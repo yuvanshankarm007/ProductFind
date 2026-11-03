@@ -9,9 +9,20 @@ import { escapeHtml } from './security.js';
 export async function refreshHud() {
     try {
         const res = await fetch('/api/system/health');
-        if (!res.ok) return;
-        const report = await res.json();
-        renderHud(report);
+        if (res.ok) {
+            const report = await res.json();
+            renderHud(report);
+        }
+        
+        // Also refresh prompt instincts count
+        const instRes = await fetch('/api/system/instincts');
+        if (instRes.ok) {
+            const instData = await instRes.json();
+            const badge = document.getElementById('hud-instincts-badge');
+            if (badge && instData.total_instincts !== undefined) {
+                badge.textContent = instData.total_instincts;
+            }
+        }
     } catch (e) {
         console.warn("HUD refresh failed:", e);
     }

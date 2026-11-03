@@ -33,6 +33,7 @@ from .agents.adaptive_skill_learner import AdaptiveSkillLearner, SkillVault, Ada
 from .agents.autonomous_self_healer import autonomous_healer
 from .core.gcp_db import gcp_db_service
 from .core.instincts import commerce_instincts
+from .core.prompt_learner import PromptLearnerEngine
 
 _relay_server = None
 
@@ -175,6 +176,17 @@ class LearnInstinctRequest(BaseModel):
     pattern: str
     reason: str
     replacement_target: Optional[str] = None
+
+
+class LearnFromPromptRequest(BaseModel):
+    prompt: str
+
+
+class QuarantineItemRequest(BaseModel):
+    merchant: str
+    merchant_domain: Optional[str] = None
+    listing_id: Optional[str] = None
+    reason: str = "User Reported Scam / Dead Link / Out of Stock"
 
 
 # Endpoints
@@ -357,6 +369,49 @@ async def add_system_instinct(req: LearnInstinctRequest):
         replacement_url=req.replacement_target
     )
     return {"status": "success", "instinct": inst.model_dump()}
+
+
+@app.post("/api/system/instincts/learn-from-prompt")
+async def api_learn_from_prompt(req: LearnFromPromptRequest):
+    """
+    Ingests natural language user feedback or search directives, extracts negative constraints,
+    and dynamically compiles new operational reflex instincts.
+    """
+    clean_query, constraints, newly_learned = PromptLearnerEngine.parse_and_learn_from_prompt(
+        raw_prompt=req.prompt,
+        instincts_vault=commerce_instincts
+    )
+    all_instincts = commerce_instincts.list_instincts()
+    return {
+        "status": "success",
+        "raw_prompt": req.prompt,
+        "clean_query": clean_query,
+        "constraints": constraints.model_dump(),
+        "newly_learned_count": len(newly_learned),
+        "newly_learned": newly_learned,
+        "total_active_instincts": len(all_instincts)
+    }
+
+
+@app.post("/api/system/quarantine-item")
+async def api_quarantine_item(req: QuarantineItemRequest):
+    """
+    1-Click user feedback endpoint: flags and permanently blacklists or quarantines
+    a scam merchant, 404 dead link, or out-of-stock product.
+    """
+    target = req.merchant_domain or req.merchant
+    inst = commerce_instincts.record_prompt_instinct(
+        prompt_text=f"User Flagged: {req.reason}",
+        category="USER_QUARANTINE_MERCHANT",
+        pattern=target,
+        reason=f"User Flagged: {req.reason} on merchant '{req.merchant}' (listing '{req.listing_id or ''}')"
+    )
+    return {
+        "status": "success",
+        "message": f"Merchant '{req.merchant}' successfully quarantined and registered in reflex memory.",
+        "rule_id": inst.rule_id,
+        "category": inst.category
+    }
 
 
 @app.post("/api/paypal/create-dossier")

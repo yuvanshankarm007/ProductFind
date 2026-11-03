@@ -215,6 +215,8 @@ class AgentNegotiationEvent(BaseModel):
 
 class BlackboardState(BaseModel):
     search_query: str = ""
+    clean_query: Optional[str] = None
+    prompt_constraints: Optional[Dict[str, Any]] = None
     session_id: str = "sess-default"
     user_preferences: UserPreferences = Field(default_factory=UserPreferences)
     is_complete: bool = False
