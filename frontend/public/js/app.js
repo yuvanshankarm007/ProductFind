@@ -9,6 +9,7 @@ import { wsClient } from './websocket.js';
 import { initializeAgGrid, updateGridData, filterGrid, exportGridCsv } from './ag_grid_setup.js';
 import { refreshHud, triggerSelfTest, triggerSelfFix, triggerSelfLearn } from './self_healer_hud.js';
 import { closeDossierModal, openDossierModal } from './merkle_modal.js';
+import { openPayPalCheckoutModal, closePayPalCheckoutModal } from './paypal_checkout_modal.js';
 import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
 
@@ -151,6 +152,16 @@ function setupEventListeners() {
     if (dossierModal) {
         dossierModal.addEventListener('click', (e) => {
             if (e.target === dossierModal) closeDossierModal();
+        });
+    }
+
+    const closePayPal = document.getElementById('modal-close-paypal');
+    if (closePayPal) closePayPal.addEventListener('click', closePayPalCheckoutModal);
+
+    const paypalModal = document.getElementById('paypal-checkout-modal');
+    if (paypalModal) {
+        paypalModal.addEventListener('click', (e) => {
+            if (e.target === paypalModal) closePayPalCheckoutModal();
         });
     }
 
@@ -363,7 +374,7 @@ function renderStrategicCards(options) {
             </div>
 
             <div style="display: flex; gap: 8px;">
-                <button type="button" class="control-btn btn-primary btn-checkout-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" style="flex: 1; justify-content: center;">
+                <button type="button" class="control-btn btn-primary btn-checkout-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" data-title="${escapeHtml(listing.product_title || '')}" style="flex: 1; justify-content: center;">
                     Pay with PayPal
                 </button>
                 <button type="button" class="control-btn btn-view-dossier" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" title="Inspect Cryptographic Section 13 Dispute Dossier">
@@ -381,8 +392,8 @@ function renderStrategicCards(options) {
             const m = b.getAttribute('data-merchant');
             const p = b.getAttribute('data-price');
             const id = b.getAttribute('data-order-id');
-            showToast(`Initiating PayPal checkout for ${m}...`, 'info');
-            openDossierModal(`PP-${id}`, m, p);
+            const title = b.getAttribute('data-title') || '';
+            openPayPalCheckoutModal(id, m, p, title);
         });
     });
 

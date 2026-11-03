@@ -336,6 +336,26 @@
         </div>
     </footer>
 
+    <!-- PayPal Orders v2 & Pay in 4 Checkout Modal -->
+    <div id="paypal-checkout-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 620px;">
+            <div class="modal-header">
+                <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.89A1.282 1.282 0 0 1 6.21 1.838h7.032c3.504 0 6.035 1.764 5.378 5.753-.473 2.873-2.39 4.887-5.188 5.42l-.578.077c-.571.077-.98.542-1.075 1.111l-.85 5.138a.641.641 0 0 1-.633.541H7.076z" fill="#003087"/>
+                        <path d="M9.13 15.289l.85-5.138c.095-.569.504-1.034 1.075-1.111l.578-.077c2.798-.533 4.715-2.547 5.188-5.42.138-.838.106-1.579-.064-2.203a5.556 5.556 0 0 1 1.488.665c2.441 1.547 2.054 5.161 1.47 8.705-.67 4.072-3.256 5.836-6.848 5.836H9.763a.641.641 0 0 1-.633-.54l-.001-.017z" fill="#0079C1"/>
+                        <path d="M8.28 21.337l1.782-10.771a.641.641 0 0 1 .633-.54h3.18c2.937 0 4.872 1.348 4.364 4.436-.457 2.775-2.28 4.713-4.946 5.228l-.552.074c-.548.074-.94.521-1.031 1.066l-.853 5.158a.641.641 0 0 1-.633.541H8.913a.641.641 0 0 1-.633-.74l-.001-.017.001-.435z" fill="#00457C"/>
+                    </svg>
+                    <span>PayPal Orders v2 & Pay in 4 Checkout</span>
+                </div>
+                <button type="button" id="modal-close-paypal" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="paypal-checkout-content">
+                <!-- Dynamically populated by paypal_checkout_modal.js -->
+            </div>
+        </div>
+    </div>
+
     <!-- Section 13 Cryptographic Merkle Tree Dispute Dossier Modal -->
     <div id="dossier-modal" class="modal-overlay">
         <div class="modal-card">

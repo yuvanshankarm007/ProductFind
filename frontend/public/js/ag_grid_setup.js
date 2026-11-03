@@ -6,6 +6,7 @@
 
 import { escapeHtml, sanitizeUrl } from './security.js';
 import { openDossierModal } from './merkle_modal.js';
+import { openPayPalCheckoutModal } from './paypal_checkout_modal.js';
 import { showToast } from './state.js';
 
 let gridApi = null;
@@ -167,6 +168,7 @@ export function initializeAgGrid(containerId) {
                             data-listing-id="${escapeHtml(data.id)}"
                             data-merchant="${escapeHtml(data.merchant)}"
                             data-price="${escapeHtml(data.tco_conv)}"
+                            data-title="${escapeHtml(data.product_title || '')}"
                             style="background: ${bg}; color: #ffffff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: ${cursor}; opacity: ${opacity};"
                             ${disabled ? "disabled" : ""}
                         >
@@ -205,7 +207,8 @@ export function initializeAgGrid(containerId) {
             const listingId = btn.getAttribute('data-listing-id');
             const merchant = btn.getAttribute('data-merchant');
             const price = btn.getAttribute('data-price');
-            handleGridCheckout(listingId, merchant, price);
+            const title = btn.getAttribute('data-title') || '';
+            handleGridCheckout(listingId, merchant, price, title);
         }
     });
 
@@ -234,26 +237,6 @@ export function exportGridCsv() {
     }
 }
 
-async function handleGridCheckout(listingId, merchant, price) {
-    showToast(`Initializing 1-Click PayPal checkout for ${merchant} (${price})...`, "info");
-    try {
-        const res = await fetch('/api/paypal/create-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                amount: parseFloat(price.replace(/[^0-9.]/g, '')) || 299.99,
-                item_name: `ProductFind Verified: ${merchant}`,
-                currency: "USD"
-            })
-        });
-        if (res.ok) {
-            const data = await res.json();
-            showToast(`PayPal Order Created: ${data.id}. Opening Section 13 Dispute Dossier...`, "success");
-            openDossierModal(data.id, merchant, price);
-        } else {
-            showToast("Failed to initialize PayPal Order.", "error");
-        }
-    } catch (err) {
-        showToast(`Checkout Error: ${err.message}`, "error");
-    }
+async function handleGridCheckout(listingId, merchant, price, title) {
+    openPayPalCheckoutModal(listingId, merchant, price, title);
 }
