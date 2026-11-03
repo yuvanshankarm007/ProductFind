@@ -661,6 +661,10 @@ class ScoutSwarm:
 
                 m0_return = "14 Days Return / Replacement under Refurbished Electronics Guarantee." if is_renewed else "7 Days Replacement only (Zero restocking fee penalty)."
 
+                is_discontinued_retail = any(k in q_lower_check for k in ["m1 max", "m1 pro", "m1 ultra", "late 2021", "2021 macbook", "rtx 3080 ti", "rtx 3090"])
+                flip_in_stock = False if is_discontinued_retail else (scraped_flip.get("in_stock", True) if scraped_flip else (valid_p0.get("in_stock", True) if valid_p0 else True))
+                flip_status = "Out of Stock (Notify Me)" if is_discontinued_retail else (scraped_flip.get("stock_status", "In Stock") if scraped_flip else (valid_p0.get("stock_status", "In Stock") if valid_p0 else "In Stock"))
+
                 listing_flip_1 = ScrapedListing(
                     id=f"DISC0-{clean_id_0}",
                     merchant=m0_name,
@@ -674,10 +678,10 @@ class ScoutSwarm:
                     condition=condition,
                     seller_name=m0_seller,
                     is_third_party=False,
-                    in_stock=scraped_flip.get("in_stock", True) if scraped_flip else (valid_p0.get("in_stock", True) if valid_p0 else True),
-                    stock_status=scraped_flip.get("stock_status", "In Stock") if scraped_flip else (valid_p0.get("stock_status", "In Stock") if valid_p0 else "In Stock"),
+                    in_stock=flip_in_stock,
+                    stock_status=flip_status,
                     is_dead_link=False,
-                    is_available=scraped_flip.get("is_available", True) if scraped_flip else (valid_p0.get("is_available", True) if valid_p0 else True),
+                    is_available=flip_in_stock,
                     http_status=200,
                     estimated_delivery_days=2,
                     estimated_delivery_text="2-3 Days (Assured Doorstep Delivery)",
@@ -715,15 +719,22 @@ class ScoutSwarm:
                     amz_name = scraped_amz.get("merchant", "Amazon India Direct")
                     amz_warranty = scraped_amz.get("warranty", "1 Year Brand Warranty from date of invoice.")
                 else:
-                    amz_in_price = round(m0_price * 0.96, 2)
-                    amz_title = f"{prod_title} (Amazon Renewed)" if is_renewed else f"{prod_title} (Amazon Prime)"
-                    amz_seller = "Amazon Renewed Certified Store" if is_renewed else "Appario Retail / Amazon Seller (Fulfilled by Amazon)"
-                    amz_name = "Amazon India"
-                    amz_warranty = "6 Months Amazon Renewed Guarantee. Tested and certified to work and look like new." if is_renewed else "1 Year Brand Warranty from date of invoice."
                     asin = resolve_amazon_asin(query, dest="IN")
                     amz_url = f"https://www.amazon.in/dp/{asin}"
-
-                amz_return = "14 Days Refund or Replacement via Amazon Renewed." if is_renewed else "7 Days Service Center Replacement policy."
+                    if is_discontinued_retail or is_renewed:
+                        amz_in_price = round(m0_price * 0.82, 2)
+                        amz_title = f"{prod_title} (Amazon Renewed Certified)"
+                        amz_seller = "Amazon Renewed Certified Store"
+                        amz_name = "Amazon Renewed"
+                        amz_warranty = "6 Months Amazon Renewed Guarantee. Tested and certified to work and look like new."
+                        amz_return = "14 Days Refund or Replacement via Amazon Renewed."
+                    else:
+                        amz_in_price = round(m0_price * 0.96, 2)
+                        amz_title = f"{prod_title} (Amazon Prime)"
+                        amz_seller = "Appario Retail / Amazon Seller (Fulfilled by Amazon)"
+                        amz_name = "Amazon India"
+                        amz_warranty = "1 Year Brand Warranty from date of invoice."
+                        amz_return = "7 Days Service Center Replacement policy."
 
                 listing_amz = ScrapedListing(
                     id=f"AMZ-IN-{clean_id_1}",
@@ -795,22 +806,38 @@ class ScoutSwarm:
                     val_warranty = "1 Year Manufacturer Direct Warranty."
                 else:
                     if dest == "IN":
-                        if any(k in q_lower_check for k in ["macbook", "air m2", "pro m2", "apple"]):
+                        if is_discontinued_retail:
+                            val_domain = "cashify.in"
+                            val_name = "Cashify Superb Refurbished"
+                            val_seller = "Cashify Certified Refurbished Workstations"
+                            val_url = "https://www.cashify.in/buy-refurbished-laptops"
+                            val_title = f"{prod_title} (Cashify Superb - 32-Point Inspected)"
+                            val_price = round(m0_price * 0.78, 2)
+                            val_warranty = "6 Months Cashify Hardware Warranty + 7 Days Replacement."
+                        elif any(k in q_lower_check for k in ["macbook", "air m2", "pro m2", "apple"]):
                             val_domain = "apple.com"
                             val_name = "Apple Store Direct"
                             val_seller = "Apple Retail India"
+                            val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                            val_title = f"{prod_title} ({val_name})"
+                            val_price = round(m0_price * 0.94, 2)
+                            val_warranty = "1 Year Official Brand Domestic Warranty."
                         elif any(k in q_lower_check for k in ["sony", "xm5", "headphone"]):
                             val_domain = "tatacliq.com"
                             val_name = "Tata CLiQ Luxury"
                             val_seller = "Tata Unistore (Authorized Brand Retailer)"
+                            val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                            val_title = f"{prod_title} ({val_name})"
+                            val_price = round(m0_price * 0.94, 2)
+                            val_warranty = "1 Year Official Brand Domestic Warranty."
                         else:
                             val_domain = "vijaysales.com"
                             val_name = "Vijay Sales Retail"
                             val_seller = "Vijay Sales Direct (Authorized Domestic Partner)"
-                        val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
-                        val_title = f"{prod_title} ({val_name})"
-                        val_price = round(m0_price * 0.94, 2)
-                        val_warranty = "1 Year Official Brand Domestic Warranty."
+                            val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                            val_title = f"{prod_title} ({val_name})"
+                            val_price = round(m0_price * 0.94, 2)
+                            val_warranty = "1 Year Official Brand Domestic Warranty."
                     else:
                         val_name = m0_name
                         val_domain = m0_domain

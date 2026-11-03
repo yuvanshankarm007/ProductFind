@@ -19,8 +19,16 @@ def resolve_amazon_asin(query: str, dest: str = "IN") -> str:
     if any(k in q for k in ["cmf", "nothing", "buds", "earbud", "earbuds", "tws"]):
         return "B0D9BKWRRG" if dest == "IN" else "B0D83J6JJ9"
 
-    # 2. Apple MacBook / Laptops
-    elif any(k in q for k in ["macbook", "apple m", "air m2", "air m3", "pro m2", "pro m3", "m2", "m3"]):
+    # 2. Apple MacBook Pro (M-Series Pro / Max / 32GB / 64GB)
+    elif any(k in q for k in [
+        "macbook pro", "m1 max", "m2 max", "m3 max", "m4 max",
+        "m1 pro", "m2 pro", "m3 pro", "m4 pro",
+        "64gb", "32gb", "96gb", "128gb", "16-inch", "14-inch"
+    ]):
+        return "B0CM5JV28X" if dest == "IN" else "B09JQSLL92"
+
+    # 3. Apple MacBook Air / Laptops
+    elif any(k in q for k in ["macbook", "apple m", "air m2", "air m3", "m2", "m3", "macbook air"]):
         # B0GR1K8S8H is verified active live 200 OK on amazon.in; B0B3C57XLR on amazon.com
         return "B0GR1K8S8H" if dest == "IN" else "B0B3C57XLR"
 
@@ -87,7 +95,9 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # Ubuy Global Direct (US Import to India)
     if "ubuy" in domain and dest == "IN":
-        if any(k in q_low for k in ["macbook", "air m2", "pro m2", "apple"]):
+        if any(k in q_low for k in ["max", "pro", "64gb", "32gb", "16-inch", "14-inch"]):
+            return "https://www.ubuy.co.in/product/1010N3N4-apple-macbook-pro-16-inch-m1-max-chip-64gb-ram-1tb-ssd-storage"
+        elif any(k in q_low for k in ["macbook", "air m2", "pro m2", "apple"]):
             return "https://www.ubuy.co.in/product/1010N3N4-apple-macbook-air-13-6-inch-m2-chip-8gb-ram-256gb-ssd-storage"
         elif any(k in q_low for k in ["dell", "latitude", "laptop", "notebook"]):
             return "https://www.ubuy.co.in/product/5511DELL-dell-latitude-5511-15-6-fhd-laptop-intel-core-i7-10th-gen"
@@ -97,8 +107,10 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # Apple Direct
     if "apple.com" in domain:
-        if any(k in q_low for k in ["macbook", "air m2", "pro m2", "m2", "m3"]):
-            return "https://www.apple.com/in/shop/buy-mac/macbook-air/13-inch-m2" if dest == "IN" else "https://www.apple.com/shop/buy-mac/macbook-air/13-inch-m2"
+        if any(k in q_low for k in ["max", "pro", "64gb", "32gb", "16-inch", "14-inch"]):
+            return "https://www.apple.com/in/shop/buy-mac/macbook-pro" if dest == "IN" else "https://www.apple.com/shop/buy-mac/macbook-pro"
+        elif any(k in q_low for k in ["macbook", "air m2", "air m3", "m2", "m3"]):
+            return "https://www.apple.com/in/shop/buy-mac/macbook-air" if dest == "IN" else "https://www.apple.com/shop/buy-mac/macbook-air"
         return "https://www.apple.com/in/shop/buy-mac" if dest == "IN" else "https://www.apple.com/shop/buy-mac"
 
     # Vijay Sales Domestic
@@ -111,7 +123,9 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # Flipkart Domestic (Verified 200 OK Product Pages)
     if "flipkart" in domain and dest == "IN":
-        if any(k in q_low for k in ["macbook", "apple m", "air m2", "air m3", "m2", "m3"]):
+        if any(k in q_low for k in ["max", "pro", "64gb", "32gb", "16-inch", "14-inch"]):
+            return "https://www.flipkart.com/apple-2023-macbook-pro-m3-pro-18-gb-512-gb-ssd-macos-sonoma-14-inch-mr7j3hn-a/p/itm5a18a5bf29ffb"
+        elif any(k in q_low for k in ["macbook", "apple m", "air m2", "air m3", "m2", "m3"]):
             return "https://www.flipkart.com/apple-macbook-air-m2-8-gb-256-gb-ssd-mac-os-monterey-mly33hn-a/p/itmdc5308fa78421"
         elif any(k in q_low for k in ["cmf", "nothing", "buds", "earbud", "tws"]):
             return "https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
