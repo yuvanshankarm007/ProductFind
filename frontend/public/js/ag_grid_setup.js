@@ -183,7 +183,6 @@ export function initializeAgGrid(containerId) {
     const gridOptions = {
         columnDefs: columnDefs,
         rowData: [],
-        theme: 'quartz-dark',
         rowHeight: 52,
         headerHeight: 40,
         pagination: true,

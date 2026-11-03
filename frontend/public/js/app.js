@@ -16,6 +16,8 @@ import { escapeHtml, sanitizeUrl } from './security.js';
 
 let currentSearchController = null;
 let currentSearchToken = 0;
+let lastExecutedQuery = "";
+let searchDebounceTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -58,23 +60,45 @@ function syncPreferencesUI() {
 }
 
 function setupEventListeners() {
-    // Search Form Submit
+    // Search Form Submit & Live Typing Debounce
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
     if (searchForm) {
         searchForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const q = searchInput.value.trim();
-            if (q) executeSearch(q);
+            clearTimeout(searchDebounceTimer);
+            const q = searchInput ? searchInput.value.trim() : '';
+            if (q) {
+                lastExecutedQuery = q;
+                executeSearch(q);
+            }
         });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            updatePromptBadges(searchInput.value);
+            clearTimeout(searchDebounceTimer);
+            const q = searchInput.value.trim();
+            // Auto-search after 800ms pause if at least 3 characters and changed
+            if (q.length >= 3 && q.toLowerCase() !== (lastExecutedQuery || '').toLowerCase()) {
+                searchDebounceTimer = setTimeout(() => {
+                    lastExecutedQuery = q;
+                    executeSearch(q);
+                }, 800);
+            }
+        });
+        updatePromptBadges(searchInput.value);
     }
 
     // Quick Query Tag Buttons
     document.querySelectorAll('.query-tag-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            clearTimeout(searchDebounceTimer);
             const query = btn.getAttribute('data-query');
             if (query) {
                 if (searchInput) searchInput.value = query;
+                lastExecutedQuery = query;
                 executeSearch(query);
             }
         });
@@ -179,11 +203,6 @@ function setupEventListeners() {
         });
     }
 
-    if (searchInput) {
-        searchInput.addEventListener('input', () => updatePromptBadges(searchInput.value));
-        updatePromptBadges(searchInput.value);
-    }
-
     // Clear Terminal Log
     const clearLogBtn = document.getElementById('btn-clear-log');
     if (clearLogBtn) {
@@ -264,6 +283,25 @@ export function executeSearch(query) {
                 showToast(`Search error: ${err.message}`, "error");
             }
         });
+    } else {
+        // Safety fallback: if WebSocket does not deliver within 4s, fetch via HTTP
+        setTimeout(() => {
+            if (searchToken === currentSearchToken && (!store.lastState || store.lastState.search_query !== query)) {
+                fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: currentSearchController.signal
+                })
+                .then(res => res.json())
+                .then(state => {
+                    if (searchToken === currentSearchToken) {
+                        applySearchResults(state);
+                    }
+                })
+                .catch(() => {});
+            }
+        }, 4000);
     }
 }
 
@@ -470,7 +508,6 @@ function updatePromptBadges(query) {
             🚫 Accessory Hijack Filter ${hasAccessories ? '✓ (Enforced via Prompt)' : ''}
         </span>
     `;
-}
 }
 
 function appendTerminalLog(source, content) {
