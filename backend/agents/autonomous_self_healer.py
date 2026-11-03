@@ -280,9 +280,11 @@ class AutonomousSelfTester:
             if sub.status == "HEALTHY":
                 score += w
             elif sub.status == "DEGRADED":
-                score += (w * 0.5)
+                score += (w * 0.7)
             elif sub.status == "AUTO_REPAIRED":
                 score += (w * 0.9)
+            elif sub.status in ("ANOMALY_DETECTED", "HEALED", "WARNING"):
+                score += (w * 0.6)
 
         overall_status = "ALL_SYSTEMS_OPTIMAL" if score >= 90.0 else ("DEGRADED" if score >= 60.0 else "ANOMALIES_DETECTED")
 

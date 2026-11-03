@@ -6,7 +6,7 @@
   "currency": "INR",
   "is_auto_synthesized": true,
   "verification_score": 0.95,
-  "learned_at": "2026-11-03T05:20:13Z",
+  "learned_at": "2026-11-03T06:13:44Z",
   "success_count": 1,
   "policy_rules": {
     "return_window_days": 14,
@@ -25,5 +25,5 @@
   },
   "paypal_shield_required": true,
   "synthesized_code": "# Autonomously Synthesized E-Commerce Parsing Skill: skill_sony_co_in_v1\n# Target Domain: sony.co.in (IN / INR)\ndef audit_merchant_sony_co_in(listing):\n    return {\n        'return_days': 14,\n        'restocking_fee_pct': 0.0,\n        'warranty_type': 'Authorized Brand Warranty',\n        'paypal_protection_mandate': True\n    }\n",
-  "sample_url": "https://www.sony.co.in/electronics/headband-headphones/wh-1000xm5/buy/wh1000xm5-smin"
+  "sample_url": "https://www.sony.co.in/electronics/headband-headphones/wh-1000xm5/buy/wh1000xm5-bmin"
 }

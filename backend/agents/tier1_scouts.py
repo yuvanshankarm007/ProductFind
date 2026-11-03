@@ -103,6 +103,7 @@ class ScoutSwarm:
     ) -> List[ScrapedListing]:
         """Dispatch search scouts to scrape live listings across domestic and international merchants for ANY product."""
         dest = destination_country.upper()
+        q_lower_check = query.lower()
         
         await self.bus.emit(
             source="ScoutCoordinator",

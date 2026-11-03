@@ -1,1 +1,1 @@
-"""ProductFind Rebuild Backend Package."""
+"""ProductFind Sentinel Backend Package."""

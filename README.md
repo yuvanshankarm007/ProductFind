@@ -1,5 +1,5 @@
-# ProductFind 🛡️
-### Bidirectional Multi-Agent Commerce Agent with PayPal Buyer Protection & Pay Later Integration
+# ProductFind Sentinel 🛡️
+### Autonomous Multi-Agent Commerce Engine with PayPal Dispute Protection & AG Grid Cockpit
 *Built for the [PayPal AI Hackathon on Devpost](https://paypalaihackathon.devpost.com/)*
 
 ---

@@ -1,5 +1,5 @@
 /**
- * ProductFind Rebuild — Main Application Bootstrap & Orchestrator.
+ * ProductFind Sentinel — Main Application Bootstrap & Orchestrator.
  * Wires together the reactive store, resilient WebSocket stream, AG Grid cockpit,
  * Self-Healer HUD, and Merkle tree dispute modal.
  */
