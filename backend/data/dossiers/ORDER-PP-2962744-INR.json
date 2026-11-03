@@ -1,7 +1,7 @@
 {
-  "dossier_id": "DOSSIER-ORDER-PP-25936D",
+  "dossier_id": "DOSSIER-ORDER-PP-EFCBAD",
   "paypal_order_id": "ORDER-PP-2962744-INR",
-  "timestamp": "2026-11-03T05:27:47.559865Z",
+  "timestamp": "2026-11-03T05:53:29.188639Z",
   "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
   "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
   "item_title": "Sony WH-1000XM5",
@@ -14,8 +14,8 @@
   "warranty_claims_evidence": "1 Year Official OEM Warranty + Accidental Spill Protection",
   "merkle_spec_hash": "64316160b4fec9efda5cd5e969a0f390963eb2f02133cf3246776e8bd830468c",
   "merkle_terms_hash": "7c4f709c0b3d8e451a3ec3a3100688e243e012c64c5f3b367b433a0b7e668872",
-  "merkle_pricing_hash": "0ee8de340d800fb4318006db7baa957828cf8bacff04158c16d18de9b9924a2f",
-  "cryptographic_hash": "25936dc0ba1e5e1c0ff140e20e39ac79885598bfcc0f12c4a3b20e003c180300",
+  "merkle_pricing_hash": "995a2854899845990fde8c2b8f1e75040bba2b1bab0ea2b7cb77bc469915ab39",
+  "cryptographic_hash": "efcbad7c2378e64c78e9b8cf740dd8f22698898ecaf0f6d33460178f4c2c29ac",
   "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
   "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
 }

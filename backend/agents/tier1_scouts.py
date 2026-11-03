@@ -483,11 +483,25 @@ class ScoutSwarm:
 
                 # 3. Third Discovered Specialist (Budget Challenger Tier)
                 if dest == "IN":
-                    store_2 = "IndiaMART Certified Supplier"
-                    domain_2 = "indiamart.com"
-                    title_2 = f"{prod_title} (IndiaMART Certified Supplier)"
-                    price_2 = valid_p2.get("price") or round(regional_price * 0.88, 2)
-                    url_2 = resolve_canonical_product_url(query, merchant_domain="indiamart.com", dest_country=dest)
+                    if valid_p2 and valid_p2.get("merchant") and valid_p2.get("merchant") not in [store_0, store_1] and "ubuy" not in (valid_p2.get("domain") or ""):
+                        store_2 = valid_p2["merchant"]
+                        domain_2 = valid_p2.get("domain", "dell.com")
+                        title_2 = valid_p2.get("title", f"{prod_title} ({store_2})")
+                        price_2 = valid_p2.get("price") or round(regional_price * 0.92, 2)
+                        p2_raw_url = valid_p2.get("url", "")
+                        url_2 = p2_raw_url if (p2_raw_url and "/s?" not in p2_raw_url and "/s/" not in p2_raw_url) else resolve_canonical_product_url(query, merchant_domain=domain_2, dest_country=dest)
+                    elif store_0 != "IndiaMART Certified Supplier" and store_1 != "IndiaMART Certified Supplier":
+                        store_2 = "IndiaMART Certified Supplier"
+                        domain_2 = "indiamart.com"
+                        title_2 = f"{prod_title} (IndiaMART Certified Supplier)"
+                        price_2 = valid_p2.get("price") or round(regional_price * 0.88, 2)
+                        url_2 = resolve_canonical_product_url(query, merchant_domain="indiamart.com", dest_country=dest)
+                    else:
+                        store_2 = "Dell Official Outlet"
+                        domain_2 = "dell.com"
+                        title_2 = f"{prod_title} (Dell Certified Partner)"
+                        price_2 = round(regional_price * 0.94, 2)
+                        url_2 = resolve_canonical_product_url(query, merchant_domain="dell.com", dest_country=dest)
                 else:
                     store_2 = valid_p2.get("merchant", "Amazon US (Global Direct Import)") if valid_p2 else "Amazon US (Global Direct Import)"
                     domain_2 = valid_p2.get("domain", "amazon.com") if valid_p2 else "amazon.com"
@@ -541,10 +555,21 @@ class ScoutSwarm:
 
                 # Append any remaining verified active in-stock specialized merchants (e.g. Cashify, RefurbishedPC.in)
                 current_urls = {r.listing_url for r in raw_listings}
+                current_merchants = {r.merchant.lower() for r in raw_listings}
+                current_domains = {r.merchant_domain.lower() for r in raw_listings}
+                current_domain_bases = {r.merchant_domain.lower().split(".")[0] for r in raw_listings if r.merchant_domain}
                 for extra_p in scraped_products:
+                    p_dom = (extra_p.get("domain") or "").lower()
+                    p_dom_base = p_dom.split(".")[0]
+                    p_merch = (extra_p.get("merchant") or "").lower()
                     if (
                         extra_p.get("url") 
                         and extra_p["url"] not in current_urls
+                        and p_dom not in current_domains
+                        and p_dom_base not in current_domain_bases
+                        and p_dom_base not in ["ubuy", "amazon", "flipkart"]
+                        and p_dom not in ["ubuy.co.in", "ubuy.com", "amazon.in", "amazon.com", "flipkart.com"]
+                        and not any(m in p_merch or p_merch in m for m in current_merchants if m)
                         and not extra_p.get("is_dead_link") 
                         and not extra_p.get("is_dead") 
                         and extra_p.get("in_stock", True) 
@@ -554,6 +579,9 @@ class ScoutSwarm:
                         and ((extra_p.get("price") or 0) >= min_price_floor)
                     ):
                         current_urls.add(extra_p["url"])
+                        current_domains.add(p_dom)
+                        current_domain_bases.add(p_dom_base)
+                        current_merchants.add(p_merch)
                         ext_id = re.sub(r'[^A-Za-z0-9]', '', extra_p.get("merchant", "STORE"))[:8].upper()
                         extra_listing = ScrapedListing(
                             id=f"SPEC-{ext_id}",
@@ -921,10 +949,14 @@ class ScoutSwarm:
             # 5. Dynamically Learned Merchant Skill (Autonomous E-Commerce Skill Acquisition)
             # Select a distinct source for the dynamically learned merchant skill
             used_for_novel = {listing.listing_url for listing in raw_listings}
+            used_domains = {r.merchant_domain.lower() for r in raw_listings}
+            used_domain_bases = {r.merchant_domain.lower().split(".")[0] for r in raw_listings if r.merchant_domain}
             candidate_novel = [
                 p for p in scraped_products 
                 if p.get("url") not in used_for_novel 
-                and p.get("domain") not in ["flipkart.com", "amazon.in", "amazon.com"]
+                and (p.get("domain") or "").lower() not in ["flipkart.com", "amazon.in", "amazon.com", "ubuy.co.in", "ubuy.com"]
+                and (p.get("domain") or "").lower() not in used_domains
+                and (p.get("domain") or "").lower().split(".")[0] not in used_domain_bases
                 and p.get("url")
                 and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?"])
             ]
@@ -932,6 +964,7 @@ class ScoutSwarm:
                 candidate_novel = [
                     p for p in scraped_products 
                     if p.get("url") not in used_for_novel 
+                    and (p.get("domain") or "").lower() not in used_domains
                     and p.get("url")
                     and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?"])
                 ]

@@ -338,11 +338,11 @@ function renderStrategicCards(options) {
                 <div class="price-main">
                     <div>
                         <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Risk-Adjusted TCO</div>
-                        <div class="tco-val mono-font">${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? opt.risk_adjusted_tco.toLocaleString() : '0.00'}</div>
+                        <div class="tco-val mono-font">${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</div>
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Sticker Outlay</div>
-                        <div class="sticker-price mono-font">${escapeHtml(opt.display_currency || '$')} ${opt.converted_cash_outlay ? opt.converted_cash_outlay.toLocaleString() : '0.00'}</div>
+                        <div class="sticker-price mono-font">${escapeHtml(opt.display_currency || '$')} ${opt.converted_cash_outlay ? Number(opt.converted_cash_outlay).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</div>
                     </div>
                 </div>
             </div>
@@ -359,14 +359,14 @@ function renderStrategicCards(options) {
 
             <!-- PayPal Pay in 4 Financing Callout -->
             <div style="background: rgba(0, 112, 186, 0.08); border: 1px solid rgba(0, 112, 186, 0.25); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px; color: #93c5fd;">
-                <strong>PayPal Pay in 4:</strong> 4 payments of <strong>${escapeHtml(opt.display_currency || '$')} ${paypal.pay_in_4_biweekly ? paypal.pay_in_4_biweekly.toLocaleString() : '0.00'}</strong> bi-weekly with 0% APR.
+                <strong>PayPal Pay in 4:</strong> 4 payments of <strong>${escapeHtml(opt.display_currency || '$')} ${paypal.pay_in_4_biweekly ? Number(paypal.pay_in_4_biweekly).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</strong> bi-weekly with 0% APR.
             </div>
 
             <div style="display: flex; gap: 8px;">
-                <button type="button" class="control-btn btn-primary btn-checkout-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? opt.risk_adjusted_tco.toLocaleString() : '0.00'}" style="flex: 1; justify-content: center;">
+                <button type="button" class="control-btn btn-primary btn-checkout-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" style="flex: 1; justify-content: center;">
                     Pay with PayPal
                 </button>
-                <button type="button" class="control-btn btn-view-dossier" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? opt.risk_adjusted_tco.toLocaleString() : '0.00'}" title="Inspect Cryptographic Section 13 Dispute Dossier">
+                <button type="button" class="control-btn btn-view-dossier" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" title="Inspect Cryptographic Section 13 Dispute Dossier">
                     🛡️ Dossier
                 </button>
             </div>

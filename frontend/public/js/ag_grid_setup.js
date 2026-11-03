@@ -20,7 +20,7 @@ export function initializeAgGrid(containerId) {
             headerName: "Merchant & Store",
             field: "merchant",
             pinned: "left",
-            width: 210,
+            width: 250,
             filter: "agTextColumnFilter",
             cellRenderer: (params) => {
                 const data = params.data;
@@ -41,7 +41,7 @@ export function initializeAgGrid(containerId) {
         {
             headerName: "Product & Hardware Spec",
             field: "product_title",
-            width: 280,
+            width: 330,
             filter: "agTextColumnFilter",
             cellRenderer: (params) => {
                 const data = params.data;
