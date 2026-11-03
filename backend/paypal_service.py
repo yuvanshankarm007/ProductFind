@@ -202,13 +202,21 @@ class PayPalService:
         else:
             headline = "PayPal Pay Later Financing Recommended"
 
+        curr_upper = currency.upper()
+        if curr_upper == "INR":
+            is_pay_later_eligible = (total_bundle >= 1000.0 and total_bundle <= 300000.0)
+        elif curr_upper in ("EUR", "GBP"):
+            is_pay_later_eligible = (total_bundle >= 30.0 and total_bundle <= 2500.0)
+        else:
+            is_pay_later_eligible = (total_bundle >= 30.0 and total_bundle <= 3000.0)
+
         return {
             "recommend_paypal": recommend,
             "headline": headline,
             "explanation": " ".join(mitigated_risks),
             "buyer_protection_tier": tier,
             "mitigated_risks": mitigated_risks,
-            "pay_later_eligible": total_bundle >= 30.0 and total_bundle <= 2500.0,
+            "pay_later_eligible": is_pay_later_eligible,
             "pay_in_4_biweekly": pay_in_4_rate,
             "total_financed_with_adp": total_bundle,
             "currency": currency

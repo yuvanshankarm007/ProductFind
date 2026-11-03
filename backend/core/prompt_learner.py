@@ -35,23 +35,23 @@ class PromptLearnerEngine:
 
     # Patterns matching negative constraints & preferences in natural language
     OUT_OF_STOCK_PATTERNS = [
-        r"\b(in\s*stock\s*only|no\s*out\s*of\s*stock|available\s*only|must\s*be\s*in\s*stock|exclude\s*out\s*of\s*stock|in\s*stock)\b",
-        r"\b(not?\s*out\s*of\s*stock|dont?\s*show\s*out\s*of\s*stock)\b"
+        r"\b(?:in\s*stock\s*only|no\s*out\s*of\s*stock|available\s*only|must\s*be\s*in\s*stock|exclude\s*out\s*of\s*stock|in\s*stock)\b",
+        r"\b(?:not?\s*out\s*of\s*stock|dont?\s*show(?:\s*me)?\s*(?:any\s*)?out\s*of\s*stock|without\s*(?:any\s*)?out\s*of\s*stock|skip\s*out\s*of\s*stock|hide\s*out\s*of\s*stock)\b"
     ]
 
     DEAD_LINK_PATTERNS = [
-        r"\b(no\s*404s?|no\s*dead\s*links?|working\s*links?\s*only|zero\s*404|exclude\s*404s?|valid\s*urls?\s*only)\b",
-        r"\b(dont?\s*give\s*me\s*404|no\s*broken\s*links?)\b"
+        r"\b(?:no|without|zero|skip|exclude|avoid|dont?\s*show(?:\s*me)?|not|or)\s*(?:any\s*)?(?:404s?|dead\s*links?|broken\s*links?|expired\s*links?|404\s*dead\s*links?)\b",
+        r"\b(?:working\s*links?\s*only|valid\s*urls?\s*only|live\s*links?\s*only)\b"
     ]
 
     ANTI_SCAM_PATTERNS = [
-        r"\b(no\s*scams?|avoid\s*scams?|reputable\s*(?:sellers?|stores?|merchants?)|verified\s*only|trusted\s*only|no\s*shady|safe\s*sellers?)\b",
-        r"\b(no\s*counterfeits?|authentic\s*only|official\s*stores?\s*only|genuine\s*only)\b"
+        r"\b(?:no|without|avoid|skip|exclude|dont?\s*show(?:\s*me)?)\s*(?:any\s*)?(?:scams?|scam\s*stores?|shady\s*(?:sellers?|stores?|merchants?)|fraud|sketchy\s*(?:sellers?|stores?)|fake\s*products?)\b",
+        r"\b(?:reputable\s*(?:sellers?|stores?|merchants?)|verified\s*only|trusted\s*only|safe\s*sellers?|authentic\s*only|official\s*stores?\s*only|genuine\s*only|no\s*counterfeits?)\b"
     ]
 
     ACCESSORY_HIJACK_PATTERNS = [
-        r"\b(no\s*accessories|no\s*parts|full\s*(?:unit|product|laptop|headphones)\s*only|no\s*brush\s*rollers?|no\s*cables?)\b",
-        r"\b(actual\s*product\s*only|not?\s*an?\s*accessory)\b"
+        r"\b(?:no|without|skip|exclude|avoid)\s*(?:any\s*)?(?:accessories|parts|brush\s*rollers?|cables?|cases?|covers?|lens\s*bundles?)\b",
+        r"\b(?:full\s*(?:unit|product|laptop|headphones|camera)\s*only|actual\s*product\s*only|not?\s*an?\s*accessory|body\s*only)\b"
     ]
 
     # Explicit domain ban pattern: e.g. "no ebay", "exclude indiamart", "ban shady-store.com", "do not show scam.com"
@@ -113,8 +113,9 @@ class PromptLearnerEngine:
             tags.append(f"BANNED_DOMAIN:{dom}")
             cleaned = re.sub(rf"\b(?:no|exclude|ban|avoid|skip|block|do not show|don't show|dont show|filter out|without)\s+{re.escape(dom)}\b", "", cleaned, flags=re.IGNORECASE)
 
-        # Clean extraneous commas, hyphens, and whitespace
-        clean_query = re.sub(r'[\,\;\|\+]+', ' ', cleaned)
+        # Clean extraneous commas, semicolons, pipes, and whitespace (preserving alphanumeric symbols like + in DS923+)
+        clean_query = re.sub(r'[\,\;\|]+', ' ', cleaned)
+        clean_query = re.sub(r'\s+\+\s+', ' ', clean_query)
         clean_query = re.sub(r'\s+', ' ', clean_query).strip()
 
         # If stripping removed everything (e.g. user just typed "in stock only no 404s"), keep reasonable fallback

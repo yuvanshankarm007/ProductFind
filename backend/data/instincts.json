@@ -1,7 +1,7 @@
 {
   "version": "2.1.0",
-  "updated_at": "2026-11-03T14:10:27Z",
-  "total_rules": 31,
+  "updated_at": "2026-11-03T14:37:10Z",
+  "total_rules": 34,
   "instincts": [
     {
       "rule_id": "INST-DEAD-ASIN-B0CKZJ8V3C",
@@ -32,9 +32,9 @@
       "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
       "reason": "Newegg permanently removed 1TS-000A-0U1G3. Replaced with verified active Amazon US import B0D16TS69T.",
       "confidence": 1.0,
-      "triggers_count": 70,
+      "triggers_count": 155,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-03T14:10:27Z"
+      "last_triggered_at": "2026-11-03T14:37:10Z"
     },
     {
       "rule_id": "INST-SEARCH-PAGE-AMAZON",
@@ -296,9 +296,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Purge all out-of-stock inventory. Only verified in-stock deals permitted.",
       "confidence": 1.0,
-      "triggers_count": 31,
+      "triggers_count": 140,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-03T14:10:08Z"
+      "last_triggered_at": "2026-11-03T14:37:09Z"
     },
     {
       "rule_id": "INST-PROMPT-ZERO-404-UNIVERSAL",
@@ -307,9 +307,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Zero tolerance for HTTP 404s and broken links. Quarantine immediately.",
       "confidence": 1.0,
-      "triggers_count": 31,
+      "triggers_count": 82,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-03T14:10:08Z"
+      "last_triggered_at": "2026-11-03T14:37:09Z"
     },
     {
       "rule_id": "INST-PROMPT-ANTI-SCAM-UNIVERSAL",
@@ -318,9 +318,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Block high-risk counterfeit sellers, unaccredited stores, and trust < 75.",
       "confidence": 1.0,
-      "triggers_count": 10,
+      "triggers_count": 69,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-03T14:08:01Z"
+      "last_triggered_at": "2026-11-03T14:37:09Z"
     },
     {
       "rule_id": "INST-USER_QUARANT-FAKESHADYSTORE-FA50",
@@ -329,9 +329,9 @@
       "replacement_target": null,
       "reason": "User Flagged: Merchant sent replica hardware on merchant 'FakeShadyStore' (listing '')",
       "confidence": 1.0,
-      "triggers_count": 9,
+      "triggers_count": 10,
       "created_at": "2026-11-03T13:07:35Z",
-      "last_triggered_at": "2026-11-03T14:08:01Z"
+      "last_triggered_at": "2026-11-03T14:37:09Z"
     },
     {
       "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-6B5899",
@@ -343,6 +343,39 @@
       "triggers_count": 0,
       "created_at": "2026-11-03T13:17:09Z",
       "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-USER_QUARANT-EBAY_COM-FC4E",
+      "category": "USER_QUARANTINE_MERCHANT",
+      "pattern": "ebay.com",
+      "replacement_target": null,
+      "reason": "Learned from user prompt: Permanently blacklisted domain 'ebay.com' based on user directive.",
+      "confidence": 1.0,
+      "triggers_count": 18,
+      "created_at": "2026-11-03T14:27:59Z",
+      "last_triggered_at": "2026-11-03T14:37:08Z"
+    },
+    {
+      "rule_id": "INST-USER_QUARANT-SHADY_DEALS_IN-86A8",
+      "category": "USER_QUARANTINE_MERCHANT",
+      "pattern": "shady-deals.in",
+      "replacement_target": null,
+      "reason": "Learned from user prompt: Permanently blacklisted domain 'shady-deals.in' based on user directive.",
+      "confidence": 1.0,
+      "triggers_count": 15,
+      "created_at": "2026-11-03T14:28:00Z",
+      "last_triggered_at": "2026-11-03T14:37:08Z"
+    },
+    {
+      "rule_id": "INST-USER_QUARANT-SHADY_DEPOT_COM-C82F",
+      "category": "USER_QUARANTINE_MERCHANT",
+      "pattern": "shady-depot.com",
+      "replacement_target": null,
+      "reason": "Learned from user prompt: Permanently blacklisted domain 'shady-depot.com' based on user directive.",
+      "confidence": 1.0,
+      "triggers_count": 5,
+      "created_at": "2026-11-03T14:36:16Z",
+      "last_triggered_at": "2026-11-03T14:37:09Z"
     }
   ]
 }
