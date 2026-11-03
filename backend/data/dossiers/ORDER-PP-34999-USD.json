@@ -1,7 +1,7 @@
 {
-  "dossier_id": "DOSSIER-ORDER-PP-BFFC72",
+  "dossier_id": "DOSSIER-ORDER-PP-571676",
   "paypal_order_id": "ORDER-PP-34999-USD",
-  "timestamp": "2026-11-03T04:37:57.343999Z",
+  "timestamp": "2026-11-03T05:26:22.254618Z",
   "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
   "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
   "item_title": "Sony WH-1000XM5 Premium Headphones",
@@ -14,8 +14,8 @@
   "warranty_claims_evidence": "1-Year OEM Coverage",
   "merkle_spec_hash": "822dba79be44852e0142526c319cf2d07b62f7246c018be8a593404ac53e1b6b",
   "merkle_terms_hash": "8346c9b52e117d93353856ca747ad7b2084a5707c456564faacaa6cc7ba13f68",
-  "merkle_pricing_hash": "28b0e834c10d4a695fda79d224772dc6eaa543defaba1fc65a843946344cbafb",
-  "cryptographic_hash": "bffc721d0b8e34d2b16a7fde2a976c8250e7430af04deb1012f0d474fe2432b5",
+  "merkle_pricing_hash": "5cb5a7b8f622e4b3e849ad9b5f24c228bc4e751250ed7574798bb62162bf4322",
+  "cryptographic_hash": "571676c4c7efd0fa3169f60f6567ba3b2c48c26240d6f2b86dfc3aab88121aa2",
   "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
   "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
 }

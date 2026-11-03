@@ -219,6 +219,8 @@ class StrategyCompiler:
                 "skill_confidence": f"{round(listing.skill_confidence * 100):.0f}% (Auto-Synthesized)" if listing.skill_confidence else "Verified Reseller",
                 "sticker_price_orig": self.fx.format_price(listing.base_price, listing.currency),
                 "sticker_price_conv": self.fx.format_price(conv_base, curr),
+                "landed_outlay_conv": self.fx.format_price(converted_cash_outlay, curr),
+                "sticker_outlay": self.fx.format_price(converted_cash_outlay, curr),
                 "tco_conv": self.fx.format_price(tco, curr),
                 "trust_score": f"{t.overall_score}/100 ({t.trust_tier})",
                 "estimated_delivery": listing.estimated_delivery_text,
@@ -262,6 +264,24 @@ class StrategyCompiler:
 
         curated: List[AnalyzedDealOption] = []
 
+        # Accessory gating for top recommendation cards
+        outlays = [opt.converted_cash_outlay for opt in eligible_pool if opt.converted_cash_outlay > 0]
+        median_outlay = sorted(outlays)[len(outlays)//2] if outlays else 1000.0
+        acc_stop_words = [
+            'brush roller', 'roller brush', 'cleaner head', 'roller', 'attachment', 'wand',
+            'nozzle', 'crevice tool', 'motorhead', 'hepa filter', 'filter replacement', 'dustbin',
+            'replacement pad', 'ear pad', 'ear tips', 'silicone case', 'tempered glass',
+            'charging cable', 'replacement battery', 'housing shell', 'trackpad replacement',
+            'keyboard replacement', 'spare part', 'repair kit', 'docking station', 'mop head',
+            'accessories kit', 'cleaning head', 'fluffy head'
+        ]
+
+        def _is_accessory_hijack(opt: AnalyzedDealOption) -> bool:
+            t_low = opt.listing.product_title.lower()
+            has_acc_word = any(w in t_low for w in acc_stop_words)
+            is_suspiciously_cheap = opt.converted_cash_outlay < (median_outlay * 0.40)
+            return has_acc_word and is_suspiciously_cheap
+
         # Prioritize strictly live verified in-stock items for top recommendation slots (RULE OUT out-of-stock and dead/404 listings)
         live_verified_pool = [
             opt for opt in eligible_pool
@@ -270,6 +290,7 @@ class StrategyCompiler:
             and getattr(opt.listing, 'is_available', True)
             and getattr(opt.listing, 'http_status', 200) not in (404, 410)
             and opt.listing.stock_status == "In Stock"
+            and not _is_accessory_hijack(opt)
         ]
 
         if not live_verified_pool:

@@ -67,7 +67,25 @@ KNOWN_BRANDS = [
     'cmf', 'nothing', 'oneplus', 'bose', 'sennheiser', 'jbl', 'boat', 'noise',
     'realme', 'xiaomi', 'redmi', 'poco', 'google', 'pixel', 'motorola', 'oppo',
     'vivo', 'iqoo', 'nike', 'adidas', 'nintendo', 'xbox', 'playstation', 'logitech',
-    'razer', 'corsair', 'canon', 'nikon', 'lg', 'panasonic', 'anker', 'marshall'
+    'razer', 'corsair', 'canon', 'nikon', 'lg', 'panasonic', 'anker', 'marshall', 'dyson'
+]
+
+ACCESSORY_INTENT_WORDS = [
+    'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin',
+    'hinge', 'roller', 'brush', 'filter', 'attachment', 'head', 'part', 'parts',
+    'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery'
+]
+
+ACCESSORY_STOP_WORDS = [
+    'case', 'cover', 'silicone', 'cushion', 'replacement pad', 'ear pad', 'ear tips',
+    'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter',
+    'hinge kit', 'lcd replacement', 'screen replacement', 'top assembly', 'lcd screen display',
+    'spare part', 'repair kit', 'replacement battery', 'housing shell', 'trackpad replacement',
+    'keyboard replacement', 'brush roller', 'roller', 'cleaner head', 'attachment', 'wand',
+    'nozzle', 'crevice tool', 'motorhead', 'hepa filter', 'filter replacement', 'dustbin',
+    'docking station', 'mop head', 'scrubber', 'brush head', 'extension pipe', 'extension hose',
+    'replacement head', 'replacement part', 'accessories kit', 'cleaning head', 'roller brush',
+    'fluffy head', 'direct drive cleaner head', 'filter kit', 'dock mount', 'wall mount'
 ]
 
 class LiveWebScoutEngine:
@@ -732,6 +750,8 @@ class LiveWebScoutEngine:
         results: List[Dict[str, Any]] = []
         candidate_items = []
 
+        has_acc_intent = any(k in q_lower for k in ACCESSORY_INTENT_WORDS)
+
         # 1. Primary: Query External Stealth Bot Browser across retail index
         try:
             bot_items = await stealth_bot_browser.search_retail_products(query, dest_country=dest_country, max_results=8)
@@ -739,6 +759,8 @@ class LiveWebScoutEngine:
                 t_low = bi["title"].lower()
                 dom = bi["domain"]
                 if any(ns in dom for ns in NON_STORE_DOMAINS) or not dom:
+                    continue
+                if not has_acc_intent and any(w in t_low for w in ACCESSORY_STOP_WORDS):
                     continue
                 brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
                 if brand_keywords and not any(b in t_low for b in brand_keywords):
@@ -797,6 +819,8 @@ class LiveWebScoutEngine:
                         continue
 
                     t_lower = raw_title.lower()
+                    if not has_acc_intent and any(w in t_lower for w in ACCESSORY_STOP_WORDS):
+                        continue
                     
                     # Brand relevance gating: reject competitor brands & cheap clones
                     brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
@@ -1148,8 +1172,45 @@ class LiveWebScoutEngine:
             "swift", "aspire", "tuf", "rog", "zephyrus", "strix", "katana", "cyborg", "bravo", 
             "loq", "legion", "yoga", "surface", "galaxy book", "gram", "spectre", "envy", 
             "macbook", "laptop", "notebook", "ultrabook", "chromebook", "probook", "elitebook",
+            "precision", "workstation", "tower", "pc",
             "rtx", "gpu", "graphics card", "geforce"
         ]):
+            # Dell Precision / Enterprise Workstation Recognition
+            if any(k in q for k in ["precision", "workstation", "7820", "5820", "7920", "3660"]):
+                m_num_match = re.search(r'\b(7820|5820|7920|3660|3650|3640)\b', q)
+                m_num = m_num_match.group(1) if m_num_match else "7820"
+                xeon_spec = "Dual Intel Xeon Gold / 64GB ECC RAM / 1TB NVMe / NVIDIA RTX" if m_num in ["7820", "7920"] else "Intel Xeon / 32GB ECC RAM / 512GB SSD / NVIDIA Quadro"
+                if is_renewed:
+                    return {
+                        "category": "Enterprise Tower Workstation (Renewed)",
+                        "brand": "Dell",
+                        "title": f"Dell Precision {m_num} Tower Workstation (Renewed - {xeon_spec}){storage_spec}",
+                        "base_usd": 1250.00 + storage_addon_usd,
+                        "inr_baseline": 105000.00 + storage_addon_inr,
+                        "min_inr": 65000.0, "max_inr": 280000.0,
+                        "min_usd": 800.0, "max_usd": 3200.0,
+                        "adp_provider": "Dell Certified Enterprise Warranty (3-Year Onsite)",
+                        "adp_usd": 149.0, "adp_inr": 9999.0,
+                        "ex_usd": 150.0, "ex_inr": 12000.0,
+                        "condition": condition_str,
+                        "is_renewed": True
+                    }
+                else:
+                    return {
+                        "category": "Enterprise Tower Workstation",
+                        "brand": "Dell",
+                        "title": f"Dell Precision {m_num} Tower Workstation ({xeon_spec}){storage_spec}",
+                        "base_usd": 1850.00 + storage_addon_usd,
+                        "inr_baseline": 154990.00 + storage_addon_inr,
+                        "min_inr": 85000.0, "max_inr": 380000.0,
+                        "min_usd": 1100.0, "max_usd": 4500.0,
+                        "adp_provider": "Dell ProSupport Plus 3-Year Next Business Day Onsite",
+                        "adp_usd": 199.0, "adp_inr": 14999.0,
+                        "ex_usd": 200.0, "ex_inr": 15000.0,
+                        "condition": "Brand New",
+                        "is_renewed": False
+                    }
+
             # Dell Latitude Specific Recognition
             if "latitude" in q:
                 m_num_match = re.search(r'\b(\d{4})\b', q)

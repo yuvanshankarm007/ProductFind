@@ -70,6 +70,21 @@ class ExternalStealthBotBrowser:
         else:
             search_query = f"{query} buy online price"
 
+        q_lower = query.lower()
+        has_acc_intent = any(k in q_lower for k in [
+            'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin',
+            'hinge', 'roller', 'brush', 'filter', 'attachment', 'head', 'part', 'parts',
+            'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery'
+        ])
+        accessory_stop_words = [
+            'brush roller', 'roller brush', 'cleaner head', 'roller', 'attachment', 'wand',
+            'nozzle', 'crevice tool', 'motorhead', 'hepa filter', 'filter replacement', 'dustbin',
+            'replacement pad', 'ear pad', 'ear tips', 'silicone case', 'tempered glass',
+            'charging cable', 'replacement battery', 'housing shell', 'trackpad replacement',
+            'keyboard replacement', 'spare part', 'repair kit', 'docking station', 'mop head',
+            'accessories kit', 'cleaning head', 'fluffy head'
+        ]
+
         def _sync_ddgs():
             items = []
             try:
@@ -87,6 +102,11 @@ class ExternalStealthBotBrowser:
                         if any(bad in href for bad in ["/search", "/s?k=", "search?", "searchpage", "results?"]):
                             continue
                         if any(ign in domain for ign in ["wikipedia.org", "youtube.com", "reddit.com", "quora.com", "facebook.com"]):
+                            continue
+
+                        # Filter accessories unless query has explicit accessory intent
+                        t_low = title.lower()
+                        if not has_acc_intent and any(w in t_low for w in accessory_stop_words):
                             continue
 
                         # Extract price if present in body or title

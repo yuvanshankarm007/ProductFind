@@ -65,7 +65,7 @@ export function initializeAgGrid(containerId) {
             width: 140,
             sortable: true,
             cellRenderer: (params) => {
-                const val = escapeHtml(params.value || "$0.00");
+                const val = escapeHtml(params.value || (params.data && (params.data.landed_outlay_conv || params.data.sticker_price_conv)) || "$0.00");
                 return `<span style="color: #94a3b8; font-family: monospace; font-size: 13px;">${val}</span>`;
             }
         },

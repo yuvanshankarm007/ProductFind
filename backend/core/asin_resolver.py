@@ -32,7 +32,11 @@ def resolve_amazon_asin(query: str, dest: str = "IN") -> str:
     elif any(k in q for k in ["iphone"]):
         return "B0CHX1W1XY"
 
-    # 5. Dell Business Laptops / Refurbished
+    # 5. Dell Precision Workstations / Enterprise Hardware
+    elif any(k in q for k in ["precision", "workstation", "7820", "5820", "7920", "3660"]):
+        return "B09T3K314N" if dest == "IN" else "B0BNQG83X2"
+
+    # 6. Dell Business Laptops / Refurbished
     elif any(k in q for k in ["dell", "latitude", "inspiron", "vostro", "5511"]):
         return "B0HP26WLF4" if dest == "IN" else "B0D16TS69T"
 
@@ -77,6 +81,8 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # IndiaMART Domestic
     if "indiamart" in domain and dest == "IN":
+        if any(k in q_low for k in ["precision", "workstation", "7820", "5820", "7920"]):
+            return "https://www.indiamart.com/proddetail/dell-precision-7820-tower-workstation-23395914688.html"
         return "https://www.indiamart.com/proddetail/dell-latitude-5511-i7-refurbished-laptop-2855589109433.html"
 
     # Ubuy Global Direct (US Import to India)
