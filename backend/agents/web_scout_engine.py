@@ -247,6 +247,8 @@ class LiveWebScoutEngine:
                             if min_bound <= p_val <= max_bound and p_val not in [2023.0, 2024.0, 2025.0, 2026.0, 2027.0]:
                                 clean_url = "https://www.flipkart.com" + link_m.group(1).split("?")[0]
                                 rating = float(rating_m.group(1)) if rating_m else 4.3
+                                b_lower = b.lower()
+                                is_out = any(k in b_lower for k in ["notify me", "out of stock", "currently unavailable", "temporarily unavailable", "sold out"])
                                 items.append({
                                     "title": raw_title,
                                     "price": p_val,
@@ -254,10 +256,10 @@ class LiveWebScoutEngine:
                                     "url": clean_url,
                                     "domain": "flipkart.com",
                                     "merchant": "Flipkart Assured",
-                                    "in_stock": True,
-                                    "stock_status": "In Stock",
+                                    "in_stock": not is_out,
+                                    "stock_status": "Out of Stock (Notify Me)" if is_out else "In Stock",
                                     "is_dead_link": False,
-                                    "is_available": True,
+                                    "is_available": not is_out,
                                     "http_status": 200,
                                     "seller_name": "OmniRetail Assured (Verified Official Partner)",
                                     "warranty": "1 Year Official Brand Domestic Warranty. Valid across authorized service centers nationwide.",
@@ -313,6 +315,11 @@ class LiveWebScoutEngine:
                         score -= 100.0
                     if "macbook" in t_lower and "macbook" not in q_lower:
                         score -= 100.0
+                    # Prevent MacBook Air from hijacking a MacBook Pro / Max / 64GB query
+                    if any(k in q_lower for k in ["max", "pro", "64gb", "32gb", "16-inch", "14-inch"]) and "air" in t_lower:
+                        score -= 300.0
+                    if "air" in q_lower and "pro" in t_lower:
+                        score -= 150.0
                     return score
 
                 for it in unique_items:
@@ -1341,12 +1348,39 @@ class LiveWebScoutEngine:
                         "is_renewed": is_renewed
                     }
 
-            if "macbook pro" in q:
-                b_usd, b_inr, brand = 1599.00, 169900.00, "Apple"
-                title = f"Apple MacBook Pro 14 (Liquid Retina XDR{storage_spec})"
+            is_macbook_pro = any(k in q for k in [
+                "macbook pro", "m1 max", "m2 max", "m3 max", "m4 max",
+                "m1 pro", "m2 pro", "m3 pro", "m4 pro", "m1 ultra", "m2 ultra",
+                "14-inch", "16-inch", "14\"", "16\""
+            ]) or ("macbook" in q and any(ram in q for ram in ["32gb", "64gb", "96gb", "128gb", "32 gb", "64 gb", "96 gb", "128 gb"]))
+
+            if is_macbook_pro:
+                if any(k in q for k in ["max", "64gb", "64 gb", "96gb", "128gb"]):
+                    chip = "M1 Max" if "m1" in q else ("M2 Max" if "m2" in q else ("M3 Max" if "m3" in q else ("M4 Max" if "m4" in q else "M-Series Max")))
+                    b_usd = 1999.00 if is_renewed else 2599.00
+                    b_inr = 199900.00 if is_renewed else 249900.00
+                    brand = "Apple"
+                    title = f"Apple MacBook Pro 16 ({chip} / 64GB Unified Memory / 1TB SSD / Liquid Retina XDR)"
+                    min_inr, max_inr = 160000.0, 480000.0
+                    min_usd, max_usd = 1600.0, 5000.0
+                elif any(k in q for k in ["pro", "32gb", "32 gb"]):
+                    chip = "M1 Pro" if "m1" in q else ("M2 Pro" if "m2" in q else ("M3 Pro" if "m3" in q else ("M4 Pro" if "m4" in q else "M-Series Pro")))
+                    b_usd = 1499.00 if is_renewed else 1899.00
+                    b_inr = 149900.00 if is_renewed else 189900.00
+                    brand = "Apple"
+                    title = f"Apple MacBook Pro 14 ({chip} / 32GB Unified Memory / 512GB SSD / Liquid Retina XDR)"
+                    min_inr, max_inr = 120000.0, 360000.0
+                    min_usd, max_usd = 1200.0, 3800.0
+                else:
+                    b_usd, b_inr, brand = 1599.00, 169900.00, "Apple"
+                    title = f"Apple MacBook Pro 14 (Liquid Retina XDR{storage_spec})"
+                    min_inr, max_inr = 110000.0, 320000.0
+                    min_usd, max_usd = 1100.0, 3200.0
             elif "macbook air" in q or "macbook" in q:
                 b_usd, b_inr, brand = 999.00, 99900.00, "Apple"
                 title = f"Apple MacBook Air 13 (Liquid Retina{storage_spec})"
+                min_inr, max_inr = 65000.0, 160000.0
+                min_usd, max_usd = 750.0, 1800.0
             elif "xps" in q:
                 b_usd, b_inr, brand = 1499.00, 154990.00, "Dell"
                 title = f"Dell XPS 14 High-Performance Laptop{storage_spec}"
