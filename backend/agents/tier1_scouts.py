@@ -1361,7 +1361,6 @@ class ScoutSwarm:
                     "open_box": listing.open_box_delivery
                 }
             )
-            await asyncio.sleep(0.04)
 
         return listings
 

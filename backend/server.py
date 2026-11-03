@@ -310,7 +310,7 @@ async def learn_skill(req: LearnSkillRequest):
 
 @app.get("/api/system/health")
 async def get_system_health():
-    report = await autonomous_healer.tester.run_full_diagnostic()
+    report = await autonomous_healer.tester.get_or_run_diagnostic(max_age_seconds=60.0)
     report.recent_repairs = autonomous_healer.fixer.fix_history[-10:]
     return report.model_dump()
 

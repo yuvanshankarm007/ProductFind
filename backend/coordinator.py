@@ -33,8 +33,8 @@ from .core.hooks import SwarmLifecycleHooks
 from .core.prompt_learner import PromptLearnerEngine, PromptConstraint
 from .core.instincts import commerce_instincts
 
-# Circuit-breaker timeout (seconds) for the scout live-scrape phase (supports multi-engine stealth web scraping)
-_SCOUT_TIMEOUT = 8.5
+# Circuit-breaker timeout (seconds) for ultra-fast 3-4s search SLAs
+_SCOUT_TIMEOUT = 3.5
 
 
 class SentinelCoordinator:
@@ -204,21 +204,10 @@ class SentinelCoordinator:
         state.raw_listings = listings
 
         # 2. Tier 2: Parallel Specialist Processing with Feedback Loops
-        warranties: Dict[str, WarrantyAdpAnalysis] = {}
-        trust_ratings: Dict[str, MerchantTrustRating] = {}
-        cross_border_evals: Dict[str, CrossBorderFxDutyAnalysis] = {}
-        paypal_evals: Dict[str, PayPalProtectionAssessment] = {}
-
-        for listing in listings:
+        async def _evaluate_listing(listing):
             w_analysis = await processors.analyze_warranty_and_adp(listing, language=preferences.language)
-            warranties[listing.id] = w_analysis
-
             t_rating = await processors.evaluate_merchant_trust(listing, language=preferences.language)
-            trust_ratings[listing.merchant] = t_rating
-
             cb_analysis = await processors.evaluate_cross_border_fx_and_duties(listing, preferences)
-            cross_border_evals[listing.id] = cb_analysis
-
             p_eval = await processors.evaluate_paypal_synergy(
                 listing,
                 w_analysis,
@@ -226,7 +215,20 @@ class SentinelCoordinator:
                 cb_analysis,
                 preferences
             )
-            paypal_evals[listing.id] = p_eval
+            return listing.id, listing.merchant, w_analysis, t_rating, cb_analysis, p_eval
+
+        eval_results = await asyncio.gather(*[_evaluate_listing(l) for l in listings])
+
+        warranties: Dict[str, WarrantyAdpAnalysis] = {}
+        trust_ratings: Dict[str, MerchantTrustRating] = {}
+        cross_border_evals: Dict[str, CrossBorderFxDutyAnalysis] = {}
+        paypal_evals: Dict[str, PayPalProtectionAssessment] = {}
+
+        for lid, merch, w_analysis, t_rating, cb_analysis, p_eval in eval_results:
+            warranties[lid] = w_analysis
+            trust_ratings[merch] = t_rating
+            cross_border_evals[lid] = cb_analysis
+            paypal_evals[lid] = p_eval
 
         state.warranty_analyses = warranties
         state.trust_ratings = trust_ratings

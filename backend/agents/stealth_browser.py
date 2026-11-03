@@ -134,7 +134,7 @@ class ExternalStealthBotBrowser:
 
         try:
             loop = asyncio.get_event_loop()
-            results = await loop.run_in_executor(None, _sync_ddgs)
+            results = await asyncio.wait_for(loop.run_in_executor(None, _sync_ddgs), timeout=2.0)
         except Exception:
             pass
 

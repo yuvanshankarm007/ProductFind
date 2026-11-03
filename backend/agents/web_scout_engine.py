@@ -9,7 +9,7 @@ import asyncio
 import httpx
 import re
 import urllib.parse
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from .stealth_browser import stealth_bot_browser
 
 try:
@@ -87,6 +87,10 @@ ACCESSORY_STOP_WORDS = [
     'replacement head', 'replacement part', 'accessories kit', 'cleaning head', 'roller brush',
     'fluffy head', 'direct drive cleaner head', 'filter kit', 'dock mount', 'wall mount'
 ]
+
+# Fast in-memory TTL query cache for ultra-responsive 3-4s search SLAs
+_SCOUT_PROFILE_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_SCOUT_CACHE_TTL = 900.0  # 15 minutes
 
 class LiveWebScoutEngine:
     def __init__(self):
@@ -793,7 +797,7 @@ class LiveWebScoutEngine:
 
         # 2. Secondary: Multi-merchant open-web fallback feed
         try:
-            html_content = await self.fetch_page_stealth("https://html.duckduckgo.com/html/", method="POST", data={"q": search_q}, timeout=5.0)
+            html_content = await self.fetch_page_stealth("https://html.duckduckgo.com/html/", method="POST", data={"q": search_q}, timeout=2.0)
             if html_content:
                 blocks = html_content.split('class="result results_links')
                 for b in blocks[1:]:
@@ -886,22 +890,25 @@ class LiveWebScoutEngine:
                         "open_box": True
                     })
 
-                # Concurrently probe top items for actual selling price and live stock status
+                # Concurrently probe top items for actual selling price and live stock status with fast timeout
                 probe_tasks = []
-                for it in candidate_items[:6]:
+                for it in candidate_items[:3]:
                     probe_tasks.append((it, self.probe_live_merchant_details(None, it["url"], min_bound, max_bound)))
 
                 if probe_tasks:
-                    probe_results = await asyncio.gather(*[t[1] for t in probe_tasks], return_exceptions=True)
-                    for (it, _), p_res in zip(probe_tasks, probe_results):
-                        if isinstance(p_res, dict):
-                            if p_res.get("price") is not None:
-                                it["price"] = float(p_res["price"])
-                            it["in_stock"] = p_res.get("in_stock", True)
-                            it["stock_status"] = p_res.get("stock_status", "In Stock")
-                            it["is_dead_link"] = p_res.get("is_dead", False)
-                            it["is_available"] = p_res.get("is_available", True)
-                            it["http_status"] = p_res.get("http_status", 200)
+                    try:
+                        probe_results = await asyncio.wait_for(asyncio.gather(*[t[1] for t in probe_tasks], return_exceptions=True), timeout=1.2)
+                        for (it, _), p_res in zip(probe_tasks, probe_results):
+                            if isinstance(p_res, dict):
+                                if p_res.get("price") is not None:
+                                    it["price"] = float(p_res["price"])
+                                it["in_stock"] = p_res.get("in_stock", True)
+                                it["stock_status"] = p_res.get("stock_status", "In Stock")
+                                it["is_dead_link"] = p_res.get("is_dead", False)
+                                it["is_available"] = p_res.get("is_available", True)
+                                it["http_status"] = p_res.get("http_status", 200)
+                    except (asyncio.TimeoutError, Exception):
+                        pass
 
                 # Calibrated merchant stock & link validity verification
                 for it in candidate_items:
@@ -1547,6 +1554,13 @@ class LiveWebScoutEngine:
                     pass
             return round(usd * _FALLBACK_INR_PER_USD, 2)
         dest = dest_country.upper()
+        cache_key = f"{query.strip().lower()}:{dest}"
+        now = time.time()
+        if cache_key in _SCOUT_PROFILE_CACHE:
+            cached_time, cached_profile = _SCOUT_PROFILE_CACHE[cache_key]
+            if (now - cached_time) < _SCOUT_CACHE_TTL:
+                return dict(cached_profile)
+
         sem = self.get_semantic_profile(query, dest)
         is_renewed = sem.get("is_renewed", False)
         calibrated = False
@@ -1566,7 +1580,10 @@ class LiveWebScoutEngine:
         stealth_task = self.search_open_web_stealth(query, dest_country=dest, min_bound=min_p, max_bound=max_p)
 
         tasks = [t for t in [flip_task, amz_task, stealth_task] if t is not None]
-        gathered_results = await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            gathered_results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=2.2)
+        except asyncio.TimeoutError:
+            gathered_results = [[] for _ in tasks]
 
         idx = 0
         flip_items = []
@@ -1664,7 +1681,7 @@ class LiveWebScoutEngine:
 
         regional_price = final_inr if dest == "IN" else final_usd
 
-        return {
+        result_profile = {
             "title": title,
             "category": sem["category"],
             "brand": sem["brand"],
@@ -1682,3 +1699,5 @@ class LiveWebScoutEngine:
             "web_snippets": snippets,
             "scraped_products": scraped_products
         }
+        _SCOUT_PROFILE_CACHE[cache_key] = (now, result_profile)
+        return result_profile

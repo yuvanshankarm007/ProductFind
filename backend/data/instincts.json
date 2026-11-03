@@ -1,6 +1,6 @@
 {
   "version": "2.1.0",
-  "updated_at": "2026-11-03T13:35:39Z",
+  "updated_at": "2026-11-03T14:10:27Z",
   "total_rules": 31,
   "instincts": [
     {
@@ -32,9 +32,9 @@
       "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
       "reason": "Newegg permanently removed 1TS-000A-0U1G3. Replaced with verified active Amazon US import B0D16TS69T.",
       "confidence": 1.0,
-      "triggers_count": 51,
+      "triggers_count": 70,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-03T13:17:35Z"
+      "last_triggered_at": "2026-11-03T14:10:27Z"
     },
     {
       "rule_id": "INST-SEARCH-PAGE-AMAZON",
@@ -296,9 +296,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Purge all out-of-stock inventory. Only verified in-stock deals permitted.",
       "confidence": 1.0,
-      "triggers_count": 24,
+      "triggers_count": 31,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-03T13:35:39Z"
+      "last_triggered_at": "2026-11-03T14:10:08Z"
     },
     {
       "rule_id": "INST-PROMPT-ZERO-404-UNIVERSAL",
@@ -307,9 +307,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Zero tolerance for HTTP 404s and broken links. Quarantine immediately.",
       "confidence": 1.0,
-      "triggers_count": 24,
+      "triggers_count": 31,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-03T13:35:39Z"
+      "last_triggered_at": "2026-11-03T14:10:08Z"
     },
     {
       "rule_id": "INST-PROMPT-ANTI-SCAM-UNIVERSAL",
@@ -318,9 +318,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Block high-risk counterfeit sellers, unaccredited stores, and trust < 75.",
       "confidence": 1.0,
-      "triggers_count": 9,
+      "triggers_count": 10,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-03T13:35:39Z"
+      "last_triggered_at": "2026-11-03T14:08:01Z"
     },
     {
       "rule_id": "INST-USER_QUARANT-FAKESHADYSTORE-FA50",
@@ -329,9 +329,9 @@
       "replacement_target": null,
       "reason": "User Flagged: Merchant sent replica hardware on merchant 'FakeShadyStore' (listing '')",
       "confidence": 1.0,
-      "triggers_count": 8,
+      "triggers_count": 9,
       "created_at": "2026-11-03T13:07:35Z",
-      "last_triggered_at": "2026-11-03T13:35:39Z"
+      "last_triggered_at": "2026-11-03T14:08:01Z"
     },
     {
       "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-6B5899",
