@@ -1,7 +1,7 @@
 {
-  "dossier_id": "DOSSIER-ORDER-LI-7A74C0",
+  "dossier_id": "DOSSIER-ORDER-LI-DE8BC5",
   "paypal_order_id": "ORDER-LIFE-777",
-  "timestamp": "2026-11-02T19:00:44.376242Z",
+  "timestamp": "2026-11-03T04:38:04.478935Z",
   "protection_policy": "PayPal Buyer Protection — Item Significantly Not As Described / Item Not Received",
   "statutory_claim_reference": "PayPal User Agreement § 13.2 (Significantly Not As Described) & § 13.1 (Item Not Received)",
   "item_title": "MacBook Pro M3 Max",
@@ -14,8 +14,8 @@
   "warranty_claims_evidence": "1-Year AppleCare Coverage",
   "merkle_spec_hash": "f5428758ff5b72072e14c4b7af9ab9e2275ba9d77a05ad797981e929a290b909",
   "merkle_terms_hash": "81ef54f1f7636ef4bce51c120c710547583d13829b4eb76e465216730a992fd0",
-  "merkle_pricing_hash": "27483042dd8659fff7e83642910f5ef8971a99089292b386a5121dbf48065cc0",
-  "cryptographic_hash": "7a74c0cfa3b31ae83a08bb4b8e096f05b5e79ce713c306903cebcb252eaecf87",
+  "merkle_pricing_hash": "9c5ed3341c15e69135edc0fd6ff72c23c91c329b1eb1eb84a25892da858f7b03",
+  "cryptographic_hash": "de8bc5ca27dca136d13f0e4def6e63993e704f75819086295b180292d6a90496",
   "evidence_status": "SEALED_AND_READY_FOR_DISPUTE",
   "resolution_instructions": "Submit this cryptographic dossier in the PayPal Resolution Center as unforgeable proof of the advertised condition and seller warranty terms."
 }

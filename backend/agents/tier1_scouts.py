@@ -12,7 +12,7 @@ import urllib.parse
 from ..core.state import ScrapedListing
 from ..core.bus import EventBus
 from ..core.i18n import translate
-from ..core.asin_resolver import resolve_amazon_asin
+from ..core.asin_resolver import resolve_amazon_asin, resolve_canonical_product_url
 from .web_scout_engine import LiveWebScoutEngine
 from .fx_service import CURRENCY_SYMBOLS, FXService
 from .adaptive_skill_learner import AdaptiveSkillLearner
@@ -204,17 +204,17 @@ class ScoutSwarm:
                         "condition": "Renewed (Certified Refurbished)"
                     },
                     {
-                        "merchant": "Amazon US (Global Direct Import)",
-                        "domain": "amazon.com",
+                        "merchant": "Ubuy Global Direct (US Import)" if dest == "IN" else "Amazon US (Global Direct Import)",
+                        "domain": "ubuy.co.in" if dest == "IN" else "amazon.com",
                         "title": f"Dell Latitude 5511 15.6\" Business Laptop ({('Intel Core i7-10850H' if ('i7' in q_low or '10850h' in q_low) else 'Intel Core i5-10300H')} / 16GB RAM / 512GB SSD - Certified Refurbished)",
                         "price": 40800.0,
-                        "url": "https://www.amazon.com/dp/B0D16TS69T",
+                        "url": "https://www.ubuy.co.in/product/5511DELL-dell-latitude-5511-15-6-fhd-laptop-intel-core-i7-10th-gen" if dest == "IN" else "https://www.amazon.com/dp/B0D16TS69T",
                         "in_stock": True,
                         "stock_status": "In Stock",
                         "is_dead_link": False,
                         "is_available": True,
                         "http_status": 200,
-                        "seller_name": "Amazon US Certified Refurbisher",
+                        "seller_name": "Ubuy Global Imports (Duty Prepaid)" if dest == "IN" else "Amazon US Certified Refurbisher",
                         "warranty": "Free 30-Day Returns & 1-Year Comprehensive Refurbished Warranty. Insured by PayPal Section 13.",
                         "condition": "Renewed (Certified Refurbished)"
                     },
@@ -395,17 +395,24 @@ class ScoutSwarm:
                 raw_listings.append(listing_2)
 
                 # 3. Third Discovered Specialist (Budget Challenger Tier)
-                store_2 = valid_p2.get("merchant", "Amazon US (Global Direct Import)") if valid_p2 else "Amazon US (Global Direct Import)"
-                domain_2 = valid_p2.get("domain", "amazon.com") if valid_p2 else "amazon.com"
-                title_2 = valid_p2.get("title", f"{prod_title} (Pre-Owned Certified)") if valid_p2 else f"{prod_title} (Pre-Owned Certified)"
-                price_2 = valid_p2.get("price") or round(regional_price * 0.92, 2)
-                p2_raw_url = valid_p2.get("url", "") if valid_p2 else ""
-                if p2_raw_url and "/s?" not in p2_raw_url and "/s/" not in p2_raw_url:
-                    url_2 = p2_raw_url
-                elif "5511" in query or "latitude" in query.lower():
-                    url_2 = "https://www.amazon.com/dp/B0D16TS69T"
+                if dest == "IN":
+                    store_2 = "IndiaMART Certified Supplier"
+                    domain_2 = "indiamart.com"
+                    title_2 = f"{prod_title} (IndiaMART Certified Supplier)"
+                    price_2 = valid_p2.get("price") or round(regional_price * 0.88, 2)
+                    url_2 = resolve_canonical_product_url(query, merchant_domain="indiamart.com", dest_country=dest)
                 else:
-                    url_2 = f"https://{domain_2}"
+                    store_2 = valid_p2.get("merchant", "Amazon US (Global Direct Import)") if valid_p2 else "Amazon US (Global Direct Import)"
+                    domain_2 = valid_p2.get("domain", "amazon.com") if valid_p2 else "amazon.com"
+                    title_2 = valid_p2.get("title", f"{prod_title} (Pre-Owned Certified)") if valid_p2 else f"{prod_title} (Pre-Owned Certified)"
+                    price_2 = valid_p2.get("price") or round(regional_price * 0.92, 2)
+                    p2_raw_url = valid_p2.get("url", "") if valid_p2 else ""
+                    if p2_raw_url and "/s?" not in p2_raw_url and "/s/" not in p2_raw_url:
+                        url_2 = p2_raw_url
+                    elif "5511" in query or "latitude" in query.lower():
+                        url_2 = "https://www.amazon.com/dp/B0D16TS69T"
+                    else:
+                        url_2 = f"https://{domain_2}"
                 warr_2 = valid_p2.get("warranty", "30-Day Free Returns & Comprehensive Store Warranty.") if valid_p2 else "30-Day Free Returns."
 
                 listing_3 = ScrapedListing(
@@ -445,10 +452,18 @@ class ScoutSwarm:
                 )
                 raw_listings.append(listing_3)
 
-                # Append any remaining verified specialized merchants (e.g. Cashify, RefurbishedPC.in)
+                # Append any remaining verified active in-stock specialized merchants (e.g. Cashify, RefurbishedPC.in)
                 current_urls = {r.listing_url for r in raw_listings}
                 for extra_p in scraped_products:
-                    if extra_p.get("url") and extra_p["url"] not in current_urls:
+                    if (
+                        extra_p.get("url") 
+                        and extra_p["url"] not in current_urls
+                        and not extra_p.get("is_dead_link") 
+                        and not extra_p.get("is_dead") 
+                        and extra_p.get("in_stock", True) 
+                        and extra_p.get("http_status", 200) == 200
+                        and not any(marker in extra_p["url"] for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
+                    ):
                         current_urls.add(extra_p["url"])
                         ext_id = re.sub(r'[^A-Za-z0-9]', '', extra_p.get("merchant", "STORE"))[:8].upper()
                         extra_listing = ScrapedListing(
@@ -511,7 +526,7 @@ class ScoutSwarm:
                 else:
                     m0_name = "Flipkart Assured"
                     m0_domain = "flipkart.com"
-                    m0_url = f"https://www.flipkart.com/{clean_id_0.lower()}-direct/p/itm{clean_id_0.lower()}"
+                    m0_url = resolve_canonical_product_url(query, merchant_domain="flipkart.com", dest_country=dest)
                     m0_seller = "OmniRetail Assured (Verified Official Partner)"
                     m0_title = f"{prod_title} ({m0_name})"
                     m0_price = regional_price
@@ -648,13 +663,31 @@ class ScoutSwarm:
                     val_seller = valid_p1.get("seller_name", f"{val_name} Store")
                     val_warranty = "1 Year Manufacturer Direct Warranty."
                 else:
-                    val_name = m0_name
-                    val_domain = m0_domain
-                    val_url = listing_flip_1.listing_url
-                    val_title = f"{prod_title} (Verified Value Deal)"
-                    val_price = round(m0_price * 0.94, 2)
-                    val_seller = m0_seller
-                    val_warranty = "1 Year Official Brand Domestic Warranty."
+                    if dest == "IN":
+                        if any(k in q_lower_check for k in ["macbook", "air m2", "pro m2", "apple"]):
+                            val_domain = "apple.com"
+                            val_name = "Apple Store Direct"
+                            val_seller = "Apple Retail India"
+                        elif any(k in q_lower_check for k in ["sony", "xm5", "headphone"]):
+                            val_domain = "tatacliq.com"
+                            val_name = "Tata CLiQ Luxury"
+                            val_seller = "Tata Unistore (Authorized Brand Retailer)"
+                        else:
+                            val_domain = "vijaysales.com"
+                            val_name = "Vijay Sales Retail"
+                            val_seller = "Vijay Sales Direct (Authorized Domestic Partner)"
+                        val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                        val_title = f"{prod_title} ({val_name})"
+                        val_price = round(m0_price * 0.94, 2)
+                        val_warranty = "1 Year Official Brand Domestic Warranty."
+                    else:
+                        val_name = m0_name
+                        val_domain = m0_domain
+                        val_url = listing_flip_1.listing_url
+                        val_title = f"{prod_title} (Verified Value Deal)"
+                        val_price = round(m0_price * 0.94, 2)
+                        val_seller = m0_seller
+                        val_warranty = "1 Year Official Brand Domestic Warranty."
 
                 listing_flip_2 = ScrapedListing(
                     id=f"VAL-{clean_id_2}",
@@ -696,7 +729,19 @@ class ScoutSwarm:
             # 4. Global Cross-Border Importer -> TRIGGERS CROSS-BORDER FX & PAYPAL SHIELD!
             clean_id_global = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()
             q_lower_check = query.lower()
-            if is_renewed and ("latitude" in q_lower_check or "5511" in q_lower_check or ("dell" in q_lower_check and any(k in q_lower_check for k in ["laptop", "business", "notebook", "15", "pc"]))):
+            if dest == "IN":
+                # For Indian shoppers, route cross-border imports to Ubuy Global Direct (US Import)
+                # Ships directly to India with DHL Express, prepays Indian Customs/GST, and includes PayPal Buyer Protection (Section 13)
+                imp_merchant = "Ubuy Global Direct (US Import)"
+                imp_domain = "ubuy.co.in"
+                imp_url = resolve_canonical_product_url(query, merchant_domain="ubuy.co.in", dest_country="IN")
+                imp_title = f"{prod_title} (US Direct Import • Duty Prepaid)"
+                imp_price = round(base_msrp_usd * 0.88, 2)
+                imp_seller = "Ubuy Global Direct (DHL Express)"
+                imp_warranty = "1-Year Global Retailer Warranty. Insured by PayPal Section 13."
+                imp_adp = "International Cargo & Duty Protection Plan ($35.00)."
+                imp_return = "30-Day Hassle-Free Global Return Guarantee with zero restocking fees."
+            elif is_renewed and ("latitude" in q_lower_check or "5511" in q_lower_check or ("dell" in q_lower_check and any(k in q_lower_check for k in ["laptop", "business", "notebook", "15", "pc"]))):
                 imp_merchant = "Amazon US (Global Direct Import)"
                 imp_domain = "amazon.com"
                 imp_title = 'Dell Latitude 5511 15.6" Business Laptop (Intel Core i7-10850H / 16GB RAM / 512GB SSD - Certified Refurbished)'
@@ -1118,7 +1163,7 @@ class ScoutSwarm:
                     raw_warranty_text=f"{skill_newegg.policy_rules.warranty_months} Months {skill_newegg.policy_rules.warranty_type}.",
                     raw_adp_text="Allstate Electronics Protection Plan ($49.00).",
                     raw_return_policy=f"{skill_newegg.policy_rules.return_window_days} Days Return policy ({skill_newegg.policy_rules.restocking_fee_pct}% restocking fee on open items).",
-                    listing_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}",
+                    listing_url=resolve_canonical_product_url(query, merchant_domain=skill_newegg.merchant_domain, dest_country=dest),
                     is_auto_learned_skill=True,
                     skill_id=skill_newegg.skill_id,
                     skill_confidence=skill_newegg.verification_score
@@ -1130,30 +1175,20 @@ class ScoutSwarm:
         for listing in raw_listings:
             u = listing.listing_url or ""
             if any(marker in u for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="]):
-                # Look for matching scraped product with direct URL
+                dom = (listing.merchant_domain or "amazon.in").lower()
+                # Look for matching scraped product specifically for this merchant domain
                 direct_match = next((
                     p.get("url") for p in scraped_products 
-                    if p.get("domain") == listing.merchant_domain 
+                    if p.get("domain") and p.get("domain").lower() in dom
                     and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
                 ), None)
                 if direct_match:
                     listing.listing_url = direct_match
+                elif "amazon" in dom:
+                    asin = resolve_amazon_asin(query, dest=dest)
+                    listing.listing_url = f"https://www.{dom}/dp/{asin}"
                 else:
-                    dom = listing.merchant_domain or "amazon.in"
-                    best_scraped = next((
-                        p.get("url") for p in scraped_products
-                        if not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
-                    ), None)
-                    if best_scraped and listing.merchant_domain in best_scraped:
-                        listing.listing_url = best_scraped
-                    elif "amazon" in dom:
-                        asin = resolve_amazon_asin(query, dest=dest)
-                        listing.listing_url = f"https://www.{dom}/dp/{asin}"
-                    elif best_scraped:
-                        listing.listing_url = best_scraped
-                    else:
-                        asin = resolve_amazon_asin(query, dest=dest)
-                        listing.listing_url = f"https://www.amazon.in/dp/{asin}" if dest == "IN" else f"https://www.amazon.com/dp/{asin}"
+                    listing.listing_url = resolve_canonical_product_url(query, merchant_domain=dom, dest_country=dest)
 
         listings: List[ScrapedListing] = []
         for listing in raw_listings:

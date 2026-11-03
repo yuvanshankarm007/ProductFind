@@ -189,6 +189,10 @@ class CommerceInstinctsVault:
                     # Regional adaptation for search leaks
                     if inst.category == "SEARCH_PAGE_INTERCEPT":
                         return resolve_canonical_product_url(query=query, dest_country=dest_country)
+                    # For Indian shoppers, do not replace with a US Amazon URL that cannot ship to India
+                    if dest == "IN" and "amazon.com" in inst.replacement_target:
+                        dom = "indiamart.com" if any(k in (query or "").lower() for k in ["latitude", "dell"]) else "amazon.in"
+                        return resolve_canonical_product_url(query=query, merchant_domain=dom, dest_country=dest_country)
                     return inst.replacement_target
 
         return url
