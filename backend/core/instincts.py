@@ -92,6 +92,46 @@ class CommerceInstinctsVault:
                 confidence=1.0,
             ),
             CommerceInstinct(
+                rule_id="INST-DEAD-ASIN-B0CM5JV28X",
+                category="BLACKLIST_DEAD_SKU",
+                pattern="B0CM5JV28X",
+                replacement_target="https://www.amazon.in/dp/B0HPGT4XRT",
+                reason="Amazon India delisted B0CM5JV28X (404 Not Found). Automatically repaired to active 200 OK MacBook Pro ASIN B0HPGT4XRT.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
+                rule_id="INST-DEAD-FLIPKART-ITM5A18A5BF29FFB",
+                category="BLACKLIST_DEAD_SKU",
+                pattern="itm5a18a5bf29ffb",
+                replacement_target="https://www.flipkart.com/apple-2021-macbook-pro-m1-max-32-gb-1-tb-ssd-mac-os-monterey-mk1a3hn-a/p/itm00aac391057cc",
+                reason="Flipkart retired itm5a18a5bf29ffb (E002 error). Replaced with active 200 OK MacBook Pro M1 Max listing itm00aac391057cc.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
+                rule_id="INST-DEAD-FLIPKART-ITMDC5308FA78421",
+                category="BLACKLIST_DEAD_SKU",
+                pattern="itmdc5308fa78421",
+                replacement_target="https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525",
+                reason="Flipkart itmdc5308fa78421 is Out of Stock (Notify Me). Replaced with active in-stock listing.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
+                rule_id="INST-DEAD-UBUY-1010N3N4",
+                category="BLACKLIST_DEAD_SKU",
+                pattern="1010N3N4",
+                replacement_target="https://www.amazon.com/dp/B09JQSLL92",
+                reason="Ubuy dead slug redirected to homepage. Repaired to verified Amazon US global direct import B09JQSLL92.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
+                rule_id="INST-DEAD-ASIN-B09T3K314N",
+                category="BLACKLIST_DEAD_SKU",
+                pattern="B09T3K314N",
+                replacement_target="https://www.amazon.in/dp/B0HP26WLF4",
+                reason="Amazon India delisted B09T3K314N (404 Not Found). Repaired to active Dell Workstation ASIN B0HP26WLF4.",
+                confidence=1.0,
+            ),
+            CommerceInstinct(
                 rule_id="INST-DEAD-ASIN-B09V1K8X1V",
                 category="BLACKLIST_DEAD_SKU",
                 pattern="B09V1K8X1V",
@@ -239,12 +279,18 @@ class CommerceInstinctsVault:
                 inst.triggers_count += 1
                 inst.last_triggered_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
+                q_low = (query or "").lower()
+                # If query has explicit hardware specifications, dynamically resolve to the exact canonical SKU for this domain
+                if any(k in q_low for k in ["m1", "m2", "m3", "m4", "max", "pro", "64gb", "32gb", "7820", "5511", "precision", "latitude"]):
+                    domain = "flipkart.com" if "flipkart" in url else ("amazon.in" if "amazon.in" in url else ("amazon.com" if "amazon" in url else ""))
+                    return resolve_canonical_product_url(query=query, merchant_domain=domain, dest_country=dest_country)
+
                 # If a replacement target is defined
                 if inst.replacement_target:
                     if inst.category == "SEARCH_PAGE_INTERCEPT":
                         return resolve_canonical_product_url(query=query, dest_country=dest_country)
                     if dest == "IN" and "amazon.com" in inst.replacement_target:
-                        dom = "indiamart.com" if any(k in (query or "").lower() for k in ["latitude", "dell"]) else "amazon.in"
+                        dom = "indiamart.com" if any(k in q_low for k in ["latitude", "dell"]) else "amazon.in"
                         return resolve_canonical_product_url(query=query, merchant_domain=dom, dest_country=dest_country)
                     return inst.replacement_target
 
@@ -295,8 +341,16 @@ class CommerceInstinctsVault:
         if enforce_no_404 and (is_dead or http_status == 404 or "404" in stock_status):
             return True, f"Quarantined 404 Dead Link: {url or merchant}"
 
-        # 2. Out-of-Stock Check
-        if enforce_in_stock and (not in_stock or not is_avail or "out of stock" in stock_status or "sold out" in stock_status or price <= 0):
+        # 2. Out-of-Stock Check (including 'notify me' and 'sold out')
+        is_out_of_stock = (
+            not in_stock
+            or not is_avail
+            or "out of stock" in stock_status
+            or "sold out" in stock_status
+            or "notify me" in stock_status
+            or price <= 0
+        )
+        if enforce_in_stock and is_out_of_stock:
             return True, f"Quarantined Out-of-Stock Inventory: {merchant} ({stock_status})"
 
         # 3. User Banned Domain Check

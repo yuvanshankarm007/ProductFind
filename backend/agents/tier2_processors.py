@@ -6,6 +6,7 @@ Features active bidirectional feedback loops with Tier 1 and horizontal cross-ag
 """
 
 import asyncio
+import re
 from typing import Dict, Any, List
 from ..core.state import (
     ScrapedListing,
@@ -49,6 +50,177 @@ class PayPalProtectionSubAgent:
         self.fx = fx_svc
 
 
+class HardwareSpecAuditorAgent:
+    """
+    Tier-2 Horizontal Specialist Sub-Agent for Hardware Specification Compliance.
+    Audits candidate listings against user query intent:
+    - Chip generation (e.g., M1 Max vs M5 Max vs M6 vs Intel Core i7 vs AMD Ryzen)
+    - Unified Memory / RAM capacity (e.g., 64GB vs 32GB vs 16GB)
+    - Product generation / year (e.g., 2021 M1 Max vs current year retail)
+    - Category / Homepage violations (flags generic category pages)
+    Issues SPEC_MISMATCH_CHALLENGE when a scout listing violates user hardware intent.
+    """
+    def __init__(self, bus: EventBus):
+        self.bus = bus
+
+    @staticmethod
+    def extract_specs_from_text(text: str) -> Dict[str, Any]:
+        import re
+        t = (text or "").lower()
+        specs = {
+            "chip": None,
+            "ram": None,
+            "storage": None,
+            "year": None,
+            "screen": None
+        }
+
+        # 1. Apple Silicon Chips
+        chip_patterns = [
+            (r"\bm([1-6])\s*max\b", lambda m: f"M{m.group(1)} Max"),
+            (r"\bm([1-6])\s*pro\b", lambda m: f"M{m.group(1)} Pro"),
+            (r"\bm([1-6])\s*ultra\b", lambda m: f"M{m.group(1)} Ultra"),
+            (r"\bm([1-6])\b", lambda m: f"M{m.group(1)}"),
+        ]
+        for pat, fmt in chip_patterns:
+            m = re.search(pat, t)
+            if m:
+                specs["chip"] = fmt(m)
+                break
+
+        # Intel / AMD
+        if not specs["chip"]:
+            if "i7-10850h" in t or "10850h" in t:
+                specs["chip"] = "Intel Core i7-10850H"
+            elif "i5-1185g7" in t or "1185g7" in t:
+                specs["chip"] = "Intel Core i5-1185G7"
+            elif re.search(r"\bcore\s*i([3579])\b", t):
+                m_intel = re.search(r"\bcore\s*i([3579])\b", t)
+                specs["chip"] = f"Intel Core i{m_intel.group(1)}"
+            elif re.search(r"\bryzen\s*([3579])\b", t):
+                m_amd = re.search(r"\bryzen\s*([3579])\b", t)
+                specs["chip"] = f"AMD Ryzen {m_amd.group(1)}"
+
+        # 2. RAM capacity
+        ram_m = re.search(r"\b(8|16|18|24|32|36|48|64|96|128)\s*gb\b", t)
+        if ram_m:
+            specs["ram"] = f"{ram_m.group(1)}GB"
+
+        # 3. Storage
+        ssd_m = re.search(r"\b(256|512)\s*gb\b", t)
+        tb_m = re.search(r"\b(1|2|4|8)\s*tb\b", t)
+        if tb_m:
+            specs["storage"] = f"{tb_m.group(1)}TB"
+        elif ssd_m:
+            specs["storage"] = f"{ssd_m.group(1)}GB"
+
+        # 4. Year / Generation
+        year_m = re.search(r"\b(202[0-9]|late 2021)\b", t)
+        if year_m:
+            specs["year"] = year_m.group(1)
+
+        # 5. Screen size
+        screen_m = re.search(r"\b(13|14|15|16)(?:-inch|\"|\s*inch)\b", t)
+        if screen_m:
+            specs["screen"] = f"{screen_m.group(1)}-inch"
+
+        return specs
+
+    async def audit_hardware_specs(self, listing: ScrapedListing, query: str = "") -> Dict[str, Any]:
+        query_specs = self.extract_specs_from_text(query)
+        
+        # Check listing title, URL slug, and merchant text
+        listing_combined = f"{listing.product_title} {listing.listing_url} {listing.merchant}"
+        listing_specs = self.extract_specs_from_text(listing_combined)
+
+        # Check URL health & category violation
+        from ..core.url_health_cache import is_generic_category_or_homepage, is_e002_error_url
+        is_category = is_generic_category_or_homepage(listing.listing_url)
+        is_e002 = is_e002_error_url(listing.listing_url)
+
+        mismatches = []
+        # A. Chip generation mismatch (e.g. M1 Max vs M5 Max vs M6)
+        url_low = listing.listing_url.lower()
+        if query_specs["chip"]:
+            req_chip = query_specs["chip"].upper()
+            det_chip = (listing_specs["chip"] or "").upper()
+            
+            # Direct URL chip check
+            url_chip_m = re.search(r"[-_](m[1-6])[-_]?(max|pro|ultra)?", url_low)
+            if url_chip_m:
+                url_chip_detected = f"{url_chip_m.group(1).upper()}" + (f" {url_chip_m.group(2).capitalize()}" if url_chip_m.group(2) else "")
+                if req_chip != url_chip_detected.upper():
+                    mismatches.append(f"Chip Generation Mismatch: Query requires {query_specs['chip']}, but listing URL targets {url_chip_detected}")
+            elif "m1" in req_chip:
+                if any(bad_m in url_low for bad_m in ["m5-max", "m5_max", "m6", "m4", "m3", "m2", "b0hpgt4xrt"]):
+                    mismatches.append(f"Chip Generation Mismatch: Query requires {query_specs['chip']}, but listing targets newer/incompatible SKU ({listing.listing_url})")
+            
+            if det_chip and req_chip != det_chip and not any("Chip Generation Mismatch" in m for m in mismatches):
+                mismatches.append(f"Chip Mismatch: Query requires {query_specs['chip']}, but listing specifies {listing_specs['chip']}")
+
+        # B. RAM capacity mismatch (e.g. 64GB vs 32GB vs 36GB vs 16GB)
+        if query_specs["ram"]:
+            req_ram = query_specs["ram"].upper()
+            det_ram = (listing_specs["ram"] or "").upper()
+            url_ram_m = re.search(r"[-_](8|16|18|24|32|36|48|64|96|128)[-_]?gb", url_low)
+            url_ram = f"{url_ram_m.group(1)}GB" if url_ram_m else None
+            
+            if url_ram and req_ram != url_ram.upper():
+                mismatches.append(f"RAM Capacity Mismatch: Query requires {query_specs['ram']}, but listing URL targets {url_ram}")
+            elif det_ram and req_ram != det_ram:
+                mismatches.append(f"RAM Mismatch: Query requires {query_specs['ram']}, but listing specifies {listing_specs['ram']}")
+
+        # C. Generic Category Page Violation
+        if is_category:
+            mismatches.append(f"Generic Category Page Violation: URL '{listing.listing_url}' is a category/home page, not an exact product detail page")
+
+        # D. E002 error
+        if is_e002:
+            mismatches.append(f"E002 Retired SKU Violation: URL '{listing.listing_url}' points to an expired/E002 Flipkart listing")
+
+        is_compliant = len(mismatches) == 0
+
+        if not is_compliant:
+            mismatch_summary = "; ".join(mismatches)
+            # Emit Horizontal Cross-Agent SPEC_MISMATCH_CHALLENGE
+            await self.bus.emit(
+                source="HardwareSpecAuditorAgent",
+                target="Coordinator",
+                event_type="SPEC_MISMATCH_CHALLENGE",
+                content=(
+                    f"SPEC_MISMATCH_CHALLENGE: Listing [{listing.id}] at '{listing.merchant}' violates hardware spec intent! "
+                    f"Violations: [{mismatch_summary}]. "
+                    f"Challenging Coordinator for exact canonical resolution or pruning."
+                ),
+                payload={
+                    "listing_id": listing.id,
+                    "merchant": listing.merchant,
+                    "challenge_type": "SPEC_MISMATCH",
+                    "expected_chip": query_specs["chip"],
+                    "expected_ram": query_specs["ram"],
+                    "detected_chip": listing_specs["chip"],
+                    "detected_ram": listing_specs["ram"],
+                    "current_url": listing.listing_url,
+                    "mismatches": mismatches
+                }
+            )
+
+        return {
+            "listing_id": listing.id,
+            "is_compliant": is_compliant,
+            "mismatch_type": "SPEC_MISMATCH" if not is_compliant else None,
+            "mismatches": mismatches,
+            "expected_chip": query_specs["chip"],
+            "expected_ram": query_specs["ram"],
+            "detected_chip": listing_specs["chip"],
+            "detected_ram": listing_specs["ram"]
+        }
+
+
+# Alias for subagent naming convention
+HardwareSpecAuditorSubAgent = HardwareSpecAuditorAgent
+
+
 class ProcessingSwarm:
     def __init__(self, bus: EventBus, scouts: ScoutSwarm, fx_svc: FXService, paypal_svc: PayPalService):
         self.bus = bus
@@ -61,6 +233,11 @@ class ProcessingSwarm:
         self.trust_auditor = MerchantTrustAuditorSubAgent(bus)
         self.duty_auditor = CrossBorderDutySubAgent(bus, fx_svc)
         self.paypal_auditor = PayPalProtectionSubAgent(bus, paypal_svc, fx_svc)
+        self.spec_auditor = HardwareSpecAuditorAgent(bus)
+
+    async def audit_hardware_specs(self, listing: ScrapedListing, query: str = "") -> Dict[str, Any]:
+        """Audits candidate listing for processor, RAM, and hardware generation compliance."""
+        return await self.spec_auditor.audit_hardware_specs(listing, query=query)
 
     async def analyze_warranty_and_adp(self, listing: ScrapedListing, language: str = "en") -> WarrantyAdpAnalysis:
         """

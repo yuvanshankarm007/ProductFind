@@ -6,6 +6,7 @@ to extract authentic product titles, prices, stock statuses, and verified 200 OK
 """
 
 import asyncio
+import concurrent.futures
 import re
 import urllib.parse
 import warnings
@@ -13,6 +14,8 @@ from typing import List, Dict, Any, Optional
 from curl_cffi import requests as curl_requests
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*duckduckgo_search.*")
+
+_DDGS_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="ddgs_scout")
 
 try:
     from duckduckgo_search import DDGS
@@ -88,7 +91,7 @@ class ExternalStealthBotBrowser:
         def _sync_ddgs():
             items = []
             try:
-                with DDGS() as ddgs:
+                with DDGS(timeout=1.0) as ddgs:
                     raw_res = list(ddgs.text(search_query, max_results=max_results * 2))
                     for r in raw_res:
                         href = r.get("href", "")
@@ -108,6 +111,15 @@ class ExternalStealthBotBrowser:
                         t_low = title.lower()
                         if not has_acc_intent and any(w in t_low for w in accessory_stop_words):
                             continue
+
+                        # Filter hardware spec cross-line bleed (e.g. MacBook Air on MacBook Pro / Max search)
+                        if any(k in q_lower for k in ["max", "pro", "64gb", "32gb"]) and "air" in t_low:
+                            continue
+                        for chip in ["m1", "m2", "m3", "m4", "m5", "m6"]:
+                            if chip in q_lower:
+                                conflicting = [c for c in ["m1", "m2", "m3", "m4", "m5", "m6"] if c != chip]
+                                if any(re.search(r'\b' + re.escape(c) + r'\b', t_low) for c in conflicting) and not re.search(r'\b' + re.escape(chip) + r'\b', t_low):
+                                    continue
 
                         # Extract price if present in body or title
                         combined_text = f"{title} {body}"
@@ -134,7 +146,7 @@ class ExternalStealthBotBrowser:
 
         try:
             loop = asyncio.get_event_loop()
-            results = await asyncio.wait_for(loop.run_in_executor(None, _sync_ddgs), timeout=2.0)
+            results = await asyncio.wait_for(loop.run_in_executor(_DDGS_EXECUTOR, _sync_ddgs), timeout=0.8)
         except Exception:
             pass
 

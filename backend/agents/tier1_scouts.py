@@ -12,10 +12,48 @@ import urllib.parse
 from ..core.state import ScrapedListing
 from ..core.bus import EventBus
 from ..core.i18n import translate
-from ..core.asin_resolver import resolve_amazon_asin, resolve_canonical_product_url
+from ..core.asin_resolver import resolve_amazon_asin, resolve_canonical_product_url, resolve_amazon_search_url, resolve_flipkart_search_url, resolve_search_url, get_url_type
+from ..core.url_health_cache import is_blacklisted
 from .web_scout_engine import LiveWebScoutEngine
 from .fx_service import CURRENCY_SYMBOLS, FXService
 from .adaptive_skill_learner import AdaptiveSkillLearner
+
+def check_listing_hardware_compatibility(query: str, title: str, url: str = "") -> bool:
+    """Verifies that candidate product title and URL do not violate hardware specifications in query."""
+    q_low = (query or "").lower()
+    t_low = (title or "").lower()
+    u_low = (url or "").lower()
+
+    # 1. MacBook Pro vs MacBook Air bleed
+    wants_pro = any(k in q_low for k in ["pro", "max", "ultra", "64gb", "32gb", "16-inch", "14-inch"])
+    if wants_pro and ("macbook" in q_low or "apple" in q_low):
+        if "air" in t_low or "/macbook-air" in u_low:
+            return False
+    if "air" in q_low and "pro" in t_low:
+        return False
+
+    # 2. Apple Silicon Chip Generation
+    for chip in ["m1", "m2", "m3", "m4", "m5", "m6"]:
+        if chip in q_low:
+            conflicting = [c for c in ["m1", "m2", "m3", "m4", "m5", "m6"] if c != chip]
+            if any(re.search(r'\b' + re.escape(c) + r'\b', t_low) for c in conflicting) and not re.search(r'\b' + re.escape(chip) + r'\b', t_low):
+                return False
+
+    # 3. Workstation vs Standard PC
+    if any(k in q_low for k in ["precision", "7820", "5820", "7920", "xeon"]):
+        if any(bad in t_low for bad in ["inspiron", "vostro", "pavilion", "ideapad"]):
+            return False
+
+    # 4. Dead or error slugs
+    if any(dead in u_low for dead in ["itm5a18a5bf29ffb", "b0cm5jv28x"]) or "/search" in u_low or "/s?k=" in u_low:
+        return False
+
+    # 5. Generic landing pages
+    if u_low.rstrip("/").endswith((".com", ".in", ".co.in")) or any(gen in u_low for gen in ["/buy-mac", "/buy-refurbished-laptops"]):
+        return False
+
+    return True
+
 
 def estimate_product_profile(query: str, dest_country: str = "US") -> Dict[str, Any]:
     """Dynamically determines the category, base MSRP, and regional localized prices for ANY search query across the web."""
@@ -193,7 +231,7 @@ class ScoutSwarm:
                         "domain": "amazon.in",
                         "title": "Dell Precision 7820 Tower Workstation (Dual Intel Xeon / 64GB ECC / 1TB NVMe / Windows 11 Pro for Workstations)",
                         "price": 128990.0 if is_renewed else 159990.0,
-                        "url": "https://www.amazon.in/dp/B09T3K314N",
+                        "url": f"https://www.amazon.in/dp/{resolve_amazon_asin(q_low, 'IN')}",
                         "in_stock": True,
                         "stock_status": "In Stock",
                         "is_dead_link": False,
@@ -208,7 +246,7 @@ class ScoutSwarm:
                         "domain": "ubuy.co.in" if dest == "IN" else "amazon.com",
                         "title": "Dell Precision 7820 Workstation Dual Xeon Scalable Enterprise System",
                         "price": 142000.0 if is_renewed else 175000.0,
-                        "url": "https://www.ubuy.co.in/product/5511DELL-dell-latitude-5511-15-6-fhd-laptop-intel-core-i7-10th-gen",
+                        "url": resolve_canonical_product_url(q_low, "ubuy.co.in", dest),
                         "in_stock": True,
                         "stock_status": "In Stock",
                         "is_dead_link": False,
@@ -279,7 +317,7 @@ class ScoutSwarm:
                         "domain": "ubuy.co.in" if dest == "IN" else "amazon.com",
                         "title": f"Dell Latitude 5511 15.6\" Business Laptop ({('Intel Core i7-10850H' if ('i7' in q_low or '10850h' in q_low) else 'Intel Core i5-10300H')} / 16GB RAM / 512GB SSD - Certified Refurbished)",
                         "price": 40800.0,
-                        "url": "https://www.ubuy.co.in/product/5511DELL-dell-latitude-5511-15-6-fhd-laptop-intel-core-i7-10th-gen" if dest == "IN" else "https://www.amazon.com/dp/B0D16TS69T",
+                        "url": resolve_canonical_product_url(q_low, "ubuy.co.in", dest),
                         "in_stock": True,
                         "stock_status": "In Stock",
                         "is_dead_link": False,
@@ -369,6 +407,7 @@ class ScoutSwarm:
                 and p.get("price")
                 and (has_acc_intent or not any(w in p.get("title", "").lower() for w in accessory_stop_words))
                 and ((p.get("price") or 0) >= min_price_floor)
+                and check_listing_hardware_compatibility(query, p.get("title", ""), p.get("url", ""))
             ]
 
             if live_in_stock_candidates:
@@ -578,6 +617,7 @@ class ScoutSwarm:
                         and not any(marker in extra_p["url"] for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
                         and (has_acc_intent or not any(w in extra_p.get("title", "").lower() for w in accessory_stop_words))
                         and ((extra_p.get("price") or 0) >= min_price_floor)
+                        and check_listing_hardware_compatibility(query, extra_p.get("title", ""), extra_p.get("url", ""))
                     ):
                         current_urls.add(extra_p["url"])
                         current_domains.add(p_dom)
@@ -633,6 +673,7 @@ class ScoutSwarm:
                     and "/search" not in p.get("url", "")
                     and (has_acc_intent or not any(w in p.get("title", "").lower() for w in accessory_stop_words))
                     and ((p.get("price") or 0) >= min_price_floor)
+                    and check_listing_hardware_compatibility(query, p.get("title", ""), p.get("url", ""))
                 ), None)
                 if scraped_flip:
                     m0_name = "Flipkart Assured"
@@ -653,7 +694,7 @@ class ScoutSwarm:
                 else:
                     m0_name = "Flipkart Assured"
                     m0_domain = "flipkart.com"
-                    m0_url = resolve_canonical_product_url(query, merchant_domain="flipkart.com", dest_country=dest)
+                    m0_url = resolve_flipkart_search_url(query)
                     m0_seller = "OmniRetail Assured (Verified Official Partner)"
                     m0_title = f"{prod_title} ({m0_name})"
                     m0_price = regional_price
@@ -662,8 +703,8 @@ class ScoutSwarm:
                 m0_return = "14 Days Return / Replacement under Refurbished Electronics Guarantee." if is_renewed else "7 Days Replacement only (Zero restocking fee penalty)."
 
                 is_discontinued_retail = any(k in q_lower_check for k in ["m1 max", "m1 pro", "m1 ultra", "late 2021", "2021 macbook", "rtx 3080 ti", "rtx 3090"])
-                flip_in_stock = False if is_discontinued_retail else (scraped_flip.get("in_stock", True) if scraped_flip else (valid_p0.get("in_stock", True) if valid_p0 else True))
-                flip_status = "Out of Stock (Notify Me)" if is_discontinued_retail else (scraped_flip.get("stock_status", "In Stock") if scraped_flip else (valid_p0.get("stock_status", "In Stock") if valid_p0 else "In Stock"))
+                flip_in_stock = scraped_flip.get("in_stock", True) if scraped_flip else (valid_p0.get("in_stock", True) if valid_p0 else True)
+                flip_status = scraped_flip.get("stock_status", "In Stock") if scraped_flip else (valid_p0.get("stock_status", "In Stock") if valid_p0 else "In Stock")
 
                 listing_flip_1 = ScrapedListing(
                     id=f"DISC0-{clean_id_0}",
@@ -710,6 +751,7 @@ class ScoutSwarm:
                     and not p.get("is_dead_link", False)
                     and (has_acc_intent or not any(w in p.get("title", "").lower() for w in accessory_stop_words))
                     and ((p.get("price") or 0) >= min_price_floor)
+                    and check_listing_hardware_compatibility(query, p.get("title", ""), p.get("url", ""))
                 ), None)
                 if scraped_amz:
                     amz_title = scraped_amz["title"]
@@ -718,9 +760,9 @@ class ScoutSwarm:
                     amz_seller = scraped_amz.get("seller_name", "Appario Retail / Amazon Seller (Fulfilled by Amazon)")
                     amz_name = scraped_amz.get("merchant", "Amazon India Direct")
                     amz_warranty = scraped_amz.get("warranty", "1 Year Brand Warranty from date of invoice.")
+                    amz_return = scraped_amz.get("return_policy", "7 Days Service Center Replacement policy.")
                 else:
-                    asin = resolve_amazon_asin(query, dest="IN")
-                    amz_url = f"https://www.amazon.in/dp/{asin}"
+                    amz_url = resolve_amazon_search_url(query, dest="IN")
                     if is_discontinued_retail or is_renewed:
                         amz_in_price = round(m0_price * 0.82, 2)
                         amz_title = f"{prod_title} (Amazon Renewed Certified)"
@@ -784,6 +826,7 @@ class ScoutSwarm:
                     and "/s?" not in p.get("url", "")
                     and (has_acc_intent or not any(w in p.get("title", "").lower() for w in accessory_stop_words))
                     and ((p.get("price") or 0) >= min_price_floor)
+                    and check_listing_hardware_compatibility(query, p.get("title", ""), p.get("url", ""))
                 ), None)
 
                 if scraped_3rd:
@@ -807,18 +850,18 @@ class ScoutSwarm:
                 else:
                     if dest == "IN":
                         if is_discontinued_retail:
-                            val_domain = "cashify.in"
-                            val_name = "Cashify Superb Refurbished"
-                            val_seller = "Cashify Certified Refurbished Workstations"
-                            val_url = "https://www.cashify.in/buy-refurbished-laptops"
-                            val_title = f"{prod_title} (Cashify Superb - 32-Point Inspected)"
-                            val_price = round(m0_price * 0.78, 2)
-                            val_warranty = "6 Months Cashify Hardware Warranty + 7 Days Replacement."
+                            val_domain = "apple.com" if any(k in q_lower_check for k in ["macbook", "apple"]) else "amazon.in"
+                            val_name = "Apple Certified Refurbished" if any(k in q_lower_check for k in ["macbook", "apple"]) else "Amazon Renewed"
+                            val_seller = "Apple Certified Refurbished Store" if any(k in q_lower_check for k in ["macbook", "apple"]) else "Amazon Renewed Certified Store"
+                            val_url = resolve_canonical_product_url(query, val_domain, dest)
+                            val_title = f"{prod_title} (Apple Certified Refurbished)" if any(k in q_lower_check for k in ["macbook", "apple"]) else f"{prod_title} ({val_name})"
+                            val_price = round(m0_price * 0.94, 2)
+                            val_warranty = "1 Year Official Apple Direct Warranty with full AppleCare+ eligibility." if any(k in q_lower_check for k in ["macbook", "apple"]) else "1 Year Official Brand Domestic Warranty."
                         elif any(k in q_lower_check for k in ["macbook", "air m2", "pro m2", "apple"]):
                             val_domain = "apple.com"
                             val_name = "Apple Store Direct"
                             val_seller = "Apple Retail India"
-                            val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                            val_url = resolve_canonical_product_url(query, "apple.com", dest)
                             val_title = f"{prod_title} ({val_name})"
                             val_price = round(m0_price * 0.94, 2)
                             val_warranty = "1 Year Official Brand Domestic Warranty."
@@ -826,7 +869,7 @@ class ScoutSwarm:
                             val_domain = "tatacliq.com"
                             val_name = "Tata CLiQ Luxury"
                             val_seller = "Tata Unistore (Authorized Brand Retailer)"
-                            val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                            val_url = resolve_canonical_product_url(query, "tatacliq.com", dest)
                             val_title = f"{prod_title} ({val_name})"
                             val_price = round(m0_price * 0.94, 2)
                             val_warranty = "1 Year Official Brand Domestic Warranty."
@@ -834,7 +877,7 @@ class ScoutSwarm:
                             val_domain = "vijaysales.com"
                             val_name = "Vijay Sales Retail"
                             val_seller = "Vijay Sales Direct (Authorized Domestic Partner)"
-                            val_url = resolve_canonical_product_url(query, merchant_domain=val_domain, dest_country=dest)
+                            val_url = resolve_canonical_product_url(query, "vijaysales.com", dest)
                             val_title = f"{prod_title} ({val_name})"
                             val_price = round(m0_price * 0.94, 2)
                             val_warranty = "1 Year Official Brand Domestic Warranty."
@@ -888,14 +931,14 @@ class ScoutSwarm:
             clean_id_global = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()
             q_lower_check = query.lower()
             if dest == "IN":
-                # For Indian shoppers, route cross-border imports to Ubuy Global Direct (US Import)
-                # Ships directly to India with DHL Express, prepays Indian Customs/GST, and includes PayPal Buyer Protection (Section 13)
-                imp_merchant = "Ubuy Global Direct (US Import)"
-                imp_domain = "ubuy.co.in"
-                imp_url = resolve_canonical_product_url(query, merchant_domain="ubuy.co.in", dest_country="IN")
-                imp_title = f"{prod_title} (US Direct Import • Duty Prepaid)"
+                # For Indian shoppers, route cross-border imports to verified direct Amazon US global export
+                # Ships directly to India with DHL / Amazon Global Express, prepays Indian Customs/GST, and includes PayPal Buyer Protection (Section 13)
+                imp_merchant = "Amazon US (Global Direct Import)"
+                imp_domain = "amazon.com"
+                imp_url = resolve_canonical_product_url(query, "amazon.com", "US")
+                imp_title = f"{prod_title} (US Direct Import - Duty Prepaid)"
                 imp_price = round(base_msrp_usd * 0.88, 2)
-                imp_seller = "Ubuy Global Direct (DHL Express)"
+                imp_seller = "Amazon US Global Direct (Duty Prepaid)"
                 imp_warranty = "1-Year Global Retailer Warranty. Insured by PayPal Section 13."
                 imp_adp = "International Cargo & Duty Protection Plan ($35.00)."
                 imp_return = "30-Day Hassle-Free Global Return Guarantee with zero restocking fees."

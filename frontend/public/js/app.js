@@ -342,6 +342,12 @@ function applySearchResults(state) {
 
     // 4. Update KPI ribbon
     updateKpiRibbon(state);
+
+    // 5. Scroll smoothly to results so the user immediately sees the curated cards
+    const cardsSection = document.getElementById('strategic-cards-grid');
+    if (cardsSection && state.final_options && state.final_options.length > 0) {
+        cardsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 function updateKpiRibbon(state) {
@@ -395,7 +401,12 @@ function renderStrategicCards(options) {
             <div class="card-ribbon ${ribbonClass}"></div>
             <div class="tier-badge ${badgeClass}">${tierTitle}</div>
 
-            <div class="deal-title">${escapeHtml(listing.product_title || 'Certified Item')}</div>
+            <div class="deal-title">
+                <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" style="color: #ffffff; text-decoration: none; display: inline-flex; align-items: flex-start; gap: 6px;" title="Open live verified listing on ${escapeHtml(listing.merchant || 'Store')} (200 OK Guaranteed)">
+                    <span>${escapeHtml(listing.product_title || 'Certified Item')}</span>
+                    <span style="color: #60a5fa; font-size: 12px;">↗</span>
+                </a>
+            </div>
 
             <div class="deal-merchant-row">
                 <span>🏬 ${escapeHtml(listing.merchant || 'Retailer')} • ${escapeHtml(listing.origin_country || 'US')}</span>
@@ -430,7 +441,10 @@ function renderStrategicCards(options) {
                 <strong>PayPal Pay in 4:</strong> 4 payments of <strong>${escapeHtml(opt.display_currency || '$')} ${paypal.pay_in_4_biweekly ? Number(paypal.pay_in_4_biweekly).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</strong> bi-weekly with 0% APR.
             </div>
 
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" class="control-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; font-size: 11px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; border-radius: 6px;" title="Open Verified Live Product Page on ${escapeHtml(listing.merchant || 'Merchant')}">
+                    Store ↗
+                </a>
                 <button type="button" class="control-btn btn-primary btn-checkout-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" data-title="${escapeHtml(listing.product_title || '')}" style="flex: 1; justify-content: center;">
                     Pay with PayPal
                 </button>

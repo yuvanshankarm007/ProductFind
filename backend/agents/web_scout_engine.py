@@ -6,6 +6,7 @@ Eliminates synthetic math drift, mock catalogs, and artificial formulas.
 """
 
 import asyncio
+import time
 import httpx
 import re
 import urllib.parse
@@ -317,9 +318,16 @@ class LiveWebScoutEngine:
                         score -= 100.0
                     # Prevent MacBook Air from hijacking a MacBook Pro / Max / 64GB query
                     if any(k in q_lower for k in ["max", "pro", "64gb", "32gb", "16-inch", "14-inch"]) and "air" in t_lower:
-                        score -= 300.0
+                        return -1000.0
                     if "air" in q_lower and "pro" in t_lower:
-                        score -= 150.0
+                        return -500.0
+
+                    # Chip Generation Fidelity: M1 query must never match M2/M3/M4/M5/M6 products
+                    for chip in ["m1", "m2", "m3", "m4", "m5", "m6"]:
+                        if chip in q_lower:
+                            conflicting = [c for c in ["m1", "m2", "m3", "m4", "m5", "m6"] if c != chip]
+                            if any(re.search(r'\b' + re.escape(c) + r'\b', t_lower) for c in conflicting) and not re.search(r'\b' + re.escape(chip) + r'\b', t_lower):
+                                return -1000.0
                     return score
 
                 for it in unique_items:
@@ -565,6 +573,19 @@ class LiveWebScoutEngine:
                         score += 80.0
                     elif any(k in t_lower for k in ["brand new", "sealed"]):
                         score -= 40.0
+
+                # Prevent MacBook Air from hijacking a MacBook Pro / Max / 64GB query
+                if any(k in q_lower for k in ["max", "pro", "64gb", "32gb", "16-inch", "14-inch"]) and "air" in t_lower:
+                    return -1000.0
+                if "air" in q_lower and "pro" in t_lower:
+                    return -500.0
+
+                # Chip Generation Fidelity: M1 query must never match M2/M3/M4/M5/M6 products
+                for chip in ["m1", "m2", "m3", "m4", "m5", "m6"]:
+                    if chip in q_lower:
+                        conflicting = [c for c in ["m1", "m2", "m3", "m4", "m5", "m6"] if c != chip]
+                        if any(re.search(r'\b' + re.escape(c) + r'\b', t_lower) for c in conflicting) and not re.search(r'\b' + re.escape(chip) + r'\b', t_lower):
+                            return -1000.0
 
                 return score
 
@@ -1615,7 +1636,7 @@ class LiveWebScoutEngine:
 
         tasks = [t for t in [flip_task, amz_task, stealth_task] if t is not None]
         try:
-            gathered_results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=2.2)
+            gathered_results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=1.0)
         except asyncio.TimeoutError:
             gathered_results = [[] for _ in tasks]
 
@@ -1697,21 +1718,24 @@ class LiveWebScoutEngine:
 
         # Fallback to search_web if still zero items
         if not scraped_products and not calibrated:
-            web_res = await self.search_web(query, dest)
-            web_hits = len(web_res)
-            snippets = [r["snippet"] for r in web_res[:3] if r.get("snippet")]
-            if dest == "IN":
-                live_price = self.extract_prices(web_res, sem["min_inr"], sem["max_inr"], dest_country="IN")
-                if live_price:
-                    final_inr = live_price
-                    final_usd = _inr_to_usd(live_price)
-                    calibrated = True
-            else:
-                live_price = self.extract_prices(web_res, sem["min_usd"], sem["max_usd"], dest_country=dest)
-                if live_price:
-                    final_usd = live_price
-                    final_inr = _usd_to_inr(live_price)
-                    calibrated = True
+            try:
+                web_res = await asyncio.wait_for(self.search_web(query, dest), timeout=0.5)
+                web_hits = len(web_res)
+                snippets = [r["snippet"] for r in web_res[:3] if r.get("snippet")]
+                if dest == "IN":
+                    live_price = self.extract_prices(web_res, sem["min_inr"], sem["max_inr"], dest_country="IN")
+                    if live_price:
+                        final_inr = live_price
+                        final_usd = _inr_to_usd(live_price)
+                        calibrated = True
+                else:
+                    live_price = self.extract_prices(web_res, sem["min_usd"], sem["max_usd"], dest_country=dest)
+                    if live_price:
+                        final_usd = live_price
+                        final_inr = _usd_to_inr(live_price)
+                        calibrated = True
+            except Exception:
+                pass
 
         regional_price = final_inr if dest == "IN" else final_usd
 

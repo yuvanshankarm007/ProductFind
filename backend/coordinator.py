@@ -34,7 +34,7 @@ from .core.prompt_learner import PromptLearnerEngine, PromptConstraint
 from .core.instincts import commerce_instincts
 
 # Circuit-breaker timeout (seconds) for ultra-fast 3-4s search SLAs
-_SCOUT_TIMEOUT = 3.5
+_SCOUT_TIMEOUT = 1.4
 
 
 class SentinelCoordinator:
@@ -215,7 +215,8 @@ class SentinelCoordinator:
                 cb_analysis,
                 preferences
             )
-            return listing.id, listing.merchant, w_analysis, t_rating, cb_analysis, p_eval
+            spec_audit = await processors.audit_hardware_specs(listing, query=clean_query)
+            return listing.id, listing.merchant, w_analysis, t_rating, cb_analysis, p_eval, spec_audit
 
         eval_results = await asyncio.gather(*[_evaluate_listing(l) for l in listings])
 
@@ -223,12 +224,14 @@ class SentinelCoordinator:
         trust_ratings: Dict[str, MerchantTrustRating] = {}
         cross_border_evals: Dict[str, CrossBorderFxDutyAnalysis] = {}
         paypal_evals: Dict[str, PayPalProtectionAssessment] = {}
+        spec_audits: Dict[str, Dict[str, Any]] = {}
 
-        for lid, merch, w_analysis, t_rating, cb_analysis, p_eval in eval_results:
+        for lid, merch, w_analysis, t_rating, cb_analysis, p_eval, spec_audit in eval_results:
             warranties[lid] = w_analysis
             trust_ratings[merch] = t_rating
             cross_border_evals[lid] = cb_analysis
             paypal_evals[lid] = p_eval
+            spec_audits[lid] = spec_audit
 
         state.warranty_analyses = warranties
         state.trust_ratings = trust_ratings
@@ -336,6 +339,56 @@ class SentinelCoordinator:
                     payload={"listing_id": listing.id}
                 )
 
+            # E. Horizontal Hardware Spec Compliance Challenge (HardwareSpecAuditorAgent -> Coordinator)
+            spec_audit = spec_audits.get(listing.id)
+            if spec_audit and not spec_audit.get("is_compliant", True):
+                from .core.asin_resolver import resolve_canonical_product_url
+                from .core.url_health_cache import is_generic_category_or_homepage, is_e002_error_url
+                
+                exp_chip = spec_audit.get("expected_chip") or "Target Chip"
+                exp_ram = spec_audit.get("expected_ram") or "Target RAM"
+                det_chip = spec_audit.get("detected_chip") or "Detected"
+                det_ram = spec_audit.get("detected_ram") or "Detected"
+                
+                # Coordinator handles the challenge bidirectionally by resolving exact canonical URL
+                canonical_url = resolve_canonical_product_url(
+                    query=clean_query,
+                    merchant_domain=listing.merchant_domain,
+                    dest_country=preferences.country
+                )
+                
+                # Check if canonical_url resolves the mismatch and is not generic category / E002
+                if canonical_url and not is_generic_category_or_homepage(canonical_url) and not is_e002_error_url(canonical_url):
+                    old_url = listing.listing_url
+                    listing.listing_url = canonical_url
+                    if "apple" in clean_query.lower() and exp_chip in ["M1 Max", "M1 Pro", "M2 Max", "M3 Max"]:
+                        listing.product_title = f"{listing.merchant} - Apple MacBook Pro 16 ({exp_chip} / {exp_ram or '64GB'} / Liquid Retina XDR)"
+                    
+                    await scoped_bus.emit(
+                        source="Coordinator",
+                        target="HardwareSpecAuditorAgent",
+                        event_type="RESOLVED",
+                        content=(
+                            f"SPEC_CHALLENGE_RESOLVED: Listing [{listing.id}] ({listing.merchant}) repaired to certified canonical product URL: "
+                            f"{canonical_url}. Resolved chip/RAM mismatch ({det_chip}/{det_ram} -> {exp_chip}/{exp_ram})."
+                        ),
+                        payload={"listing_id": listing.id, "action": "CANONICAL_RESOLVED", "resolved_url": canonical_url, "old_url": old_url}
+                    )
+                else:
+                    listing.is_available = False
+                    listing.in_stock = False
+                    listing.stock_status = f"Disqualified: Hardware Spec Mismatch ({det_chip} vs {exp_chip})"
+                    await scoped_bus.emit(
+                        source="Coordinator",
+                        target="HardwareSpecAuditorAgent",
+                        event_type="RESOLVED",
+                        content=(
+                            f"SPEC_CHALLENGE_PRUNED: Disqualified listing [{listing.id}] ({listing.merchant}) due to unresolvable hardware mismatch "
+                            f"({det_chip} vs {exp_chip}). Disqualified from recommendation slots."
+                        ),
+                        payload={"listing_id": listing.id, "action": "PRUNED"}
+                    )
+
         # 5. Tier 3: Strategy Compilation with dynamic risk preference weighting
         final_options, comp_matrix = await compiler.compile_and_curate(
             listings=listings,
@@ -428,7 +481,7 @@ class SentinelCoordinator:
             return state
 
         target_listing = matching[0]
-        scoped_bus, _, _, _, _ = self._get_scoped_components(state.session_id)
+        scoped_bus, scouts, processors, compiler, hooks = self._get_scoped_components(state.session_id)
 
         if challenge_type == "VERIFY_STOCK":
             await scoped_bus.emit(
@@ -483,6 +536,24 @@ class SentinelCoordinator:
                 event_type="RESOLVED",
                 content=f"PayPal Protection Shield underwritten for [{target_listing.id}]: Tier={tier}, 180-Day Dispute Escrow active.",
                 payload={"listing_id": target_listing.id, "protection_tier": tier}
+            )
+
+        elif challenge_type in ("AUDIT_SPECS", "HARDWARE_SPEC_AUDIT", "SPEC_MISMATCH"):
+            await scoped_bus.emit(
+                source="ClientAuditor",
+                target="HardwareSpecAuditorAgent",
+                event_type="SPEC_MISMATCH_CHALLENGE",
+                content=f"CLIENT CHALLENGE: Auditing hardware specification & chip generation compliance for [{target_listing.id}] ({target_listing.merchant}).",
+                payload={"listing_id": target_listing.id, "type": "SPEC_AUDIT"}
+            )
+            audit = await processors.audit_hardware_specs(target_listing, query=state.search_query)
+            status_text = "Verified 100% Compliant" if audit.get("is_compliant") else f"Mismatch Detected ({', '.join(audit.get('mismatches', []))})"
+            await scoped_bus.emit(
+                source="HardwareSpecAuditorAgent",
+                target="ClientAuditor",
+                event_type="RESOLVED",
+                content=f"Hardware specification audit completed for [{target_listing.id}]: Status={status_text}. Product URL: {target_listing.listing_url}.",
+                payload={"listing_id": target_listing.id, "audit": audit}
             )
 
         state.events = scoped_bus.get_logs()

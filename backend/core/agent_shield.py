@@ -8,6 +8,7 @@ merchant trust boundaries, and counterfeit protections before client rendering.
 from typing import Dict, Any, List, Optional
 from .instincts import commerce_instincts
 from .asin_resolver import resolve_canonical_product_url
+from .url_health_cache import is_generic_category_or_homepage, is_e002_error_url
 
 
 class CommerceAgentShield:
@@ -17,7 +18,7 @@ class CommerceAgentShield:
     """
 
     FORBIDDEN_URL_PATTERNS = [
-        "/s?k=", "/search", "/search/", "search?q=", "/p/pl?d=", "/pl?", "searchpage", "results?"
+        "/s?k=", "/search", "/search/", "search?q=", "/p/pl?d=", "/pl?", "searchpage", "results?", "catalogsearch"
     ]
 
     UNSAFE_DOMAINS = [
@@ -46,11 +47,19 @@ class CommerceAgentShield:
         if any(pat in url for pat in cls.FORBIDDEN_URL_PATTERNS):
             return cls._get_canonical_fallback(query, merchant_domain, dest_country)
 
-        # 3. Guard against unsafe/phishing domains
+        # 3. Intercept Flipkart E002 retired products
+        if is_e002_error_url(url):
+            return cls._get_canonical_fallback(query, merchant_domain, dest_country)
+
+        # 4. Intercept generic category and home pages (e.g. apple.com/shop/buy-mac/macbook-pro)
+        if is_generic_category_or_homepage(url):
+            return cls._get_canonical_fallback(query, merchant_domain, dest_country)
+
+        # 5. Guard against unsafe/phishing domains
         if any(unsafe in url for unsafe in cls.UNSAFE_DOMAINS):
             return cls._get_canonical_fallback(query, merchant_domain, dest_country)
 
-        # 4. Guarantee HTTPS
+        # 6. Guarantee HTTPS
         if url.startswith("http://"):
             url = url.replace("http://", "https://", 1)
 

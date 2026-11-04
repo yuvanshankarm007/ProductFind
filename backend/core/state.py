@@ -60,6 +60,7 @@ class ScrapedListing(BaseModel):
     raw_adp_text: str = ""
     raw_return_policy: str = ""
     listing_url: str = ""
+    listing_url_type: str = "product"  # "product" (direct page) or "search" (search results page)
 
     # Autonomous Adaptive Skill Acquisition metadata
     is_auto_learned_skill: bool = False

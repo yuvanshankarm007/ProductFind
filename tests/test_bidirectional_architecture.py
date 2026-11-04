@@ -53,3 +53,6 @@ async def test_horizontal_vertical_division_of_labour_flow():
 
     challenged_paypal_state = await coord.challenge_listing(target_id, "PAYPAL_SHIELD")
     assert challenged_paypal_state is not None
+
+    challenged_spec_state = await coord.challenge_listing(target_id, "AUDIT_SPECS")
+    assert challenged_spec_state is not None
