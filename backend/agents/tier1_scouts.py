@@ -24,6 +24,34 @@ def check_listing_hardware_compatibility(query: str, title: str, url: str = "") 
     t_low = (title or "").lower()
     u_low = (url or "").lower()
 
+    # 0. Cross-Category Bleed Check (Smartphone vs Audio vs Laptop)
+    has_phone_intent = any(k in q_low for k in [
+        "phone", "mobile", "cell", "smartphone", "5g", "android", "iphone",
+        "galaxy", "vivo", "oppo", "redmi", "realme", "poco", "pixel", "oneplus", "motorola", "moto", "y31"
+    ])
+    has_audio_intent = any(k in q_low for k in [
+        "buds", "earbud", "earbuds", "tws", "airpod", "airpods", "headphone", "headphones",
+        "over-ear", "in-ear", "headset", "xm5", "xm4", "wh-1000", "quietcomfort", "anc", "earphone", "audio"
+    ])
+    has_laptop_intent = any(k in q_low for k in [
+        "macbook", "laptop", "notebook", "thinkpad", "latitude", "zenbook", "vivobook", "computer", "pc", "workstation"
+    ])
+
+    # If user wants a phone, reject earbuds, headphones, and headsets
+    if has_phone_intent and not has_audio_intent:
+        if any(bad in t_low or bad in u_low for bad in ["buds", "earbud", "earbuds", "tws", "headphone", "headphones", "headset", "earphone"]):
+            return False
+
+    # If user wants audio, reject phones or laptops
+    if has_audio_intent and not has_phone_intent and not has_laptop_intent:
+        if any(bad in t_low for bad in ["smartphone", "laptop", "notebook", "desktop"]):
+            return False
+
+    # If user wants laptop, reject earbuds or standalone phones
+    if has_laptop_intent and not has_phone_intent and not has_audio_intent:
+        if any(bad in t_low or bad in u_low for bad in ["buds", "earbud", "earbuds", "tws"]):
+            return False
+
     # 1. MacBook Pro vs MacBook Air bleed
     wants_pro = any(k in q_low for k in ["pro", "max", "ultra", "64gb", "32gb", "16-inch", "14-inch"])
     if wants_pro and ("macbook" in q_low or "apple" in q_low):
@@ -874,10 +902,10 @@ class ScoutSwarm:
                             val_price = round(m0_price * 0.94, 2)
                             val_warranty = "1 Year Official Brand Domestic Warranty."
                         else:
-                            val_domain = "vijaysales.com"
-                            val_name = "Vijay Sales Retail"
-                            val_seller = "Vijay Sales Direct (Authorized Domestic Partner)"
-                            val_url = resolve_canonical_product_url(query, "vijaysales.com", dest)
+                            val_domain = "croma.com"
+                            val_name = "Croma Electronics"
+                            val_seller = "Tata Croma Direct (Authorized Domestic Partner)"
+                            val_url = resolve_canonical_product_url(query, "croma.com", dest)
                             val_title = f"{prod_title} ({val_name})"
                             val_price = round(m0_price * 0.94, 2)
                             val_warranty = "1 Year Official Brand Domestic Warranty."

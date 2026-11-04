@@ -145,6 +145,20 @@ async def test_hardware_spec_auditor_agent_challenges():
     assert audit_good["is_compliant"] is True
     assert len(audit_good["mismatches"]) == 0
 
+    # 4. Cross-Category Bleed Listing (Vivo Y31 smartphone query returning CMF Buds Pro 2 earbuds)
+    bad_listing_bleed = ScrapedListing(
+        id="CMF-BUDS-BLEED",
+        merchant="Flipkart Assured",
+        merchant_domain="flipkart.com",
+        product_title="CMF by Nothing Buds Pro 2 with 50 dB ANC",
+        base_price=3499.0,
+        seller_name="OmniRetail Assured",
+        listing_url="https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
+    )
+    audit_bleed = await auditor.audit_hardware_specs(bad_listing_bleed, query="vivo y31")
+    assert audit_bleed["is_compliant"] is False
+    assert any("Category Bleed Violation" in m for m in audit_bleed["mismatches"])
+
 
 @pytest.mark.asyncio
 async def test_bidirectional_coordinator_spec_resolution():

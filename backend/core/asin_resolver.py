@@ -4,22 +4,71 @@ Maps product search queries and intents to verified, active, 200 OK canonical AS
 Eliminates dead links, 404s, cross-category bleed (e.g. MacBook Air on MacBook Pro search), and knockoffs.
 """
 
-from typing import Optional
+import re
+import urllib.parse
+from typing import Optional, Dict, Any, List
 
 
 def resolve_amazon_asin(query: str, dest: str = "IN") -> str:
     """
     Dynamically resolves a certified live 200 OK Amazon product ASIN based on query intent and destination.
     Guarantees region-accurate ASINs (Amazon India vs Amazon US/UK/DE have different ASIN catalogs).
+    Eliminates cross-category bleed (e.g. smartphones never resolve to earbuds).
     """
     q = (query or "").lower()
     dest = (dest or "IN").upper()
 
-    # 1. CMF by Nothing / Earbuds / TWS
-    if any(k in q for k in ["cmf", "nothing", "buds", "earbud", "earbuds", "tws"]):
-        return "B0D9BKWRRG" if dest == "IN" else "B0D83J6JJ9"
+    # Distinguish phone intent from audio intent
+    has_phone_intent = any(k in q for k in [
+        "phone", "mobile", "cell", "smartphone", "5g", "android", "iphone",
+        "galaxy", "vivo", "oppo", "redmi", "realme", "poco", "pixel", "oneplus", "motorola", "moto"
+    ])
+    has_audio_intent = any(k in q for k in [
+        "buds", "earbud", "earbuds", "tws", "airpod", "airpods", "headphone", "headphones",
+        "over-ear", "in-ear", "headset", "xm5", "xm4", "wh-1000", "quietcomfort", "anc"
+    ])
 
-    # 2. Apple MacBook Pro (M-Series Pro / Max / 32GB / 64GB / 14-inch / 16-inch)
+    # 1. Apple iPhone
+    if "iphone" in q:
+        return "B0CHX1W1XY"
+
+    # 2. Vivo Smartphones (e.g. Vivo Y31, Y28, Y58, V40, etc.)
+    elif ("vivo" in q or "y31" in q) and not ("vivobook" in q):
+        return "B0HFRDSW7H" if dest == "IN" else "B08VS3L4ZJ"
+
+    # 3. Samsung Galaxy Smartphones
+    elif any(k in q for k in ["samsung", "galaxy", "s24", "s23", "s25", "a15", "a35", "a55"]) and not has_audio_intent:
+        return "B0CS5X8286"
+
+    # 4. OnePlus Smartphones
+    elif ("oneplus" in q or "nord" in q) and not has_audio_intent:
+        return "B0CQPLJHRM" if dest == "IN" else "B0CQPLJHRM"
+
+    # 5. Xiaomi / Redmi / Poco Smartphones
+    elif any(k in q for k in ["redmi", "xiaomi", "poco"]) and not has_audio_intent:
+        return "B0CQPF6G29" if dest == "IN" else "B0CP83J7NZ"
+
+    # 6. Motorola / Moto Smartphones
+    elif ("motorola" in q or re.search(r'\bmoto\b', q)) and not has_audio_intent:
+        return "B0CHWR1X99" if dest == "IN" else "B0CHWR1X99"
+
+    # 7. Realme / Narzo Smartphones
+    elif any(k in q for k in ["realme", "narzo"]) and not has_audio_intent:
+        return "B0CY5JMG98" if dest == "IN" else "B0CY5JMG98"
+
+    # 8. Google Pixel
+    elif "pixel" in q and not has_audio_intent:
+        return "B0CGVDSTWB" if dest == "IN" else "B0CGVDSTWB"
+
+    # 9. Nothing Phone (Nothing Phone 1, 2, 2a)
+    elif "nothing" in q and has_phone_intent and not has_audio_intent:
+        return "B0CV4GTRV4" if dest == "IN" else "B0CV4GTRV4"
+
+    # 10. Generic Smartphone / Mobile
+    elif has_phone_intent and not has_audio_intent:
+        return "B0HFRDSW7H" if dest == "IN" else "B0CS5X8286"
+
+    # 11. Apple MacBook Pro (M-Series Pro / Max / 32GB / 64GB / 14-inch / 16-inch)
     elif any(k in q for k in [
         "macbook pro", "m1 max", "m2 max", "m3 max", "m4 max", "m5 max",
         "m1 pro", "m2 pro", "m3 pro", "m4 pro", "m5 pro", "m1 ultra", "m2 ultra",
@@ -30,12 +79,12 @@ def resolve_amazon_asin(query: str, dest: str = "IN") -> str:
             return "B09V5RWQXY"
         return "B0HPGT4XRT" if dest == "IN" else "B09V5RWQXY"
 
-    # 3. Apple MacBook Air / Laptops
+    # 12. Apple MacBook Air / Laptops
     elif any(k in q for k in ["macbook air", "air m2", "air m3", "air m5"]):
         # B0GR1K8S8H is verified active live 200 OK on amazon.in; B0B3C57XLR on amazon.com
         return "B0GR1K8S8H" if dest == "IN" else "B0B3C57XLR"
 
-    # 4. Generic MacBook / Apple Laptop
+    # 13. Generic MacBook / Apple Laptop
     elif "macbook" in q or "apple m" in q:
         # Default to MacBook Pro if any high-spec indicator present, else MacBook Air
         if any(k in q for k in ["m1 max", "m1 pro", "m1", "2021"]):
@@ -44,50 +93,46 @@ def resolve_amazon_asin(query: str, dest: str = "IN") -> str:
             return "B0HPGT4XRT" if dest == "IN" else "B09V5RWQXY"
         return "B0GR1K8S8H" if dest == "IN" else "B0B3C57XLR"
 
-    # 5. Apple AirPods
-    elif any(k in q for k in ["airpod", "airpods"]):
-        return "B0D1XD1ZV3"
-
-    # 6. Apple iPhone
-    elif any(k in q for k in ["iphone"]):
-        return "B0CHX1W1XY"
-
-    # 7. Dell Precision Workstations / Enterprise Hardware
+    # 14. Dell Precision Workstations / Enterprise Hardware
     elif any(k in q for k in ["precision", "workstation", "7820", "5820", "7920", "3660"]):
         return "B0HP26WLF4" if dest == "IN" else "B0BNQG83X2"
 
-    # 8. Dell Business Laptops / Refurbished
-    elif any(k in q for k in ["dell", "latitude", "inspiron", "vostro", "5511"]):
+    # 15. Dell Business Laptops / Refurbished
+    elif any(k in q for k in ["dell", "latitude", "inspiron", "vostro", "5511", "vivobook"]):
         return "B0HP26WLF4" if dest == "IN" else "B0D16TS69T"
 
-    # 9. Sony Premium Audio / Over-ear Headphones
+    # 16. General Laptops / Computers
+    elif any(k in q for k in ["laptop", "pc", "computer", "notebook", "thinkpad", "zenbook", "yoga", "ideapad"]):
+        return "B0HP26WLF4" if dest == "IN" else "B0D16TS69T"
+
+    # 17. Apple AirPods
+    elif any(k in q for k in ["airpod", "airpods"]):
+        return "B0D1XD1ZV3"
+
+    # 18. Sony Premium Audio / Over-ear Headphones
     elif any(k in q for k in ["xm5", "1000xm5", "sony headphone", "sony wh", "over-ear", "wh-1000"]):
         return "B0BZP2H373" if dest == "IN" else "B09Z2S9FSX"
 
-    # 10. Bose Audio
+    # 19. Bose Audio
     elif any(k in q for k in ["bose", "quietcomfort"]):
         return "B0CD27L2Y4"
 
-    # 11. Samsung Galaxy
-    elif any(k in q for k in ["samsung", "galaxy", "s24", "s23"]):
-        return "B0CS5X8286"
+    # 20. CMF by Nothing / Earbuds / TWS (EXPLICIT AUDIO ONLY)
+    elif any(k in q for k in ["cmf", "buds", "earbud", "earbuds", "tws"]) or ("nothing" in q and has_audio_intent):
+        return "B0D9BKWRRG" if dest == "IN" else "B0D83J6JJ9"
 
-    # 12. Gaming Consoles
+    # 21. General Audio
+    elif any(k in q for k in ["headphone", "audio", "speaker"]):
+        return "B0BZP2H373" if dest == "IN" else "B09Z2S9FSX"
+
+    # 22. Gaming Consoles
     elif any(k in q for k in ["ps5", "playstation"]):
         return "B0CL5KNB9M"
     elif any(k in q for k in ["switch", "nintendo"]):
         return "B098RKWHHZ"
 
-    # 13. General Laptops / Computers
-    elif any(k in q for k in ["laptop", "pc", "computer", "notebook"]):
-        return "B0HP26WLF4" if dest == "IN" else "B0D16TS69T"
-
-    # 14. General Audio
-    elif any(k in q for k in ["headphone", "audio", "speaker"]):
-        return "B0BZP2H373" if dest == "IN" else "B09Z2S9FSX"
-
-    # Default fallback: safe verified consumer gadget
-    return "B0D9BKWRRG" if dest == "IN" else "B0D83J6JJ9"
+    # Default fallback: safe verified consumer tech flagship (NEVER default to earbuds!)
+    return "B0CS5X8286" if dest == "IN" else "B0CS5X8286"
 
 
 def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_country: str = "IN") -> str:
@@ -116,13 +161,19 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
             return "https://www.amazon.com/dp/B09V5RWQXY" if "m1" in q_low else "https://www.amazon.com/dp/B09JQSLL92"
         elif any(k in q_low for k in ["macbook", "air m2", "pro m2", "apple"]):
             return "https://www.amazon.com/dp/B0B3C57XLR"
+        elif ("vivo" in q_low or "y31" in q_low) and not ("vivobook" in q_low):
+            return "https://www.amazon.com/dp/B08VS3L4ZJ"
+        elif any(k in q_low for k in ["samsung", "galaxy"]):
+            return "https://www.amazon.com/dp/B0CS5X8286"
+        elif any(k in q_low for k in ["iphone"]):
+            return "https://www.amazon.com/dp/B0CHX1W1XY"
         elif any(k in q_low for k in ["precision", "workstation", "7820", "5820", "7920", "xeon"]):
             return "https://www.amazon.com/dp/B0BNQG83X2"
         elif any(k in q_low for k in ["dell", "latitude", "laptop", "notebook"]):
             return "https://www.amazon.com/dp/B0D16TS69T"
         elif any(k in q_low for k in ["sony", "xm5", "headphone"]):
             return "https://www.amazon.com/dp/B09Z2S9FSX"
-        return "https://www.amazon.com/dp/B0D16TS69T"
+        return "https://www.amazon.com/dp/B08VS3L4ZJ" if any(k in q_low for k in ["phone", "mobile", "vivo", "android"]) else "https://www.amazon.com/dp/B0D16TS69T"
 
     # Apple Direct & Certified Refurbished
     if "apple.com" in domain:
@@ -159,7 +210,7 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # Vijay Sales Domestic
     if "vijaysales" in domain and dest == "IN":
-        if any(k in q_low for k in ["cmf", "nothing", "buds"]):
+        if any(k in q_low for k in ["cmf", "buds", "earbud", "earbuds", "tws"]) and not any(k in q_low for k in ["phone", "mobile", "vivo", "galaxy", "iphone"]):
             return "https://www.vijaysales.com/p/230993/cmf-by-nothing-buds-pro-2-with-dual-device-connection-ip55-dust-and-water-resistance-50db-hybrid-active-noise-cancellation-smart-dial-orange"
         elif is_m1_max_pro:
             return "https://www.flipkart.com/apple-2021-macbook-pro-m1-max-32-gb-1-tb-ssd-mac-os-monterey-mk1a3hn-a/p/itm00aac391057cc"
@@ -167,7 +218,15 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
             return "https://www.apple.com/in/shop/buy-mac/macbook-pro"
         elif any(k in q_low for k in ["macbook", "apple", "m2"]):
             return "https://www.apple.com/in/shop/buy-mac/macbook-air/13-inch-m2"
-        return "https://www.vijaysales.com/p/230993/cmf-by-nothing-buds-pro-2-with-dual-device-connection-ip55-dust-and-water-resistance-50db-hybrid-active-noise-cancellation-smart-dial-orange"
+        elif ("vivo" in q_low or "y31" in q_low) and not ("vivobook" in q_low):
+            return "https://www.croma.com/vivo-y28-5g-128-gb-4-gb-ram-glitter-aqua-/p/303986"
+        elif any(k in q_low for k in ["samsung", "galaxy"]):
+            return "https://www.croma.com/samsung-galaxy-s24-5g-128-gb-8-gb-ram-onyx-black-/p/304192"
+        elif "iphone" in q_low:
+            return "https://www.croma.com/apple-iphone-15-128gb-black-/p/300769"
+        elif any(k in q_low for k in ["phone", "mobile", "smartphone", "5g", "android", "redmi", "realme", "oppo", "moto"]):
+            return "https://www.croma.com/vivo-y28-5g-128-gb-4-gb-ram-glitter-aqua-/p/303986"
+        return "https://www.croma.com/vivo-y28-5g-128-gb-4-gb-ram-glitter-aqua-/p/303986"
 
     # Flipkart Domestic (Verified 200 OK Product Pages)
     if "flipkart" in domain and dest == "IN":
@@ -185,18 +244,30 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
             if any(k in q_low for k in ["pro", "max", "64", "32"]):
                 return "https://www.flipkart.com/apple-macbook-pro-proled-xdr-display-m5-max-2026-m5-max-36-gb-2-tb-ssd-tahoe-mj2j4hn-a/p/itmd4bc234552798"
             return "https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525"
-        elif any(k in q_low for k in ["cmf", "nothing", "buds", "earbud", "tws"]):
-            return "https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
-        elif any(k in q_low for k in ["dell", "latitude", "laptop", "notebook"]):
-            return "https://www.flipkart.com/dell-renewed-latitude-5420-14-fhd-laptop-quad-core-i5-1185g7-windows-11-pro-pro-intel-quad-core-i5-11th-generation-processor-type-1185g7-i5-1185g7e-530-mb-graphics-card-8-gb-ddr-4-ram-2600-mhz-256-ssd-m-2-mini-pc/p/itm1af14c1889b86"
-        elif any(k in q_low for k in ["iphone"]):
-            return "https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm6ac6485515ae4"
-        elif any(k in q_low for k in ["sony", "xm5", "1000xm"]):
-            return "https://www.flipkart.com/sony-wh-1000xm5-wireless-noise-cancellation-ai-reduction-bluetooth/p/itmdec52bcb83eb9"
+        elif ("vivo" in q_low or "y31" in q_low) and not ("vivobook" in q_low):
+            return "https://www.flipkart.com/vivo-y31-5g-diamond-green-128-gb/p/itm5337e173eced8"
         elif any(k in q_low for k in ["samsung", "galaxy"]):
             return "https://www.flipkart.com/samsung-galaxy-s24-5g-onyx-black-128-gb/p/itm325e14cb7b8eb"
-        # Generic domestic electronics fallback on Flipkart
-        return "https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525" if any(k in q_low for k in ["laptop", "pc", "computer", "mac"]) else "https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
+        elif any(k in q_low for k in ["iphone"]):
+            return "https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm6ac6485515ae4"
+        elif any(k in q_low for k in ["redmi", "xiaomi"]):
+            return "https://www.flipkart.com/redmi-13c-5g-starlight-black-128-gb/p/itm8f36c4b92b67d"
+        elif any(k in q_low for k in ["realme", "narzo"]):
+            return "https://www.flipkart.com/realme-12x-5g-twilight-purple-128-gb/p/itm5cf99bb44b204"
+        elif any(k in q_low for k in ["motorola", "moto"]):
+            return "https://www.flipkart.com/motorola-g54-5g-mint-green-128-gb/p/itmd0633b43db04b"
+        elif any(k in q_low for k in ["poco"]):
+            return "https://www.flipkart.com/poco-m6-pro-5g-power-black-128-gb/p/itmc5128091dd154"
+        elif any(k in q_low for k in ["phone", "smartphone", "mobile"]):
+            return "https://www.flipkart.com/vivo-y31-5g-diamond-green-128-gb/p/itm5337e173eced8"
+        elif any(k in q_low for k in ["cmf", "buds", "earbud", "earbuds", "tws"]) or ("nothing" in q_low and any(k in q_low for k in ["buds", "ear", "audio"])):
+            return "https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
+        elif any(k in q_low for k in ["dell", "latitude", "laptop", "notebook", "vivobook"]):
+            return "https://www.flipkart.com/dell-renewed-latitude-5420-14-fhd-laptop-quad-core-i5-1185g7-windows-11-pro-pro-intel-quad-core-i5-11th-generation-processor-type-1185g7-i5-1185g7e-530-mb-graphics-card-8-gb-ddr-4-ram-2600-mhz-256-ssd-m-2-mini-pc/p/itm1af14c1889b86"
+        elif any(k in q_low for k in ["sony", "xm5", "1000xm"]):
+            return "https://www.flipkart.com/sony-wh-1000xm5-wireless-noise-cancellation-ai-reduction-bluetooth/p/itmdec52bcb83eb9"
+        # Generic domestic fallback on Flipkart:
+        return "https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525" if any(k in q_low for k in ["laptop", "pc", "computer", "mac"]) else "https://www.flipkart.com/vivo-y31-5g-diamond-green-128-gb/p/itm5337e173eced8"
 
     # Tata CLiQ Luxury
     if "tatacliq" in domain and dest == "IN":
@@ -217,13 +288,19 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
             return "https://www.apple.com/in/shop/buy-mac/macbook-pro"
         elif any(k in q_low for k in ["macbook", "apple m", "air m2", "air m3", "m2"]):
             return "https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525"
-        elif any(k in q_low for k in ["cmf", "nothing", "buds", "earbud", "tws"]):
+        elif ("vivo" in q_low or "y31" in q_low) and not ("vivobook" in q_low):
+            return "https://www.croma.com/vivo-y28-5g-128-gb-4-gb-ram-glitter-aqua-/p/303986"
+        elif any(k in q_low for k in ["samsung", "galaxy"]):
+            return "https://www.flipkart.com/samsung-galaxy-s24-5g-onyx-black-128-gb/p/itm325e14cb7b8eb"
+        elif any(k in q_low for k in ["iphone"]):
+            return "https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm6ac6485515ae4"
+        elif any(k in q_low for k in ["cmf", "buds", "earbud", "earbuds", "tws"]) and not any(k in q_low for k in ["phone", "mobile"]):
             return "https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
         elif any(k in q_low for k in ["dell", "latitude", "laptop"]):
             return "https://www.flipkart.com/dell-renewed-latitude-5420-14-fhd-laptop-quad-core-i5-1185g7-windows-11-pro-pro-intel-quad-core-i5-11th-generation-processor-type-1185g7-i5-1185g7e-530-mb-graphics-card-8-gb-ddr-4-ram-2600-mhz-256-ssd-m-2-mini-pc/p/itm1af14c1889b86"
         elif any(k in q_low for k in ["sony", "xm5"]):
             return "https://luxury.tatacliq.com/sony-wh-1000xm5-wireless-industry-leading-active-noise-cancelling-headphones-black/p-mp000000014264629"
-        return "https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525"
+        return "https://www.flipkart.com/apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd-tahoe-mdhe4hn-a/p/itm8505e2f874525" if any(k in q_low for k in ["laptop", "pc", "computer", "mac"]) else "https://www.flipkart.com/vivo-y31-5g-diamond-green-128-gb/p/itm5337e173eced8"
 
     # Amazon Regional & Direct Resolution
     # M1 Max Amazon Renewed / Import is verified live on Amazon US B09V5RWQXY

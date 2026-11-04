@@ -442,17 +442,19 @@ class LiveWebScoutEngine:
                 if not asin or len(asin) != 10:
                     continue
 
-                # 2. Product Title
-                img_alt_m = re.search(r'<img[^>]+class="s-image"[^>]+alt="([^"]+)"', b)
+                # 2. Product Title (robust to tag attribute ordering)
                 title_m = re.search(r'<h2[^>]*>[\s\S]*?<span[^>]*>(.*?)</span>', b)
                 if not title_m:
+                    title_m = re.search(r'<h2[^>]*>[\s\S]*?<a[^>]*>(.*?)</a>', b)
+                if not title_m:
                     title_m = re.search(r'<h2[^>]*>(.*?)</h2>', b, re.DOTALL)
+                img_alt_m = re.search(r'<img[^>]*\balt="([^"]+)"', b)
 
                 raw_title = ""
-                if img_alt_m and len(img_alt_m.group(1).strip()) > 5:
-                    raw_title = img_alt_m.group(1).strip()
-                elif title_m:
+                if title_m:
                     raw_title = re.sub(r'<[^>]+>', '', title_m.group(1)).strip()
+                elif img_alt_m and len(img_alt_m.group(1).strip()) > 5:
+                    raw_title = img_alt_m.group(1).strip()
 
                 raw_title = raw_title.replace("Sponsored Ad - ", "").strip()
                 raw_title = raw_title.replace('&quot;', '"').replace('&amp;', '&').replace('&#x27;', "'").strip()
@@ -1521,16 +1523,48 @@ class LiveWebScoutEngine:
                 usd_base = 279.00
                 cat = "Mid-Range Smartphone"
             
-            p_title = f"Samsung Galaxy {query.title()}" if ("a17" in q or "a16" in q or "a15" in q) and "samsung" not in q else query.title()
+            if "vivo" in q or "y31" in q:
+                brand = "Vivo"
+                adp = "Vivo Shield Protection"
+                p_title = f"Vivo {query.title()}" if "vivo" not in q else query.title()
+            elif any(k in q for k in ["samsung", "galaxy"]):
+                brand = "Samsung"
+                adp = "Samsung Care+ / Brand Shield"
+                p_title = f"Samsung Galaxy {query.title()}" if ("a17" in q or "a16" in q or "a15" in q) and "samsung" not in q else query.title()
+            elif any(k in q for k in ["redmi", "xiaomi"]):
+                brand = "Xiaomi"
+                adp = "Mi Protect Shield"
+                p_title = query.title()
+            elif any(k in q for k in ["realme", "narzo"]):
+                brand = "Realme"
+                adp = "Realme Care Protection"
+                p_title = query.title()
+            elif any(k in q for k in ["oneplus", "nord"]):
+                brand = "OnePlus"
+                adp = "OnePlus Care"
+                p_title = query.title()
+            elif "motorola" in q or re.search(r'\bmoto\b', q):
+                brand = "Motorola"
+                adp = "Moto Care Protection"
+                p_title = query.title()
+            elif "oppo" in q:
+                brand = "OPPO"
+                adp = "OPPO Care Shield"
+                p_title = query.title()
+            else:
+                brand = "Android OEM"
+                adp = "Brand Care Shield"
+                p_title = query.title()
+
             return {
                 "category": cat,
-                "brand": "Samsung" if "samsung" in q or "galaxy" in q or "a1" in q else "Android OEM",
-                "title": f"{p_title} 5G",
+                "brand": brand,
+                "title": f"{p_title} 5G" if not p_title.lower().endswith("5g") else p_title,
                 "base_usd": usd_base,
                 "inr_baseline": inr_base,
                 "min_inr": 10000.0, "max_inr": 45000.0,
                 "min_usd": 120.0, "max_usd": 500.0,
-                "adp_provider": "Samsung Care+ / Brand Shield",
+                "adp_provider": adp,
                 "adp_usd": 24.99, "adp_inr": 1499.0,
                 "ex_usd": 35.0, "ex_inr": 3500.0
             }
@@ -1635,10 +1669,18 @@ class LiveWebScoutEngine:
         stealth_task = self.search_open_web_stealth(query, dest_country=dest, min_bound=min_p, max_bound=max_p)
 
         tasks = [t for t in [flip_task, amz_task, stealth_task] if t is not None]
+        gathered_results = [[] for _ in tasks]
         try:
-            gathered_results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=1.0)
+            gathered_results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=2.5)
         except asyncio.TimeoutError:
-            gathered_results = [[] for _ in tasks]
+            for i, t in enumerate(tasks):
+                if hasattr(t, "done") and t.done() and not t.cancelled():
+                    try:
+                        gathered_results[i] = t.result()
+                    except Exception:
+                        gathered_results[i] = []
+                else:
+                    gathered_results[i] = []
 
         idx = 0
         flip_items = []

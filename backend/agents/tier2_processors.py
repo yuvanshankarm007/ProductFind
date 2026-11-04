@@ -178,6 +178,28 @@ class HardwareSpecAuditorAgent:
         if is_e002:
             mismatches.append(f"E002 Retired SKU Violation: URL '{listing.listing_url}' points to an expired/E002 Flipkart listing")
 
+        # E. Cross-Category Bleed Violation (e.g. smartphone query vs earbuds listing)
+        q_low = query.lower()
+        title_url_combined = f"{listing.product_title} {listing.listing_url}".lower()
+        has_phone_intent = any(k in q_low for k in [
+            "phone", "mobile", "cell", "smartphone", "5g", "android", "iphone",
+            "galaxy", "vivo", "oppo", "redmi", "realme", "poco", "pixel", "oneplus", "motorola", "moto", "y31"
+        ])
+        has_audio_intent = any(k in q_low for k in [
+            "buds", "earbud", "earbuds", "tws", "airpod", "airpods", "headphone", "headphones",
+            "over-ear", "in-ear", "headset", "xm5", "xm4", "wh-1000", "quietcomfort", "anc", "earphone", "audio"
+        ])
+        has_laptop_intent = any(k in q_low for k in [
+            "macbook", "laptop", "notebook", "thinkpad", "latitude", "zenbook", "vivobook", "computer", "pc", "workstation"
+        ])
+
+        if has_phone_intent and not has_audio_intent:
+            if any(bad in title_url_combined for bad in ["buds", "earbud", "earbuds", "tws", "headphone", "headphones", "headset", "earphone"]):
+                mismatches.append(f"Category Bleed Violation: Query has phone intent, but listing offers audio earbuds/headphones")
+        elif has_laptop_intent and not has_phone_intent and not has_audio_intent:
+            if any(bad in title_url_combined for bad in ["buds", "earbud", "earbuds", "tws"]):
+                mismatches.append(f"Category Bleed Violation: Query has laptop intent, but listing offers earbuds")
+
         is_compliant = len(mismatches) == 0
 
         if not is_compliant:
