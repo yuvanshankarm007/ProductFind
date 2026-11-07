@@ -297,3 +297,86 @@ def test_api_voice_transcribe_error_handling():
     }
     resp_empty = client.post("/api/voice/transcribe", files=files_empty)
     assert resp_empty.status_code == 400
+
+
+def test_visual_search_svg_parsing_and_data_uri():
+    """Verify SVG vector graphics and data:image/svg+xml;base64 URIs parse seamlessly without Pillow failure."""
+    svg_content = b"""<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+        <rect width="160" height="160" fill="#1e293b"/>
+        <text x="80" y="70" font-family="Arial">Bose</text>
+        <text x="80" y="90" font-family="Arial">QuietComfort 45</text>
+    </svg>"""
+
+    # 1. Raw bytes
+    res_bytes = visual_search_engine.extract_visual_features(svg_content, filename="bose_qc45.svg")
+    assert res_bytes.brand == "Bose"
+    assert "QuietComfort" in res_bytes.model or "45" in res_bytes.model
+    assert res_bytes.features["format"] == "SVG"
+    assert res_bytes.confidence >= 0.80
+
+    # 2. Base64 data URI
+    data_uri = "data:image/svg+xml;base64," + base64.b64encode(svg_content).decode("ascii")
+    res_uri = visual_search_engine.extract_visual_features(data_uri, filename="bose_preset.svg")
+    assert res_uri.brand == "Bose"
+    assert res_uri.features["format"] == "SVG"
+
+
+def test_visual_search_dynamic_brand_model_classification():
+    """Verify dynamic brand identification outside fixed catalog (Canon, Asus, Logitech)."""
+    img_bytes = create_test_image(120, 120, color="black", format="JPEG")
+
+    # Canon EOS camera
+    res_canon = visual_search_engine.extract_visual_features(
+        img_bytes,
+        filename="canon_eos_r5_camera.jpg"
+    )
+    assert res_canon.brand == "Canon"
+    assert "Eos" in res_canon.model or "R5" in res_canon.model
+
+    # Asus ROG laptop
+    res_asus = visual_search_engine.extract_visual_features(
+        img_bytes,
+        filename="asus_rog_zephyrus_laptop.jpg"
+    )
+    assert res_asus.brand == "Asus"
+    assert "Rog" in res_asus.model or "Zephyrus" in res_asus.model
+
+
+def test_api_voice_transcribe_aac_adts_and_dynamic_filename():
+    """Verify AAC ADTS audio streaming and dynamic filename transcription."""
+    # Synthetic AAC ADTS audio frame (0xFFF syncword)
+    aac_bytes = b"\xff\xf1\x50\x80\x00\x00\x00" + (b"\x00" * 200)
+
+    files = {
+        "file": ("bose_quietcomfort_45_mic.aac", aac_bytes, "audio/aac")
+    }
+    resp = client.post("/api/voice/transcribe", files=files, data={"language": "en"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "success"
+    assert "Bose" in data["transcript"]
+    assert "Quietcomfort" in data["transcript"] or "45" in data["transcript"]
+
+
+def test_api_voice_transcribe_bundle_mode_with_items():
+    """Verify voice transcription in bundle mode accepts items_list and triggers knapsack search."""
+    wav_bytes = create_test_wav_bytes(duration_ms=600)
+    files = {
+        "file": ("workstation_bundle_audio.wav", wav_bytes, "audio/wav")
+    }
+    data = {
+        "query_hint": "Developer Rig Setup",
+        "mode": "bundle",
+        "items_list": "Thunderbolt 4 Dock, NVMe 2TB SSD, 4K Hub",
+        "auto_search": "true",
+        "country": "US",
+        "currency": "USD"
+    }
+    resp = client.post("/api/voice/transcribe", files=files, data=data)
+    assert resp.status_code == 200
+    res_data = resp.json()
+    assert res_data["status"] == "success"
+    assert res_data["transcript"] == "Developer Rig Setup"
+    assert "search_state" in res_data
+    # Check cart split / bundle execution
+    assert "cart_split_result" in res_data or "final_options" in res_data

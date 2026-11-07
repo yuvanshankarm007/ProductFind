@@ -15,6 +15,7 @@ import { openWorkflowArbitrageModal, closeWorkflowArbitrageModal } from './cart_
 import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
 import { initMultimodalSearch } from './multimodal_search.js';
+import { initConciergeBot } from './concierge_bot.js';
 
 let currentSearchController = null;
 let currentSearchToken = 0;
@@ -50,7 +51,10 @@ function initApp() {
         addBundleItem: (item) => addBundleItem(item)
     });
 
-    // 7. Pre-seed demo search if first load
+    // 7. Wire Sentinel AI Concierge Chatbot & Voice Bot for Doubts & Queries
+    initConciergeBot();
+
+    // 8. Pre-seed demo search if first load
     setTimeout(() => {
         executeSearch("Sony WH-1000XM5");
     }, 400);

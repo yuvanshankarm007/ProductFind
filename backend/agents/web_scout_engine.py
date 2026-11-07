@@ -210,7 +210,11 @@ def is_consumable_or_accessory_listing(query: str, title: str, url: str = "") ->
         return False
 
     # 2. Identify physical hardware product intent
-    is_printer = any(k in q_low for k in ["printer", "printers", "all-in-one", "inkjet", "laserjet", "ecotank"])
+    is_printer = any(k in q_low for k in [
+        "printer", "printers", "all-in-one", "inkjet", "laserjet", "ecotank",
+        "pixma", "deskjet", "laser", "multifunction", "mfp",
+        "l3250", "l3150", "l3210", "l3252", "l3211", "l130", "l565", "l3350", "l3110", "l3115", "l3116"
+    ]) or ("epson" in q_low and any(c.isdigit() for c in q_low))
     is_monitor = any(k in q_low for k in ["monitor", "monitors", "display", "smart monitor"])
     is_laptop = any(k in q_low for k in ["laptop", "laptops", "notebook", "notebooks", "macbook", "latitude", "thinkpad", "zenbook", "vivobook", "computer", "pc", "workstation", "desktop"])
     is_phone_tablet = any(k in q_low for k in ["phone", "smartphone", "mobile", "iphone", "ipad", "tablet", "galaxy", "pixel"])
@@ -239,8 +243,18 @@ def is_consumable_or_accessory_listing(query: str, title: str, url: str = "") ->
             r'\bphoto\s+paper\b', r'\bglossy\s+paper\b', r'\bmatte\s+paper\b',
             r'\bmaintenance\s+box\b', r'\bwaste\s+ink\b',
             r'\b\d+\s*ml\b',
+            r'\b\d+\s*gm\b',
+            r'\b\d+\s*g\b',
             r'\bink\s+for\b',
-            r'\b(?:black|cyan|magenta|yellow|tri-color)\s+ink\b'
+            r'\b003\b',
+            r'\bcompatible\s+ink\b',
+            r'\bcompatible\s+refill\b',
+            r'\b(?:black|cyan|magenta|yellow|tri-color)\s+ink\b',
+            r'\bink\s+pack\b',
+            r'\bmultipack\b',
+            r'\bink\s+tank\s+printer\s+black\s+ink\b',
+            r'\bprinter\s+black\s+ink\b',
+            r'\bprinter\s+color\s+ink\b'
         ]
         if any(re.search(pat, t_low) for pat in printer_consumables):
             return True
@@ -2008,6 +2022,53 @@ class LiveWebScoutEngine:
                 "ex_usd": 10.0, "ex_inr": 500.0
             }
 
+        # 11.2 Printers, Multi-Function All-In-One & InkTank Document Solutions (Epson, Canon, HP, Brother)
+        elif any(f in q for f in [
+            "printer", "printers", "all-in-one", "ecotank", "inkjet", "laserjet",
+            "pixma", "l3250", "l3150", "l3210", "l3252", "l130", "l565", "l3350",
+            "epson", "canon", "brother"
+        ]) and not any(f in q for f in ["laptop", "mouse", "keyboard", "phone", "headphone"]):
+            brand = "Epson" if "epson" in q or "l3" in q or "ecotank" in q else ("Canon" if "canon" in q else ("HP" if "hp" in q else ("Brother" if "brother" in q else "Printer OEM")))
+            is_l3250 = any(k in q for k in ["l3250", "3250"])
+            if is_l3250 or ("epson" in q and "l3" in q):
+                title = "Epson EcoTank L3250 Multi-function Wi-Fi Color Ink Tank Printer (A4 All-in-One, Print/Scan/Copy)"
+                b_usd, b_inr = 175.00, 14999.00
+                min_usd, max_usd = 110.0, 320.0
+                min_inr, max_inr = 10000.0, 24000.0
+            elif "l3350" in q:
+                title = "Epson EcoTank L3350 Multi-function Wi-Fi Color Ink Tank Printer"
+                b_usd, b_inr = 185.00, 15499.00
+                min_usd, max_usd = 120.0, 350.0
+                min_inr, max_inr = 11000.0, 26000.0
+            elif "l130" in q:
+                title = "Epson L130 Single Function Inkjet Color Printer"
+                b_usd, b_inr = 119.00, 9799.00
+                min_usd, max_usd = 80.0, 200.0
+                min_inr, max_inr = 7500.0, 16000.0
+            elif "l565" in q:
+                title = "Epson L565 Multi-function Wi-Fi Color Ink Tank Printer with ADF"
+                b_usd, b_inr = 210.00, 17999.00
+                min_usd, max_usd = 130.0, 400.0
+                min_inr, max_inr = 12000.0, 32000.0
+            else:
+                title = f"{brand} EcoTank Wi-Fi Multi-Function All-in-One Ink Tank Printer"
+                b_usd, b_inr = 169.00, 13999.00
+                min_usd, max_usd = 95.0, 450.0
+                min_inr, max_inr = 8500.0, 35000.0
+
+            return {
+                "category": "Printers & All-In-One Document Solutions",
+                "brand": brand,
+                "title": title,
+                "base_usd": b_usd,
+                "inr_baseline": b_inr,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
+                "adp_provider": f"{brand} Care Protection Plan",
+                "adp_usd": 18.0, "adp_inr": 1499.0,
+                "ex_usd": 25.0, "ex_inr": 2000.0
+            }
+
         # 11.5 Grocery, Confectionery, Personal Care & FMCG (Gum, Candy, Chocolates, Beverages, Snacks)
         elif any(f in q for f in ["gum", "chewing", "bubble gum", "candy", "chocolate", "mints", "snack", "beverage", "biscuit"]):
             brand = "Happydent" if "happydent" in q else ("Cadbury" if "cadbury" in q else ("Nestle" if "nestle" in q else ("Orbit" if "orbit" in q else "FMCG Brand")))
@@ -2171,8 +2232,15 @@ class LiveWebScoutEngine:
         web_hits = len(scraped_products)
 
         # DYNAMIC STATISTICAL ANALYSIS OF LIVE PUBLIC SEARCH DATA
-        all_found_prices = [p["price"] for p in scraped_products if p.get("price") and p["price"] > 0]
         has_acc_intent = any(k in query.lower() for k in ACCESSORY_INTENT_WORDS)
+        # Strictly prune consumables and accessories if user did not ask for accessories
+        if not has_acc_intent:
+            scraped_products = [
+                p for p in scraped_products
+                if not is_consumable_or_accessory_listing(query, p.get("title", ""), p.get("url", ""))
+            ]
+        web_hits = len(scraped_products)
+        all_found_prices = [p["price"] for p in scraped_products if p.get("price") and p["price"] > 0]
 
         if all_found_prices:
             raw_median = statistics.median(all_found_prices)

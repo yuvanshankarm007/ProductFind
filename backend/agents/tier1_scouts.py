@@ -620,9 +620,9 @@ class ScoutSwarm:
                 valid_p1 = sorted_live[1] if len(sorted_live) > 1 else sorted_live[0]
                 valid_p2 = sorted_live[2] if len(sorted_live) > 2 else (sorted_live[1] if len(sorted_live) > 1 else sorted_live[0])
             else:
-                valid_p0 = scraped_products[0] if scraped_products else None
-                valid_p1 = scraped_products[1] if len(scraped_products) > 1 else valid_p0
-                valid_p2 = scraped_products[2] if len(scraped_products) > 2 else valid_p0
+                valid_p0 = None
+                valid_p1 = None
+                valid_p2 = None
 
             clean_id_0 = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()
             clean_id_1 = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:8].upper() + "1"
@@ -883,7 +883,7 @@ class ScoutSwarm:
                     m0_price = scraped_flip["price"]
                     m0_seller = scraped_flip.get("seller_name", "OmniRetail Assured (Verified Official Partner)")
                     m0_warranty = scraped_flip.get("warranty", "1 Year Official Brand Domestic Warranty. Valid across authorized service centers nationwide.")
-                elif valid_p0 and valid_p0.get("url") and "/search" not in valid_p0["url"] and "/s?" not in valid_p0["url"] and valid_p0.get("in_stock", True):
+                elif valid_p0 and valid_p0.get("url") and "/search" not in valid_p0["url"] and "/s?" not in valid_p0["url"] and valid_p0.get("in_stock", True) and check_listing_hardware_compatibility(query, valid_p0.get("title", ""), valid_p0.get("url", "")):
                     m0_name = valid_p0.get("merchant", "Flipkart Assured")
                     m0_domain = valid_p0.get("domain", "flipkart.com")
                     m0_url = valid_p0["url"]
@@ -894,7 +894,7 @@ class ScoutSwarm:
                 else:
                     m0_name = "Flipkart Assured"
                     m0_domain = "flipkart.com"
-                    m0_url = resolve_flipkart_search_url(query)
+                    m0_url = resolve_canonical_product_url(query, "flipkart.com", dest)
                     m0_seller = "OmniRetail Assured (Verified Official Partner)"
                     m0_title = f"{prod_title} ({m0_name})"
                     m0_price = regional_price
@@ -963,7 +963,8 @@ class ScoutSwarm:
                     amz_warranty = scraped_amz.get("warranty", "1 Year Brand Warranty from date of invoice.")
                     amz_return = scraped_amz.get("return_policy", "7 Days Service Center Replacement policy.")
                 else:
-                    amz_url = resolve_amazon_search_url(query, dest="IN")
+                    amz_canon = resolve_canonical_product_url(query, "amazon.in", dest)
+                    amz_url = amz_canon if (amz_canon and "/s?" not in amz_canon and "/s/" not in amz_canon) else resolve_amazon_search_url(query, dest="IN")
                     if is_discontinued_retail or is_renewed:
                         amz_in_price = round(m0_price * 0.82, 2)
                         amz_title = f"{prod_title} (Amazon Renewed Certified)"

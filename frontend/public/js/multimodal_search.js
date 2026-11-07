@@ -30,7 +30,12 @@ const SAMPLE_PRESETS = {
         confidence: 0.98,
         tags: ["Sony Logo", "WH-1000XM5", "Factory Sealed", "Hi-Res Audio", "Silver / White"],
         color: "#f1f5f9",
-        query: "Sony WH-1000XM5"
+        query: "Sony WH-1000XM5",
+        deals: [
+            { merchant: "Amazon", price: 348.00, condition: "New / Factory Sealed" },
+            { merchant: "Best Buy", price: 349.99, condition: "New" },
+            { merchant: "B&H Photo", price: 358.00, condition: "Authorized OEM" }
+        ]
     },
     "macbook-m3": {
         name: "apple_macbook_pro_16_m3_box.jpg",
@@ -41,7 +46,12 @@ const SAMPLE_PRESETS = {
         confidence: 0.97,
         tags: ["Apple Inc.", "M3 Max", "Liquid Retina XDR", "Space Black", "Liquid Retina"],
         color: "#334155",
-        query: "Apple MacBook Pro 16 M3 Max"
+        query: "Apple MacBook Pro 16 M3 Max",
+        deals: [
+            { merchant: "B&H Photo", price: 3299.00, condition: "New / Sealed" },
+            { merchant: "Apple Store", price: 3499.00, condition: "Official OEM" },
+            { merchant: "Amazon", price: 3349.00, condition: "New" }
+        ]
     },
     "iphone-16": {
         name: "iphone_16_pro_natural_titanium.jpg",
@@ -52,7 +62,12 @@ const SAMPLE_PRESETS = {
         confidence: 0.95,
         tags: ["Apple", "iPhone 16 Pro", "A18 Pro", "Natural Titanium", "Pro Camera"],
         color: "#94a3b8",
-        query: "iPhone 16 Pro"
+        query: "iPhone 16 Pro",
+        deals: [
+            { merchant: "Apple Store", price: 999.00, condition: "New / Factory Unlocked" },
+            { merchant: "Verizon Direct", price: 979.00, condition: "New" },
+            { merchant: "Best Buy", price: 999.00, condition: "New" }
+        ]
     },
     "switch-oled": {
         name: "nintendo_switch_oled_mario.jpg",
@@ -63,7 +78,12 @@ const SAMPLE_PRESETS = {
         confidence: 0.96,
         tags: ["Nintendo", "Switch OLED", "Mario Red", "Dockable Console"],
         color: "#ef4444",
-        query: "Nintendo Switch OLED Mario Edition"
+        query: "Nintendo Switch OLED Mario Edition",
+        deals: [
+            { merchant: "Target", price: 349.99, condition: "New" },
+            { merchant: "GameStop", price: 344.99, condition: "OEM Packaged" },
+            { merchant: "Amazon", price: 349.99, condition: "New" }
+        ]
     },
     "aeron": {
         name: "herman_miller_aeron_graphite.jpg",
@@ -74,7 +94,12 @@ const SAMPLE_PRESETS = {
         confidence: 0.94,
         tags: ["Herman Miller", "Pellicle Mesh", "PostureFit SL", "Graphite"],
         color: "#1e293b",
-        query: "Herman Miller Aeron Chair"
+        query: "Herman Miller Aeron Chair",
+        deals: [
+            { merchant: "Herman Miller Direct", price: 1695.00, condition: "12-Year Warranty" },
+            { merchant: "Design Within Reach", price: 1720.00, condition: "New" },
+            { merchant: "Madison Seating", price: 849.00, condition: "Open Box / Inspected" }
+        ]
     }
 };
 
@@ -349,6 +374,15 @@ async function transcribeAudioFile(file) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("language", store.preferences.language || "en");
+    formData.append("country", store.preferences.country || "US");
+    formData.append("currency", store.preferences.currency || "USD");
+    formData.append("preferred_payment", store.preferences.preferredPayment || "all");
+    formData.append("session_id", store.sessionId || "web-sess");
+    const mode = searchCallbacks.getSearchMode ? searchCallbacks.getSearchMode() : "single";
+    formData.append("mode", mode);
+    formData.append("warranty_priority", store.riskPreferences.warrantyPriority || 0.5);
+    formData.append("speed_priority", store.riskPreferences.speedPriority || 0.5);
+    formData.append("trust_tolerance", store.riskPreferences.trustTolerance || 0.7);
     formData.append("auto_search", "true");
 
     try {
@@ -363,9 +397,12 @@ async function transcribeAudioFile(file) {
             if (searchInput) searchInput.value = transcript;
             showToast(`🗣️ Transcribed: "${transcript}" (${Math.round(data.confidence * 100)}%)`, "success");
 
-            const mode = searchCallbacks.getSearchMode ? searchCallbacks.getSearchMode() : "single";
+            if (mode === 'bundle' && searchCallbacks.addBundleItem) {
+                searchCallbacks.addBundleItem(transcript);
+            }
             if (searchCallbacks.executeSearch) {
-                searchCallbacks.executeSearch(transcript, mode);
+                const bundleItems = searchCallbacks.getBundleItems ? searchCallbacks.getBundleItems() : null;
+                searchCallbacks.executeSearch(transcript, mode, bundleItems);
             }
         } else {
             showToast(`Transcription error: ${data.detail || 'Failed to process audio'}`, "error");
@@ -525,6 +562,7 @@ async function triggerVisualAnalysis(overridePreset) {
 
     try {
         let matchResult = null;
+        let returnedDeals = [];
 
         if (overridePreset) {
             // Simulated instant neural OCR pipeline for benchmark presets
@@ -537,12 +575,20 @@ async function triggerVisualAnalysis(overridePreset) {
                 confidence: overridePreset.confidence,
                 detected_labels: overridePreset.tags
             };
+            returnedDeals = overridePreset.deals || [];
         } else if (selectedImageFile) {
             // Real HTTP multipart backend request
             const formData = new FormData();
             formData.append("file", selectedImageFile);
             formData.append("country", store.preferences.country || "US");
             formData.append("currency", store.preferences.currency || "USD");
+            formData.append("preferred_payment", store.preferences.preferredPayment || "all");
+            formData.append("session_id", store.sessionId || "web-sess");
+            const mode = searchCallbacks.getSearchMode ? searchCallbacks.getSearchMode() : "single";
+            formData.append("mode", mode);
+            formData.append("warranty_priority", store.riskPreferences.warrantyPriority || 0.5);
+            formData.append("speed_priority", store.riskPreferences.speedPriority || 0.5);
+            formData.append("trust_tolerance", store.riskPreferences.trustTolerance || 0.7);
 
             const resp = await fetch("/api/search/image", {
                 method: "POST",
@@ -553,6 +599,7 @@ async function triggerVisualAnalysis(overridePreset) {
                 throw new Error(data.detail || "Visual extraction failed.");
             }
             matchResult = data.visual_analysis;
+            returnedDeals = data.final_options || data.deals || [];
         } else if (selectedImageDataUrl) {
             // JSON base64 / URL backend request
             const payload = selectedImageDataUrl.startsWith("http")
@@ -561,6 +608,12 @@ async function triggerVisualAnalysis(overridePreset) {
 
             payload.country = store.preferences.country || "US";
             payload.currency = store.preferences.currency || "USD";
+            payload.preferred_payment = store.preferences.preferredPayment || "all";
+            payload.session_id = store.sessionId || "web-sess";
+            payload.mode = searchCallbacks.getSearchMode ? searchCallbacks.getSearchMode() : "single";
+            payload.warranty_priority = store.riskPreferences.warrantyPriority || 0.5;
+            payload.speed_priority = store.riskPreferences.speedPriority || 0.5;
+            payload.trust_tolerance = store.riskPreferences.trustTolerance || 0.7;
 
             const resp = await fetch("/api/search/image", {
                 method: "POST",
@@ -572,6 +625,7 @@ async function triggerVisualAnalysis(overridePreset) {
                 throw new Error(data.detail || "Visual extraction failed.");
             }
             matchResult = data.visual_analysis;
+            returnedDeals = data.final_options || data.deals || [];
         }
 
         if (progressBar) progressBar.style.display = 'none';
@@ -579,7 +633,7 @@ async function triggerVisualAnalysis(overridePreset) {
 
         if (matchResult) {
             currentVisualMatch = matchResult;
-            renderVisualResultCard(matchResult);
+            renderVisualResultCard(matchResult, returnedDeals);
         }
     } catch (err) {
         if (progressBar) progressBar.style.display = 'none';
@@ -588,7 +642,7 @@ async function triggerVisualAnalysis(overridePreset) {
     }
 }
 
-function renderVisualResultCard(match) {
+function renderVisualResultCard(match, deals) {
     const card = document.getElementById('visual-modal-result-card');
     const title = document.getElementById('visual-result-title');
     const category = document.getElementById('visual-result-category');
@@ -611,6 +665,49 @@ function renderVisualResultCard(match) {
                 ${escapeHtml(label)}
             </span>
         `).join('');
+    }
+
+    // Render Deals Preview if deals were returned
+    let dealsContainer = document.getElementById('visual-result-deals-preview');
+    if (!dealsContainer) {
+        dealsContainer = document.createElement('div');
+        dealsContainer.id = 'visual-result-deals-preview';
+        dealsContainer.style.marginTop = '0.75rem';
+        dealsContainer.style.marginBottom = '1rem';
+        dealsContainer.style.padding = '0.6rem 0.8rem';
+        dealsContainer.style.background = 'rgba(15, 23, 42, 0.6)';
+        dealsContainer.style.border = '1px solid rgba(255, 255, 255, 0.08)';
+        dealsContainer.style.borderRadius = '8px';
+        if (tagsContainer && tagsContainer.parentNode) {
+            tagsContainer.parentNode.insertBefore(dealsContainer, tagsContainer.nextSibling);
+        }
+    }
+
+    const activeDeals = deals || match.deals || match.final_options || [];
+    if (activeDeals && activeDeals.length > 0) {
+        dealsContainer.style.display = 'block';
+        const dealRows = activeDeals.slice(0, 3).map(d => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); font-size: 12px;">
+                <div>
+                    <span style="font-weight: 700; color: #f8fafc;">${escapeHtml(d.merchant || d.seller || 'Merchant')}</span>
+                    <span style="color: #64748b; font-size: 11px; margin-left: 6px;">[${d.condition || 'New'}]</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: 800; color: #34d399; font-family: monospace;">$${Number(d.price || d.final_price || 0).toFixed(2)}</span>
+                    <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600;">✓ Verified</span>
+                </div>
+            </div>
+        `).join('');
+
+        dealsContainer.innerHTML = `
+            <div style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                <span>🎯 Instant Arbitrated Deals Found</span>
+                <span style="color: #94a3b8; font-weight: normal;">(${activeDeals.length} options)</span>
+            </div>
+            ${dealRows}
+        `;
+    } else {
+        dealsContainer.style.display = 'none';
     }
 
     card.style.display = 'block';
@@ -636,8 +733,12 @@ function applyVisualMatchToSearch() {
 
     // Execute arbitration pipeline
     const mode = searchCallbacks.getSearchMode ? searchCallbacks.getSearchMode() : "single";
+    if (mode === 'bundle' && searchCallbacks.addBundleItem) {
+        searchCallbacks.addBundleItem(query);
+    }
     if (searchCallbacks.executeSearch) {
-        searchCallbacks.executeSearch(query, mode);
+        const bundleItems = searchCallbacks.getBundleItems ? searchCallbacks.getBundleItems() : null;
+        searchCallbacks.executeSearch(query, mode, bundleItems);
     }
 }
 

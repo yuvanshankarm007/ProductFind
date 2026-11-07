@@ -176,18 +176,24 @@ class VisualSearchEngine:
         if not raw_bytes or len(raw_bytes) == 0:
             raise ValueError("Empty or zero-byte image data provided.")
 
-        try:
-            img = Image.open(io.BytesIO(raw_bytes))
-            img.verify()
-            # Reopen after verify() since verify() alters file pointer
-            img = Image.open(io.BytesIO(raw_bytes))
-        except Exception as e:
-            raise ValueError(f"Corrupted or unsupported image file format: {str(e)}")
+        svg_tokens = []
+        is_svg = self._is_svg_bytes(raw_bytes)
+
+        if is_svg:
+            img, svg_tokens, dominant_hex, format_name = self._parse_svg(raw_bytes)
+        else:
+            try:
+                img = Image.open(io.BytesIO(raw_bytes))
+                img.verify()
+                # Reopen after verify() since verify() alters file pointer
+                img = Image.open(io.BytesIO(raw_bytes))
+                format_name = (img.format or "JPEG").upper()
+            except Exception as e:
+                raise ValueError(f"Corrupted or unsupported image file format: {str(e)}")
 
         # 1. Image Geometry & Dimensions
         width, height = img.size
         aspect_ratio = round(width / max(1, height), 2)
-        format_name = (img.format or "JPEG").upper()
 
         # 2. Perceptual Difference Hash (dHash) for visual deduplication
         perceptual_hash = self._compute_dhash(img)
@@ -195,8 +201,8 @@ class VisualSearchEngine:
         # 3. Dominant Color & Brightness Analysis
         color_info = self._extract_color_metrics(img)
 
-        # 4. Text & Metadata Extraction (EXIF, PNG info, filename, hints)
-        text_tokens = self._extract_text_tokens(img, filename=filename, query_hint=query_hint)
+        # 4. Text & Metadata Extraction (EXIF, PNG info, filename, hints, SVG tokens)
+        text_tokens = self._extract_text_tokens(img, filename=filename, query_hint=query_hint, extra_tokens=svg_tokens)
 
         # 5. Product & Brand Classification
         match = self._classify_product(
@@ -240,6 +246,77 @@ class VisualSearchEngine:
             suggested_queries=list(dict.fromkeys(suggested))
         )
 
+    def _is_svg_bytes(self, raw_bytes: bytes) -> bool:
+        """Determines if the raw byte sequence represents an SVG or vector graphic."""
+        trimmed = raw_bytes.strip()
+        if trimmed.startswith((b"<svg", b"<?xml", b"<!DOCTYPE svg")):
+            return True
+        if b"<svg" in raw_bytes[:1024] and b"</svg>" in raw_bytes:
+            return True
+        return False
+
+    def _parse_svg(self, raw_bytes: bytes) -> tuple:
+        """Parses SVG vector data into an in-memory raster image, text tokens, and metadata."""
+        svg_text = ""
+        try:
+            svg_text = raw_bytes.decode("utf-8", errors="ignore")
+        except Exception:
+            pass
+
+        # 1. Extract dimensions
+        w, h = 400, 400
+        w_match = re.search(r'width=["\']?(\d+)', svg_text)
+        h_match = re.search(r'height=["\']?(\d+)', svg_text)
+        if w_match:
+            try:
+                w = int(w_match.group(1))
+            except Exception:
+                pass
+        if h_match:
+            try:
+                h = int(h_match.group(1))
+            except Exception:
+                pass
+        if not w_match or not h_match:
+            vb_match = re.search(r'viewBox=["\']?\d+\s+\d+\s+(\d+)\s+(\d+)', svg_text)
+            if vb_match:
+                try:
+                    w = int(vb_match.group(1))
+                    h = int(vb_match.group(2))
+                except Exception:
+                    pass
+
+        # 2. Extract colors
+        fill_matches = re.findall(r'fill=["\'](#[0-9a-fA-F]{3,6}|rgba?\([^)]+\))["\']', svg_text)
+        dominant_hex = "#1e293b"
+        if fill_matches:
+            first_fill = fill_matches[0]
+            if first_fill.startswith("#"):
+                dominant_hex = first_fill
+                if len(dominant_hex) == 4:
+                    dominant_hex = "#" + "".join(c * 2 for c in dominant_hex[1:])
+
+        # 3. Extract text inside text elements & product attributes
+        tokens = []
+        for tag in ["text", "tspan", "title", "desc"]:
+            for match in re.finditer(rf'<{tag}[^>]*>(.*?)</{tag}>', svg_text, re.DOTALL | re.IGNORECASE):
+                cleaned = re.sub(r'<[^>]+>', ' ', match.group(1))
+                tokens.extend([t.strip() for t in re.split(r'[\s,_\-\.]+', cleaned) if len(t.strip()) > 1])
+
+        for attr in ["aria-label", "alt", "data-product", "data-brand", "data-model"]:
+            for match in re.finditer(rf'{attr}=["\']([^"\']+)["\']', svg_text, re.IGNORECASE):
+                tokens.extend([t.strip() for t in re.split(r'[\s,_\-\.]+', match.group(1)) if len(t.strip()) > 1])
+
+        # 4. Create synthetic raster image for downstream pipeline
+        try:
+            from PIL import ImageColor
+            rgb_color = ImageColor.getrgb(dominant_hex)
+        except Exception:
+            rgb_color = (30, 41, 59)
+
+        img = Image.new("RGB", (max(10, min(2000, w)), max(10, min(2000, h))), color=rgb_color)
+        return img, list(dict.fromkeys(tokens)), dominant_hex, "SVG"
+
     def _decode_image_bytes(self, image_data: Union[bytes, str]) -> bytes:
         """Decodes raw bytes, data URIs, or base64 strings."""
         if isinstance(image_data, bytes):
@@ -249,8 +326,8 @@ class VisualSearchEngine:
             raise ValueError("image_data must be bytes or a base64/URL string.")
 
         data_str = image_data.strip()
-        # Handle data:image/png;base64,....
-        if data_str.startswith("data:image/") and ";base64," in data_str:
+        # Handle data:[<mediatype>];base64,....
+        if data_str.startswith("data:") and ";base64," in data_str:
             _, b64_part = data_str.split(";base64,", 1)
             return base64.b64decode(b64_part)
 
@@ -311,15 +388,19 @@ class VisualSearchEngine:
         self,
         img: Image.Image,
         filename: Optional[str] = None,
-        query_hint: Optional[str] = None
+        query_hint: Optional[str] = None,
+        extra_tokens: Optional[List[str]] = None
     ) -> List[str]:
-        """Harvests textual tokens from filename, EXIF metadata, PNG info chunks, and query hints."""
+        """Harvests textual tokens from filename, EXIF metadata, PNG info chunks, query hints, and SVG elements."""
         tokens = []
+
+        if extra_tokens:
+            tokens.extend([w.lower() for w in extra_tokens if len(w) > 1])
 
         if filename:
             # Clean filename: replace underscores/dashes with spaces
             clean_fn = re.sub(r"[_\-\.]+", " ", filename).lower()
-            tokens.extend([w for w in clean_fn.split() if len(w) > 1 and w not in ["jpg", "png", "jpeg", "webp", "img", "image"]])
+            tokens.extend([w for w in clean_fn.split() if len(w) > 1 and w not in ["jpg", "png", "jpeg", "webp", "svg", "gif", "img", "image"]])
 
         if query_hint:
             tokens.extend(query_hint.lower().split())
@@ -362,13 +443,14 @@ class VisualSearchEngine:
         best_product = None
         highest_score = 0
 
+        category_stopwords = {"laptop", "phone", "headphones", "headphone", "earphone", "camera", "monitor", "chair", "nas", "storage", "edition"}
         for prod in self.known_products:
             score = 0
             # Direct keyword match
             for kw in prod["keywords"]:
                 if kw in joined_text:
                     score += 4
-                elif any(part in joined_text for part in kw.split() if len(part) > 2):
+                elif any(part in joined_text for part in kw.split() if len(part) > 2 and part not in category_stopwords):
                     score += 1
 
             # Brand match
@@ -383,8 +465,9 @@ class VisualSearchEngine:
                 highest_score = score
                 best_product = prod
 
-        # If high match found
-        if best_product and highest_score >= 3:
+        # If high match found in curated knowledge base (requires strong model/brand correlation)
+        is_brand_matched = best_product and (best_product["brand"].lower() in joined_text)
+        if best_product and (highest_score >= 3 or (highest_score >= 2 and is_brand_matched)):
             confidence = min(0.98, max(0.85, 0.85 + (highest_score * 0.02)))
             return {
                 "brand": best_product["brand"],
@@ -394,7 +477,7 @@ class VisualSearchEngine:
                 "confidence": round(confidence, 2),
                 "labels": best_product["labels"] + [color_info["name"]]
             }
-        elif best_product and highest_score > 0:
+        elif best_product and is_brand_matched and highest_score > 0:
             confidence = min(0.84, max(0.70, 0.70 + (highest_score * 0.03)))
             return {
                 "brand": best_product["brand"],
@@ -403,6 +486,59 @@ class VisualSearchEngine:
                 "query": best_product["query"],
                 "confidence": round(confidence, 2),
                 "labels": best_product["labels"] + [color_info["name"]]
+            }
+
+        # Dynamic brand and model extraction for broader product ecosystem
+        popular_brands = [
+            "Sony", "Apple", "Samsung", "Dell", "HP", "Lenovo", "Asus", "Acer", "LG", "Microsoft",
+            "Google", "Nintendo", "Logitech", "Razer", "Corsair", "SteelSeries", "Bose", "Sennheiser",
+            "Audio-Technica", "JBL", "Anker", "Herman Miller", "Steelcase", "Synology", "QNAP",
+            "Framework", "Nvidia", "AMD", "Intel", "Canon", "Nikon", "Fujifilm", "Panasonic", "DJI",
+            "GoPro", "Beats", "Marshall", "Garmin", "Fitbit", "Dyson", "Philips", "PlayStation", "Xbox"
+        ]
+
+        detected_brand = None
+        for brand in popular_brands:
+            if re.search(rf"\b{re.escape(brand.lower())}\b", joined_text):
+                detected_brand = brand
+                break
+
+        if detected_brand:
+            # Extract remaining model tokens
+            stop_words = {
+                "photo", "image", "box", "package", "camera", "upload", "retail", "unit",
+                "review", "spec", "test", "sample", "jpg", "png", "jpeg", "webp", "svg",
+                "unnamed", "product", "authentic", "factory", "sealed", "oem", "genuine",
+                detected_brand.lower()
+            }
+            model_tokens = [w for w in text_tokens if w not in stop_words and len(w) > 1]
+            model_name = " ".join(model_tokens[:3]).title() if model_tokens else "Flagship Device"
+            
+            # Determine category heuristic
+            cat = "Consumer Electronics"
+            if any(w in joined_text for w in ["headphone", "audio", "earphone", "sound", "anc", "music"]):
+                cat = "Wireless Headphones"
+            elif any(w in joined_text for w in ["laptop", "macbook", "notebook", "ultrabook", "computer"]):
+                cat = "High-Performance Laptop"
+            elif any(w in joined_text for w in ["phone", "mobile", "galaxy", "iphone", "smartphone"]):
+                cat = "Flagship Smartphone"
+            elif any(w in joined_text for w in ["chair", "seating", "ergonomic", "mesh"]):
+                cat = "Ergonomic Office Chair"
+            elif any(w in joined_text for w in ["nas", "storage", "diskstation", "synology"]):
+                cat = "Network Attached Storage"
+            elif any(w in joined_text for w in ["mouse", "keyboard", "keychron"]):
+                cat = "Ergonomic Peripherals"
+            elif any(w in joined_text for w in ["gpu", "graphics", "geforce", "radeon"]):
+                cat = "Graphics Card"
+
+            query = f"{detected_brand} {model_name}".strip()
+            return {
+                "brand": detected_brand,
+                "model": model_name,
+                "category": cat,
+                "query": query,
+                "confidence": 0.86,
+                "labels": [detected_brand, model_name, cat, color_info["name"]]
             }
 
         # Fallback heuristic: check for general hardware categories
