@@ -14,6 +14,7 @@ import { openInstinctsModal, closeInstinctsModal, quarantineMerchantFromUI } fro
 import { openWorkflowArbitrageModal, closeWorkflowArbitrageModal } from './cart_arbitrage_modal.js';
 import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
+import { initMultimodalSearch } from './multimodal_search.js';
 
 let currentSearchController = null;
 let currentSearchToken = 0;
@@ -41,7 +42,15 @@ function initApp() {
     // 5. Wire Event Listeners
     setupEventListeners();
 
-    // 6. Pre-seed demo search if first load
+    // 6. Wire Multimodal Voice & Visual Search
+    initMultimodalSearch({
+        executeSearch: (query, mode, itemsList) => executeSearch(query, mode, itemsList),
+        getSearchMode: () => currentSearchMode,
+        getBundleItems: () => bundleItems,
+        addBundleItem: (item) => addBundleItem(item)
+    });
+
+    // 7. Pre-seed demo search if first load
     setTimeout(() => {
         executeSearch("Sony WH-1000XM5");
     }, 400);
