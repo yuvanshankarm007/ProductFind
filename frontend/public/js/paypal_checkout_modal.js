@@ -350,11 +350,14 @@ function renderSuccessScreen(captureData) {
             </div>
 
             <!-- Action CTAs -->
-            <div style="display: flex; gap: 10px; margin-top: 4px;">
-                <button type="button" id="btn-view-generated-dossier" class="control-btn btn-primary" style="flex: 2; justify-content: center; padding: 10px 14px; font-weight: 700;">
-                    🛡️ View Cryptographic Section 13 Dossier
+            <div style="display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap;">
+                <button type="button" id="btn-view-generated-dossier" class="control-btn" style="flex: 1; min-width: 140px; justify-content: center; padding: 10px 14px; font-weight: 700;">
+                    🛡️ View Section 13 Dossier
                 </button>
-                <button type="button" id="btn-close-checkout-done" class="control-btn" style="flex: 1; justify-content: center;">
+                <button type="button" id="btn-download-checkout-pdf" class="control-btn btn-primary" style="flex: 1; min-width: 160px; justify-content: center; padding: 10px 14px; font-weight: 700; background: linear-gradient(135deg, #0070ba, #003087); border: 1px solid #38bdf8; color: #ffffff;">
+                    📄 Official Legal PDF (.PDF)
+                </button>
+                <button type="button" id="btn-close-checkout-done" class="control-btn" style="padding: 10px 16px; justify-content: center;">
                     Done
                 </button>
             </div>
@@ -369,6 +372,23 @@ function renderSuccessScreen(captureData) {
             const ord = activeOrder;
             closePayPalCheckoutModal();
             openDossierModal(ord.id, ord.merchant, `${ord.currencySymbol} ${ord.formattedAmount}`);
+        });
+    }
+
+    // Wire Direct Legal PDF Download
+    const btnPdf = document.getElementById('btn-download-checkout-pdf');
+    if (btnPdf) {
+        btnPdf.addEventListener('click', () => {
+            const ord = activeOrder;
+            const pdfUrl = `/api/paypal/dossiers/${encodeURIComponent(ord.id)}/download.pdf`;
+            const a = document.createElement('a');
+            a.href = pdfUrl;
+            a.download = `Section13_Dossier_${ord.id}.pdf`;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Downloading Official Legal Dispute PDF...", "success");
         });
     }
 

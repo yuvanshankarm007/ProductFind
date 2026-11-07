@@ -128,7 +128,9 @@ def check_listing_hardware_compatibility(query: str, title: str, url: str = "") 
             if any(bad in t_u_low for bad in ["lg", "acer", "benq", "viewsonic", "zebronics"]):
                 return False
         if "sony" in brand_keywords:
-            if any(bad in t_u_low for bad in ["frony", "atozco", "zebronics", "portronics", "boat", "noise "]):
+            if any(bad in t_u_low for bad in ["frony", "atozco", "zebronics", "portronics", "boat"]):
+                return False
+            if re.search(r'\bnoise\b(?![\s\-]*(?:cancell|reduc|isolat))', t_u_low):
                 return False
 
     query_identifiers = extract_query_identifiers(query)

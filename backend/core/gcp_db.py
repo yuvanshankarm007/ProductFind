@@ -212,6 +212,23 @@ class FirestorePersistenceService:
 
         return self._local_dossiers.get(order_id)
 
+    def delete_dossier(self, order_id: str) -> bool:
+        """Removes an evidentiary dispute dossier from Firestore and local store."""
+        self._local_dossiers.pop(order_id, None)
+        path = os.path.join(self.dossiers_dir, f"{order_id}.json")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+        if self.is_connected and self.client:
+            try:
+                self.client.collection("dispute_dossiers").document(order_id).delete()
+                return True
+            except Exception:
+                return False
+        return True
+
     def list_dossiers(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Lists recent dispute dossiers."""
         if self.is_connected and self.client:

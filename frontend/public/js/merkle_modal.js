@@ -114,12 +114,15 @@ function renderDossier(dossier) {
             </div>
 
             <!-- Action Buttons -->
-            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
                 <button type="button" class="control-btn" id="btn-copy-dossier-json">
                     📋 Copy Immutable JSON
                 </button>
-                <button type="button" class="control-btn btn-primary" id="btn-download-dossier">
+                <button type="button" class="control-btn" id="btn-download-dossier">
                     ⬇️ Download Dossier (.json)
+                </button>
+                <button type="button" class="control-btn btn-primary" id="btn-download-dossier-pdf" style="background: linear-gradient(135deg, #0070ba, #003087); color: #ffffff; border: 1px solid #38bdf8; font-weight: 700;">
+                    📄 Official Legal PDF (.PDF)
                 </button>
             </div>
         </div>
@@ -139,5 +142,18 @@ function renderDossier(dossier) {
         a.click();
         URL.revokeObjectURL(url);
         showToast("Dispute dossier downloaded.", "success");
+    });
+
+    document.getElementById('btn-download-dossier-pdf').addEventListener('click', () => {
+        const orderId = dossier.paypal_order_id || dossier.order_id || dossier.dossier_id;
+        const pdfUrl = `/api/paypal/dossiers/${encodeURIComponent(orderId)}/download.pdf`;
+        const a = document.createElement('a');
+        a.href = pdfUrl;
+        a.download = `Section13_Dossier_${dossier.dossier_id}.pdf`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast("Downloading Official Section 13 Legal Dispute PDF...", "success");
     });
 }

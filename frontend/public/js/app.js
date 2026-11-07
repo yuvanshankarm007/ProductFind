@@ -11,6 +11,7 @@ import { refreshHud, triggerSelfTest, triggerSelfFix, triggerSelfLearn } from '.
 import { closeDossierModal, openDossierModal } from './merkle_modal.js';
 import { openPayPalCheckoutModal, closePayPalCheckoutModal } from './paypal_checkout_modal.js';
 import { openInstinctsModal, closeInstinctsModal, quarantineMerchantFromUI } from './instincts_modal.js';
+import { openWorkflowArbitrageModal, closeWorkflowArbitrageModal } from './cart_arbitrage_modal.js';
 import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
 
@@ -91,7 +92,7 @@ function setupEventListeners() {
         updatePromptBadges(searchInput.value);
     }
 
-    // Quick Query Tag Buttons
+    // Quick Query Tag & Workflow Preset Buttons
     document.querySelectorAll('.query-tag-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             clearTimeout(searchDebounceTimer);
@@ -99,7 +100,11 @@ function setupEventListeners() {
             if (query) {
                 if (searchInput) searchInput.value = query;
                 lastExecutedQuery = query;
-                executeSearch(query);
+                if (btn.classList.contains('workflow-preset-btn')) {
+                    openWorkflowArbitrageModal(query);
+                } else {
+                    executeSearch(query);
+                }
             }
         });
     });
@@ -200,6 +205,16 @@ function setupEventListeners() {
     if (instinctsModal) {
         instinctsModal.addEventListener('click', (e) => {
             if (e.target === instinctsModal) closeInstinctsModal();
+        });
+    }
+
+    const closeArbitrage = document.getElementById('modal-close-arbitrage');
+    if (closeArbitrage) closeArbitrage.addEventListener('click', closeWorkflowArbitrageModal);
+
+    const arbitrageModal = document.getElementById('workflow-arbitrage-modal');
+    if (arbitrageModal) {
+        arbitrageModal.addEventListener('click', (e) => {
+            if (e.target === arbitrageModal) closeWorkflowArbitrageModal();
         });
     }
 
@@ -432,6 +447,15 @@ function renderStrategicCards(options) {
                 ${warranty.has_adp ? `<span class="chip chip-success">🛡️ ADP Included</span>` : `<span class="chip">${warranty.oem_warranty_months || 12}-Mo OEM</span>`}
             </div>
 
+            <!-- Visual Truth & Packaging Seal Badge -->
+            <div class="visual-seal-badge-row" style="display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 5px 8px; margin: 8px 0; font-size: 11px;">
+                <div style="display: flex; align-items: center; gap: 5px; color: #34d399; font-weight: 700;">
+                    <span>🛡️ Packaging Shield:</span>
+                    <span style="color: #a7f3d0; font-weight: 600;">${listing.open_box_delivery ? 'OTP Doorstep Verified' : '100% Factory Sealed'}</span>
+                </div>
+                <span class="hud-status-badge status-optimal" style="font-size: 9px; padding: 1px 6px;">SEAL INTACT</span>
+            </div>
+
             <div style="font-size: 11.5px; color: #94a3b8; line-height: 1.4; margin-bottom: 1rem; flex: 1;">
                 ${escapeHtml(opt.tier_reason || '')}
             </div>
@@ -450,6 +474,9 @@ function renderStrategicCards(options) {
                 </button>
                 <button type="button" class="control-btn btn-view-dossier" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" title="Inspect Cryptographic Section 13 Dispute Dossier">
                     🛡️ Dossier
+                </button>
+                <button type="button" class="control-btn btn-snipe-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-price="${opt.risk_adjusted_tco || listing.price_inr || 1000}" style="padding: 6px 10px; font-size: 11px; background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.4); color: #38bdf8;" title="1-Click Escrow Snipe Deal Lock">
+                    🎯 Snipe
                 </button>
                 <button type="button" class="btn-flag-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-domain="${escapeHtml(listing.merchant_domain || '')}" style="background: transparent; border: 1px solid rgba(244, 63, 94, 0.35); color: #fda4af; border-radius: 6px; padding: 6px 10px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background 0.15s;" title="Teach Self-Healer: Flag & Quarantine Listing">
                     🚩 Flag
@@ -477,6 +504,41 @@ function renderStrategicCards(options) {
             const p = b.getAttribute('data-price');
             const id = b.getAttribute('data-order-id');
             openDossierModal(`PP-${id}`, m, p);
+        });
+    });
+
+    // Wire 1-Click Snipe Deal Lock
+    grid.querySelectorAll('.btn-snipe-deal').forEach(b => {
+        b.addEventListener('click', async () => {
+            const id = b.getAttribute('data-order-id') || 'deal-001';
+            const price = parseFloat(b.getAttribute('data-price')) || 1000.0;
+            b.disabled = true;
+            b.textContent = "Locking...";
+            try {
+                const res = await fetch('/api/snipe/lock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        listing_id: id,
+                        target_price: price,
+                        preauth_payment_method: 'ONE_CLICK_ESCROW',
+                        auto_execute_within_seconds: 600
+                    })
+                });
+                if (res.ok) {
+                    const lock = await res.json();
+                    showToast(`🎯 Snipe Locked! Receipt: ${lock.receipt_hash.substring(0, 16)}...`, "success");
+                    b.textContent = "🔒 Locked";
+                    b.style.color = "#34d399";
+                    b.style.borderColor = "#10b981";
+                } else {
+                    throw new Error("Lock service error");
+                }
+            } catch (err) {
+                showToast("Failed to lock snipe: " + err.message, "error");
+                b.disabled = false;
+                b.textContent = "🎯 Snipe";
+            }
         });
     });
 

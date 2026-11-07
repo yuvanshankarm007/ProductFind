@@ -11,7 +11,12 @@ import re
 import urllib.parse
 import warnings
 from typing import List, Dict, Any, Optional
-from curl_cffi import requests as curl_requests
+try:
+    from curl_cffi import requests as curl_requests
+    HAS_CURL_CFFI = True
+except ImportError:
+    curl_requests = None
+    HAS_CURL_CFFI = False
 
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*renamed to.*")
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*duckduckgo_search.*")
@@ -181,19 +186,33 @@ class ExternalStealthBotBrowser:
         try:
             loop = asyncio.get_event_loop()
             def _check():
-                resp = curl_requests.get(
-                    url,
-                    impersonate="chrome124",
-                    headers={
-                        "User-Agent": cls.USER_AGENT,
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                        "Accept-Language": "en-US,en;q=0.9"
-                    },
-                    timeout=timeout,
-                    allow_redirects=True
-                )
-                text = resp.text or ""
-                code = resp.status_code
+                if HAS_CURL_CFFI and curl_requests is not None:
+                    resp = curl_requests.get(
+                        url,
+                        impersonate="chrome124",
+                        headers={
+                            "User-Agent": cls.USER_AGENT,
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                            "Accept-Language": "en-US,en;q=0.9"
+                        },
+                        timeout=timeout,
+                        allow_redirects=True
+                    )
+                    text = resp.text or ""
+                    code = resp.status_code
+                else:
+                    import httpx
+                    with httpx.Client(follow_redirects=True, timeout=timeout) as client:
+                        resp = client.get(
+                            url,
+                            headers={
+                                "User-Agent": cls.USER_AGENT,
+                                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                                "Accept-Language": "en-US,en;q=0.9"
+                            }
+                        )
+                        text = resp.text or ""
+                        code = resp.status_code
 
                 # Check for known e-commerce failure signatures
                 is_amazon_dog = "Looking for something? We're sorry" in text or "Dogs of Amazon" in text

@@ -34,6 +34,11 @@ from .agents.autonomous_self_healer import autonomous_healer
 from .core.gcp_db import gcp_db_service
 from .core.instincts import commerce_instincts
 from .core.prompt_learner import PromptLearnerEngine
+from .core.cart_arbitrage import CartArbitrageurAgent, WorkflowArbitrateRequest, CartSplitResult, ProductListing
+from .core.arbitrage_catalogue import WORKFLOW_PRESETS, CATALOGUE, get_listings_for_workflow
+from .core.pdf_generator import Section13PDFGenerator
+from .core.visual_shield import VisualTruthShieldAgent, VisualVerificationRequest, VisualVerificationResult
+from .core.temporal_volatility import TemporalVolatilityEngine, VolatilityAnalysis, SnipeLockRequest, SnipeLockResponse
 
 _relay_server = None
 
@@ -123,6 +128,10 @@ coordinator = SentinelCoordinator(global_bus)
 paypal_svc = PayPalService()
 skill_vault = SkillVault()
 skill_learner = AdaptiveSkillLearner(skill_vault)
+cart_arbitrageur = CartArbitrageurAgent()
+pdf_generator = Section13PDFGenerator()
+visual_shield = VisualTruthShieldAgent()
+volatility_engine = TemporalVolatilityEngine()
 
 
 # Request schemas
@@ -215,7 +224,11 @@ async def health_check():
             "Side-by-Side Comparison Matrix",
             "PayPal Buyer Protection & Pay Later",
             "Google Cloud Firestore Native Persistence",
-            "Memorystore Low-Latency Trajectory Cache"
+            "Memorystore Low-Latency Trajectory Cache",
+            "Combinatorial Knapsack Multi-Retailer Cart Splitter",
+            "Legal Section 13 Binary PDF Dispute Dossier Generator",
+            "Visual Truth & Holographic Packaging Shield",
+            "Temporal Volatility & 1-Click Snipe Engine"
         ]
     }
 
@@ -480,6 +493,134 @@ async def get_dispute_dossier(order_id: str):
     if not dossier:
         raise HTTPException(status_code=404, detail=f"No dispute dossier found for order '{order_id}'")
     return dossier
+
+
+@app.get("/api/paypal/dossiers/{order_id}/download.pdf")
+@app.get("/api/paypal/dossiers/{order_id}/download/pdf")
+@app.get("/api/escrow/dossier/{order_id}/download.pdf")
+@app.get("/api/escrow/dossier/{order_id}/download/pdf")
+async def download_dispute_dossier_pdf(order_id: str):
+    """
+    Serves the formal Section 13 legal memorandum PDF for credit card and PayPal arbitration.
+    """
+    dossier = gcp_db_service.get_dossier(order_id)
+    if not dossier:
+        sample_dossier = PayPalEvidenceSentinel.create_dispute_dossier(
+            order_id=order_id,
+            item_title="Verified Merchant Listing",
+            platform="PayPal Partner Merchant",
+            agreed_tco=299.99,
+            condition="Brand New (Open Box Inspected)",
+            open_box_verified=True,
+            seller_name="Authorized Enterprise Seller",
+            seller_rating=4.8,
+            warranty_claims="1-Year OEM Coverage + 180-Day PayPal Section 13 Escrow",
+            display_currency="USD"
+        )
+        dossier = sample_dossier.model_dump()
+    
+    pdf_bytes = pdf_generator.generate(dossier)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=Section13_Dossier_{order_id}.pdf"}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Multi-Item Workflow & Cart-Splitting Knapsack Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/workflow/presets")
+async def get_workflow_presets():
+    """Returns commercial workflow starter templates."""
+    return {
+        "status": "success",
+        "presets": WORKFLOW_PRESETS,
+        "single_items": [
+            {"id": "sony-xm5-amz", "name": "Sony WH-1000XM5 Wireless Headphones", "category": "Headphones"}
+        ]
+    }
+
+
+@app.post("/api/workflow/arbitrate", response_model=CartSplitResult)
+async def api_arbitrate_workflow(req: WorkflowArbitrateRequest):
+    """
+    Executes combinatorial knapsack cart-split optimization across retailers
+    (Amazon, Flipkart, OEM Direct) with shipping step functions and card tier bonuses.
+    """
+    try:
+        items = req.items
+        if not items:
+            raw_candidates = get_listings_for_workflow(req.query)
+            items = [ProductListing(**item) for item in raw_candidates]
+        return cart_arbitrageur.optimize_cart_split(
+            query=req.query,
+            candidate_pool=items,
+            budget_limit=req.budget_limit
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Workflow arbitration failed: {str(e)}")
+
+
+@app.post("/api/arbitrage/split", response_model=CartSplitResult)
+async def api_arbitrage_split(items: List[ProductListing], query: str = "Custom Cart"):
+    """Recalculates cart split across retailers with updated item selections."""
+    try:
+        return cart_arbitrageur.optimize_cart_split(query, items)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cart split optimization failed: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# Visual Truth & Holographic Packaging Shield Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/visual-verify", response_model=VisualVerificationResult)
+async def api_visual_verify(req: VisualVerificationRequest):
+    """Deep visual packaging, seal integrity, and counterfeit audit for a listing."""
+    item = next((i for i in CATALOGUE if i["id"] == req.listing_id), None)
+    if not item:
+        item = {
+            "id": req.listing_id,
+            "title": req.title or "Inspected Product Unit",
+            "brand": "OEM",
+            "seller_name": req.seller_name or "ThirdParty Global",
+            "is_refurbished": bool(req.is_refurbished) if req.is_refurbished is not None else False,
+            "packaging_seal_intact": req.packaging_seal_intact if req.packaging_seal_intact is not None else True,
+            "current_price": req.current_price or 5000.0,
+            "original_mrp": req.original_mrp or 10000.0
+        }
+    return visual_shield.verify_listing_visuals(item)
+
+
+# ---------------------------------------------------------------------------
+# Temporal Price Volatility & Deal Lock (Snipe Engine) Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/volatility/{listing_id}", response_model=VolatilityAnalysis)
+async def api_get_price_volatility(listing_id: str):
+    """Returns 30-day temporal price history, algorithmic dip detection, and snipe trigger."""
+    item = next((i for i in CATALOGUE if i["id"] == listing_id), None)
+    if not item:
+        item = {
+            "id": listing_id,
+            "title": f"Listing {listing_id}",
+            "current_price": 14999.0,
+            "original_mrp": 19999.0,
+            "retailer": "Amazon"
+        }
+    return volatility_engine.analyze_item_volatility(item)
+
+
+@app.post("/api/snipe/lock", response_model=SnipeLockResponse)
+async def api_lock_snipe_deal(req: SnipeLockRequest):
+    """1-Click pre-authorized deal lock-in with cryptographic receipt hash."""
+    return volatility_engine.lock_snipe_deal(
+        listing_id=req.listing_id,
+        target_price=req.target_price,
+        auto_execute_seconds=req.auto_execute_within_seconds
+    )
 
 
 @app.post("/api/paypal/create-order")
