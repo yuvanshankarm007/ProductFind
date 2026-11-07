@@ -98,16 +98,50 @@
             </div>
 
             <div class="search-box-wrapper">
+                <!-- Search Mode Switcher -->
+                <div class="search-mode-switcher">
+                    <button type="button" id="mode-single-btn" class="mode-tab-btn active" data-mode="single">
+                        <span>⚡ Single Deal</span>
+                    </button>
+                    <button type="button" id="mode-bundle-btn" class="mode-tab-btn" data-mode="bundle">
+                        <span>📦 Bundle / Bulk Discount</span>
+                        <span class="mode-tab-badge">Knapsack Split</span>
+                    </button>
+                </div>
+
                 <form id="search-form">
                     <div class="search-input-group">
                         <input type="text" id="search-input" class="search-input" placeholder="Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, iPhone 16 Pro)..." value="Sony WH-1000XM5" autocomplete="off" required>
-                        <button type="submit" class="search-btn">
+                        <button type="submit" id="main-search-submit-btn" class="search-btn">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                             </svg>
-                            Arbitrate Deals
+                            <span id="search-btn-label">Arbitrate Deals</span>
                         </button>
+                    </div>
+
+                    <!-- Interactive Bundle Builder (Active in Bundle Mode) -->
+                    <div id="bundle-builder-container" style="display: none; margin-top: 10px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 12px 14px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+                                <span>📦 Target Items for Bulk / Bundle Optimization</span>
+                                <span id="bundle-item-count-badge" style="background: rgba(56, 189, 248, 0.2); color: #7dd3fc; padding: 1px 6px; border-radius: 10px; font-size: 10px;">0 items</span>
+                            </div>
+                            <span style="font-size: 11px; color: #94a3b8;">Enter items comma-separated above, or add individually:</span>
+                        </div>
+                        <div id="bundle-pills-list" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 28px;">
+                            <!-- Dynamically generated item pills -->
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="bundle-item-quick-input" placeholder="Add custom item (e.g. 27-inch 4K Monitor, Ergonomic Footrest)..." style="flex: 1; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 6px 10px; color: #f8fafc; font-size: 12px; outline: none;">
+                            <button type="button" id="btn-add-bundle-item" class="control-btn" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; font-weight: 700; padding: 6px 12px; font-size: 12px;">
+                                + Add Item
+                            </button>
+                            <button type="button" id="btn-clear-bundle-items" class="control-btn" style="color: #94a3b8; font-size: 11px; padding: 6px 10px;">
+                                Clear
+                            </button>
+                        </div>
                     </div>
                 </form>
 
@@ -272,6 +306,9 @@
                     <h2 style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Curated Strategic Recommendations</h2>
                     <p style="font-size: 0.8rem; color: #94a3b8;">Mathematically arbitrated slots (Optimal Value, Maximum Peace-of-Mind ADP, and Budget Sticker) with guaranteed identity isolation.</p>
                 </div>
+            <!-- Bundle Arbitrage Spotlight Banner (Populated when bundle arbitrated) -->
+            <div id="bundle-spotlight-section" style="display: none; margin-bottom: 1.5rem;">
+                <!-- Dynamically rendered by renderBundleSpotlight in app.js -->
             </div>
 
             <div id="strategic-cards-grid" class="deal-cards-grid">

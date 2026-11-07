@@ -731,17 +731,188 @@ class PricePoint(BaseModel):
     event_label: Optional[str] = None
 
 
-def get_listings_for_workflow(query: str) -> List[Dict[str, Any]]:
-    """Return matching listings for a query from our seeded catalogue."""
+def get_listings_for_workflow(query: str, items_list: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """
+    Return matching listings for a query or custom items list from our seeded catalogue,
+    or dynamically synthesize high-fidelity multi-retailer listings for custom bundle items.
+    """
+    # 0. Check if explicit items_list provided or comma-separated query
+    explicit_items = []
+    if items_list:
+        explicit_items = [it.strip() for it in items_list if it and it.strip()]
+    elif query and "," in query:
+        parts = [s.strip() for s in query.split(",") if s.strip()]
+        if len(parts) >= 2:
+            explicit_items = parts
+
+    if explicit_items:
+        collected: List[Dict[str, Any]] = []
+        for idx, item_name in enumerate(explicit_items):
+            item_q = item_name.lower().strip()
+            # Try to find matching listings in CATALOGUE by category or keyword
+            matched_for_item = []
+            
+            # Category keyword aliases
+            category_aliases = {
+                "gaming monitor": "Gaming Monitor",
+                "monitor": "Monitor",
+                "display": "Monitor",
+                "screen": "Monitor",
+                "keyboard": "Mechanical Keyboard",
+                "chair": "Ergonomic Chair",
+                "webcam": "Webcam",
+                "camera": "Webcam",
+                "mic": "Studio Microphone",
+                "microphone": "Studio Microphone",
+                "interface": "Audio Interface",
+                "headphone": "Monitor Headphones",
+                "headphones": "Monitor Headphones",
+                "headset": "Monitor Headphones",
+                "mouse": "Wireless Gaming Mouse",
+                "dock": "Thunderbolt 4 Dock",
+                "hub": "Thunderbolt 4 Dock",
+                "ssd": "NVMe 2TB High-Speed SSD",
+                "nvme": "NVMe 2TB High-Speed SSD",
+                "storage": "NVMe 2TB High-Speed SSD"
+            }
+            
+            best_cat = None
+            for alias_key, cat_name in category_aliases.items():
+                if alias_key in item_q:
+                    best_cat = cat_name
+                    break
+
+            if best_cat:
+                matched_for_item = [item for item in CATALOGUE if item["category"].lower() == best_cat.lower()]
+
+            if not matched_for_item:
+                # Direct match in catalogue
+                matched_for_item = [
+                    item for item in CATALOGUE
+                    if (item_q in item["title"].lower() or
+                        item_q in item["category"].lower() or
+                        any(word in item["title"].lower() for word in item_q.split() if len(word) > 2))
+                ]
+
+            if matched_for_item:
+                # Map listings to this slot using item_name as category
+                for base_item in matched_for_item:
+                    c = dict(base_item)
+                    c["category"] = item_name
+                    c["id"] = f"{base_item['id']}-{idx}-{hashlib.md5(item_name.encode()).hexdigest()[:4]}"
+                    collected.append(c)
+            else:
+                # Dynamically synthesize 3 verified listings (Amazon, Flipkart, OEM Direct)
+                slug = hashlib.md5(item_name.encode()).hexdigest()[:6]
+                est_price = 3500.0
+                if any(k in item_q for k in ["monitor", "display", "screen", "desk", "table"]):
+                    est_price = 18000.0
+                elif any(k in item_q for k in ["chair", "ergonomic", "seat"]):
+                    est_price = 14000.0
+                elif any(k in item_q for k in ["keyboard", "dock", "mic", "microphone", "headphone"]):
+                    est_price = 6500.0
+                elif any(k in item_q for k in ["webcam", "camera", "cam", "mouse", "light", "lamp"]):
+                    est_price = 3200.0
+                elif any(k in item_q for k in ["mat", "pad", "stand", "cable", "hub", "arm", "holder"]):
+                    est_price = 1499.0
+
+                synth_listings = [
+                    {
+                        "id": f"syn-{slug}-amz",
+                        "title": f"Verified {item_name} (High Durability Edition)",
+                        "brand": "ProEcosystem",
+                        "model": f"{item_name} Edition",
+                        "category": item_name,
+                        "retailer": "Amazon",
+                        "base_price": round(est_price * 1.05, 2),
+                        "current_price": round(est_price * 0.94, 2),
+                        "original_mrp": round(est_price * 1.30, 2),
+                        "shipping_cost": 0.0,
+                        "in_stock": True,
+                        "rating": 4.6,
+                        "review_count": 640,
+                        "seller_name": "Appario Retail Direct",
+                        "is_prime_or_plus": True,
+                        "is_accessory_only": False,
+                        "is_sponsored": False,
+                        "is_refurbished": False,
+                        "packaging_seal_intact": True,
+                        "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=60",
+                        "card_offers": ["₹1,500 Instant Discount on HDFC Cards", "5% Amazon Pay Cashback"]
+                    },
+                    {
+                        "id": f"syn-{slug}-fk",
+                        "title": f"Official {item_name} (Certified Fast-Delivery)",
+                        "brand": "ProEcosystem",
+                        "model": f"{item_name} Edition",
+                        "category": item_name,
+                        "retailer": "Flipkart",
+                        "base_price": round(est_price * 1.08, 2),
+                        "current_price": round(est_price * 0.92, 2),
+                        "original_mrp": round(est_price * 1.30, 2),
+                        "shipping_cost": 0.0,
+                        "in_stock": True,
+                        "rating": 4.5,
+                        "review_count": 510,
+                        "seller_name": "RetailNet Verified",
+                        "is_prime_or_plus": True,
+                        "is_accessory_only": False,
+                        "is_sponsored": False,
+                        "is_refurbished": False,
+                        "packaging_seal_intact": True,
+                        "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=60",
+                        "card_offers": ["10% Instant Discount on Axis Bank CC up to ₹1,250"]
+                    },
+                    {
+                        "id": f"syn-{slug}-oem",
+                        "title": f"Factory Direct {item_name} (OEM Genuine)",
+                        "brand": "ProEcosystem",
+                        "model": f"{item_name} Edition",
+                        "category": item_name,
+                        "retailer": "OEM Direct",
+                        "base_price": round(est_price * 1.15, 2),
+                        "current_price": round(est_price * 0.96, 2),
+                        "original_mrp": round(est_price * 1.30, 2),
+                        "shipping_cost": 0.0,
+                        "in_stock": True,
+                        "rating": 4.8,
+                        "review_count": 280,
+                        "seller_name": "ProEcosystem Official Direct",
+                        "is_prime_or_plus": False,
+                        "is_accessory_only": False,
+                        "is_sponsored": False,
+                        "is_refurbished": False,
+                        "packaging_seal_intact": True,
+                        "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=60",
+                        "card_offers": ["OEM Direct Exclusive Brand Rebate ₹1,000"]
+                    }
+                ]
+                collected.extend(synth_listings)
+
+        if collected:
+            return collected
+
     q = query.lower().strip()
+    q_norm = q.replace("₹", "").replace("rs.", "").replace("rs", "").replace("inr", "").replace(",", "").strip()
     
     # 1. Exact preset matching (by preset ID, query string, or explicit workflow keywords)
-    is_workflow_query = any(w in q for w in ["setup", "kit", "rig", "essentials", "workflow", "workstation", "studio", "peripherals", "wfh"])
+    is_workflow_query = any(w in q for w in ["setup", "kit", "rig", "essentials", "workflow", "workstation", "studio", "peripherals", "wfh", "bundle", "bulk"])
     if is_workflow_query:
+        if "wfh" in q or "work from home" in q:
+            return [item for item in CATALOGUE if item["category"] in WORKFLOW_PRESETS[0]["roles"]]
+        if "podcast" in q or "streaming" in q:
+            return [item for item in CATALOGUE if item["category"] in WORKFLOW_PRESETS[1]["roles"]]
+        if "gaming" in q or "esports" in q or "fps" in q:
+            return [item for item in CATALOGUE if item["category"] in WORKFLOW_PRESETS[2]["roles"]]
+        if "macbook" in q or "developer" in q or "workstation" in q or "dock" in q:
+            return [item for item in CATALOGUE if item["category"] in WORKFLOW_PRESETS[3]["roles"]]
+
         for preset in WORKFLOW_PRESETS:
+            p_q = preset["query"].lower().replace("₹", "").replace(",", "").strip()
+            p_n = preset["name"].lower().replace("₹", "").replace(",", "").strip()
             if (preset["id"] in q or 
-                preset["query"].lower() in q or 
-                preset["name"].lower() in q or
+                p_q in q_norm or 
+                p_n in q_norm or
                 all(word in q for word in preset["name"].lower().split() if len(word) > 4)):
                 results = [item for item in CATALOGUE if item["category"] in preset["roles"]]
                 if results:

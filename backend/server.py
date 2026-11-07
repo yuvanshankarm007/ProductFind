@@ -152,6 +152,9 @@ class SearchRequest(BaseModel):
     warranty_priority: Optional[float] = 0.5
     speed_priority: Optional[float] = 0.5
     trust_tolerance: Optional[float] = 0.7
+    mode: Optional[str] = "single"
+    items_list: Optional[List[str]] = None
+    budget_limit: Optional[float] = None
 
 
 class CreateOrderRequest(BaseModel):
@@ -272,7 +275,10 @@ async def api_search_get(
     country: Optional[str] = None,
     currency: Optional[str] = None,
     language: Optional[str] = "en",
-    preferred_payment: Optional[str] = "all"
+    preferred_payment: Optional[str] = "all",
+    mode: Optional[str] = "single",
+    items: Optional[str] = None,
+    budget_limit: Optional[float] = None
 ):
     """GET handler for browser URL inspection or query param search."""
     search_q = (q or query or "").strip()
@@ -287,12 +293,17 @@ async def api_search_get(
         target_currency = "INR" if target_country == "IN" else ("GBP" if target_country == "GB" else ("EUR" if target_country == "DE" else "USD"))
     else:
         target_currency = currency.upper()
+
+    items_list = [s.strip() for s in items.split(",") if s.strip()] if items else None
     req = SearchRequest(
         query=search_q,
         country=target_country,
         currency=target_currency,
         language=language or "en",
-        preferred_payment=preferred_payment or "all"
+        preferred_payment=preferred_payment or "all",
+        mode=mode or "single",
+        items_list=items_list,
+        budget_limit=budget_limit
     )
     return await api_search(req)
 
@@ -315,7 +326,10 @@ async def api_search(req: SearchRequest):
         currency=req.currency or "USD",
         preferred_payment=req.preferred_payment or "all",
         session_id=req.session_id or "web-sess",
-        risk_prefs=risk_prefs
+        risk_prefs=risk_prefs,
+        mode=req.mode or "single",
+        items_list=req.items_list,
+        budget_limit=req.budget_limit
     )
     return state.model_dump()
 
@@ -552,7 +566,7 @@ async def api_arbitrate_workflow(req: WorkflowArbitrateRequest):
     try:
         items = req.items
         if not items:
-            raw_candidates = get_listings_for_workflow(req.query)
+            raw_candidates = get_listings_for_workflow(req.query, items_list=req.items_list)
             items = [ProductListing(**item) for item in raw_candidates]
         return cart_arbitrageur.optimize_cart_split(
             query=req.query,
@@ -700,6 +714,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = N
                     current_session = requested_session
                     q = global_bus.subscribe(session_id=current_session)
 
+                mode = data.get("mode", "single")
+                items_list = data.get("items_list")
+                budget_limit = data.get("budget_limit")
+
                 risk_prefs = RiskPreferences(
                     warranty_priority=float(data.get("warranty_priority", 0.5)),
                     speed_priority=float(data.get("speed_priority", 0.5)),
@@ -715,7 +733,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = N
                             currency=currency,
                             preferred_payment=preferred_payment,
                             session_id=current_session,
-                            risk_prefs=risk_prefs
+                            risk_prefs=risk_prefs,
+                            mode=mode,
+                            items_list=items_list,
+                            budget_limit=budget_limit
                         )
                         await websocket.send_text(json.dumps({
                             "type": "FINAL_RESULT",

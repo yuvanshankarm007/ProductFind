@@ -6,10 +6,11 @@
 
 import { escapeHtml } from './security.js';
 import { showToast } from './state.js';
+import { openDossierModal } from './merkle_modal.js';
 
 let activeSplitData = null;
 
-export async function openWorkflowArbitrageModal(query, budgetLimit = null) {
+export async function openWorkflowArbitrageModal(query, budgetLimit = null, itemsList = null) {
     const modal = document.getElementById('workflow-arbitrage-modal');
     if (!modal) return;
 
@@ -24,13 +25,18 @@ export async function openWorkflowArbitrageModal(query, budgetLimit = null) {
     `;
 
     try {
+        const payload = {
+            query: query,
+            budget_limit: budgetLimit
+        };
+        if (itemsList && itemsList.length > 0) {
+            payload.items_list = itemsList;
+        }
+
         const res = await fetch('/api/workflow/arbitrate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                query: query,
-                budget_limit: budgetLimit
-            })
+            body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
@@ -200,7 +206,10 @@ function renderArbitrageResult(data, query) {
             <!-- Action CTAs -->
             <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
                 <button type="button" id="btn-lock-split-cart" class="control-btn btn-primary" style="flex: 2; min-width: 180px; justify-content: center; font-weight: 700; background: linear-gradient(135deg, #0ea5e9, #2563eb); border: 1px solid #38bdf8;">
-                    🎯 1-Click Lock Split Cart (Snipe Deal)
+                    🎯 1-Click Lock Bundle & Checkout
+                </button>
+                <button type="button" id="btn-merkle-escrow" class="control-btn" style="flex: 1.5; min-width: 160px; justify-content: center; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; font-weight: 600;">
+                    📜 Merkle Dispute Dossier
                 </button>
                 <button type="button" id="btn-export-split-json" class="control-btn" style="flex: 1; min-width: 120px; justify-content: center;">
                     📥 Export Plan (.JSON)
@@ -236,8 +245,8 @@ function renderArbitrageResult(data, query) {
 
                 if (lockRes.ok) {
                     const lockData = await lockRes.json();
-                    showToast(`Deal Locked! Receipt: ${lockData.receipt_hash.substring(0, 16)}...`, "success");
-                    btnLock.textContent = "🔒 Split Cart Rate Locked (10m)";
+                    showToast(`Bundle Deal Locked! Receipt: ${lockData.receipt_hash.substring(0, 16)}...`, "success");
+                    btnLock.textContent = "🔒 Bundle Rate Locked (10m Escrow)";
                     btnLock.style.background = "#10b981";
                     btnLock.style.borderColor = "#34d399";
                 } else {
@@ -246,8 +255,17 @@ function renderArbitrageResult(data, query) {
             } catch (err) {
                 showToast("Failed to lock snipe deal: " + err.message, "error");
                 btnLock.disabled = false;
-                btnLock.textContent = "🎯 1-Click Lock Split Cart (Snipe Deal)";
+                btnLock.textContent = "🎯 1-Click Lock Bundle & Checkout";
             }
+        });
+    }
+
+    // Merkle Escrow Dispute Dossier
+    const btnMerkle = document.getElementById('btn-merkle-escrow');
+    if (btnMerkle) {
+        btnMerkle.addEventListener('click', () => {
+            closeWorkflowArbitrageModal();
+            openDossierModal(data.workflow_id || 'wf-bundle-escrow', 'Amazon + Flipkart + OEM Knapsack Escrow', `₹${optTotal}`);
         });
     }
 

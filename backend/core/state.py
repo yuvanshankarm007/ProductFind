@@ -230,6 +230,8 @@ class BlackboardState(BaseModel):
     price_analytics: Optional[PriceAnalytics] = None
     final_options: List[AnalyzedDealOption] = Field(default_factory=list)
     comparison_matrix: List[Dict[str, Any]] = Field(default_factory=list)
+    cart_split_result: Optional[Dict[str, Any]] = None
+    is_bundle: bool = False
     created_at: str = Field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
     @property

@@ -822,3 +822,90 @@ input[type="range"]::-webkit-slider-thumb:hover {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+/* Search Mode Switcher Tabs */
+.search-mode-switcher {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.mode-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+}
+
+.mode-tab-btn:hover {
+  color: #ffffff;
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.mode-tab-btn.active {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+
+.mode-tab-badge {
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: rgba(168, 85, 247, 0.25);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  color: #d8b4fe;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+}
+
+/* Bundle Item Builder Pill */
+.bundle-item-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #e0f2fe;
+  font-size: 0.8rem;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease;
+}
+
+.bundle-item-pill-remove {
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.bundle-item-pill-remove:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Bundle Spotlight Card */
+.bundle-spotlight-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 24px rgba(56, 189, 248, 0.15);
+}

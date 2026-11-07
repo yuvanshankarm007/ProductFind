@@ -77,6 +77,7 @@ class WorkflowArbitrateRequest(BaseModel):
     query: str = Field(..., description="Workflow query or preset query (e.g. 'WFH Setup under ₹50,000')")
     budget_limit: Optional[float] = Field(None, description="Maximum budget limit constraint")
     items: Optional[List[ProductListing]] = Field(None, description="Optional explicit candidate items to split")
+    items_list: Optional[List[str]] = Field(None, description="Optional custom user-provided list of item names or categories to arbitrate")
 
 
 class CartArbitrageurAgent:
