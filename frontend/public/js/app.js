@@ -53,11 +53,6 @@ function initApp() {
 
     // 7. Wire Sentinel AI Concierge Chatbot & Voice Bot for Doubts & Queries
     initConciergeBot();
-
-    // 8. Pre-seed demo search if first load
-    setTimeout(() => {
-        executeSearch("Sony WH-1000XM5");
-    }, 400);
 }
 
 function syncPreferencesUI() {
@@ -80,49 +75,62 @@ export function setMode(mode) {
     currentSearchMode = mode;
     const singleBtn = document.getElementById('mode-single-btn');
     const bundleBtn = document.getElementById('mode-bundle-btn');
+    const imageBtn = document.getElementById('mode-image-btn');
     const bundleBuilder = document.getElementById('bundle-builder-container');
+    const imageContainer = document.getElementById('image-search-container');
     const searchInput = document.getElementById('search-input');
     const searchBtnLabel = document.getElementById('search-btn-label');
 
+    const dimBtn = (btn) => {
+        if (!btn) return;
+        btn.classList.remove('active');
+        btn.style.setProperty('background-color', 'rgba(15, 23, 42, 0.75)', 'important');
+        btn.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
+        btn.style.setProperty('color', '#94a3b8', 'important');
+    };
+
+    const activateBtn = (btn) => {
+        if (!btn) return;
+        btn.classList.add('active');
+        btn.style.setProperty('background-color', 'rgba(14, 165, 233, 0.18)', 'important');
+        btn.style.setProperty('border', '1px solid #38bdf8', 'important');
+        btn.style.setProperty('color', '#38bdf8', 'important');
+    };
+
     if (mode === 'bundle') {
-        if (singleBtn) {
-            singleBtn.classList.remove('active');
-            singleBtn.style.setProperty('background-color', 'rgba(15, 23, 42, 0.75)', 'important');
-            singleBtn.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
-            singleBtn.style.setProperty('color', '#94a3b8', 'important');
-        }
-        if (bundleBtn) {
-            bundleBtn.classList.add('active');
-            bundleBtn.style.setProperty('background-color', 'rgba(14, 165, 233, 0.18)', 'important');
-            bundleBtn.style.setProperty('border', '1px solid #38bdf8', 'important');
-            bundleBtn.style.setProperty('color', '#38bdf8', 'important');
-        }
+        dimBtn(singleBtn);
+        dimBtn(imageBtn);
+        activateBtn(bundleBtn);
         if (bundleBuilder) bundleBuilder.style.display = 'block';
+        if (imageContainer) imageContainer.style.display = 'none';
         if (searchBtnLabel) searchBtnLabel.textContent = '📦 Search Bundle Discounts';
         if (searchInput) {
             searchInput.placeholder = 'e.g. 27-inch 4K Monitor, Mechanical Keyboard, Ergonomic Chair, 1080p Webcam';
-            if (!searchInput.value || searchInput.value.includes('Sony WH-1000XM5')) {
+            if (!searchInput.value) {
                 searchInput.value = bundleItems.join(', ');
             }
         }
         renderBundlePills();
-    } else {
-        if (singleBtn) {
-            singleBtn.classList.add('active');
-            singleBtn.style.setProperty('background-color', 'rgba(14, 165, 233, 0.18)', 'important');
-            singleBtn.style.setProperty('border', '1px solid #38bdf8', 'important');
-            singleBtn.style.setProperty('color', '#38bdf8', 'important');
-        }
-        if (bundleBtn) {
-            bundleBtn.classList.remove('active');
-            bundleBtn.style.setProperty('background-color', 'rgba(15, 23, 42, 0.75)', 'important');
-            bundleBtn.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
-            bundleBtn.style.setProperty('color', '#94a3b8', 'important');
-        }
+    } else if (mode === 'image') {
+        dimBtn(singleBtn);
+        dimBtn(bundleBtn);
+        activateBtn(imageBtn);
         if (bundleBuilder) bundleBuilder.style.display = 'none';
+        if (imageContainer) imageContainer.style.display = 'block';
         if (searchBtnLabel) searchBtnLabel.textContent = 'Arbitrate Deals';
         if (searchInput) {
-            searchInput.placeholder = 'Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, iPhone 16 Pro)...';
+            searchInput.placeholder = 'Upload, drop, or select product image below, or type query...';
+        }
+    } else {
+        // Single Deal mode (default)
+        dimBtn(bundleBtn);
+        dimBtn(imageBtn);
+        activateBtn(singleBtn);
+        if (bundleBuilder) bundleBuilder.style.display = 'none';
+        if (imageContainer) imageContainer.style.display = 'none';
+        if (searchBtnLabel) searchBtnLabel.textContent = 'Arbitrate Deals';
+        if (searchInput) {
+            searchInput.placeholder = 'Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, Epson L3250)...';
         }
     }
 }
@@ -201,6 +209,11 @@ function setupEventListeners() {
         bundleModeBtn.addEventListener('click', () => setMode('bundle'));
     }
 
+    const imageModeBtn = document.getElementById('mode-image-btn');
+    if (imageModeBtn) {
+        imageModeBtn.addEventListener('click', () => setMode('image'));
+    }
+
     // Bundle Quick Add Item Input & Buttons
     const bundleQuickInput = document.getElementById('bundle-item-quick-input');
     const btnAddBundleItem = document.getElementById('btn-add-bundle-item');
@@ -260,7 +273,6 @@ function setupEventListeners() {
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             updatePromptBadges(searchInput.value);
-            clearTimeout(searchDebounceTimer);
             const q = searchInput.value.trim();
             // If user typed comma-separated in bundle mode, auto-populate pills
             if (currentSearchMode === 'bundle' && q.includes(',')) {
@@ -269,16 +281,6 @@ function setupEventListeners() {
                     bundleItems = parts;
                     renderBundlePills();
                 }
-            }
-            // Auto-search after 800ms pause if at least 3 characters and changed
-            if (q.length >= 3 && q.toLowerCase() !== (lastExecutedQuery || '').toLowerCase()) {
-                searchDebounceTimer = setTimeout(() => {
-                    lastExecutedQuery = q;
-                    const isBundleIntent = currentSearchMode === 'bundle' || 
-                        q.includes(',') || 
-                        ['setup', 'bundle', 'bulk', 'kit', 'pack', 'knapsack', 'peripherals', 'workstation', 'rig', 'wfh'].some(k => q.toLowerCase().includes(k));
-                    executeSearch(q, isBundleIntent ? 'bundle' : 'single', isBundleIntent ? bundleItems : null);
-                }, 800);
             }
         });
         updatePromptBadges(searchInput.value);

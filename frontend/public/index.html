@@ -20,7 +20,7 @@
     </script>
 
     <!-- Custom Pre-composed Stylesheet (Replaces 4.7MB runtime overhead) -->
-    <link rel="stylesheet" href="./css/styles.css?v=2.5">
+    <link rel="stylesheet" href="./css/styles.css?v=2.6">
 
     <!-- Zero-White Browser Button Reset & Glassmorphism Defaults (Prevents browser user-agent white flashes) -->
     <style>
@@ -157,23 +157,21 @@
                         <span>📦 Bundle / Bulk Discount</span>
                         <span class="mode-tab-badge">Knapsack Split</span>
                     </button>
+                    <button type="button" id="mode-image-btn" class="mode-tab-btn" data-mode="image" style="background-color: rgba(15, 23, 42, 0.75) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; color: #94a3b8 !important;">
+                        <span>🖼️ Image Search</span>
+                        <span class="mode-tab-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">AI Visual Match</span>
+                    </button>
                 </div>
 
                 <form id="search-form">
                     <div class="search-input-group">
-                        <input type="text" id="search-input" class="search-input" placeholder="Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, iPhone 16 Pro)..." value="Sony WH-1000XM5" autocomplete="off" required>
+                        <input type="text" id="search-input" class="search-input" placeholder="Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, Epson L3250)..." value="" autocomplete="off">
                         <div class="search-actions-group">
-                            <button type="button" id="btn-voice-search" class="multimodal-btn voice-btn" title="Voice Search (Click to speak)" style="background-color: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; color: #94a3b8 !important;">
+                            <button type="button" id="btn-voice-search" class="multimodal-btn voice-btn" title="Voice Search: Click to speak and transcribe directly into search box" style="background-color: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; color: #94a3b8 !important;">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                                     <line x1="12" y1="19" x2="12" y2="22"></line>
-                                </svg>
-                            </button>
-                            <button type="button" id="btn-image-search" class="multimodal-btn image-btn" title="Visual Search (Upload, paste, or drop image)" style="background-color: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; color: #94a3b8 !important;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                                    <circle cx="12" cy="13" r="4"></circle>
                                 </svg>
                             </button>
                         </div>
@@ -191,11 +189,68 @@
                     <!-- Visual Search Match Indicator Bar (Shows when visual query is active) -->
                     <div id="visual-search-indicator-bar" style="display: none; margin-top: 8px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 6px 12px; align-items: center; justify-content: space-between; font-size: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <span id="visual-indicator-badge" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px;">📷 96% Match</span>
+                            <span id="visual-indicator-badge" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px;">📷 98% Match</span>
                             <span id="visual-indicator-text" style="color: #f8fafc; font-weight: 700;">Sony WH-1000XM5</span>
                             <span id="visual-indicator-category" style="color: #94a3b8; font-size: 11px;">(Wireless Noise Cancelling Headphones)</span>
                         </div>
                         <button type="button" id="btn-clear-visual-search" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; padding: 2px 6px;" title="Clear Visual Match Filter">✕</button>
+                    </div>
+
+                    <!-- Dedicated Interactive Image Search Studio (Active in Image Search Mode) -->
+                    <div id="image-search-container" style="display: none; margin-top: 10px; background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+                                <span>🖼️ Image Search & Packaging Feature Extractor</span>
+                                <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 700;">Zero-Crash Guard</span>
+                            </div>
+                            <span style="font-size: 11px; color: #94a3b8;">Drop an image, paste (Ctrl+V), or click a benchmark sample below:</span>
+                        </div>
+
+                        <!-- Dropzone Area -->
+                        <div id="direct-image-dropzone" style="border: 2px dashed rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 18px; text-align: center; cursor: pointer; background: rgba(30, 41, 59, 0.4); transition: all 0.2s ease;">
+                            <div id="direct-dropzone-prompt">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 6px;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <div style="font-size: 13px; font-weight: 600; color: #f8fafc; margin-bottom: 3px;">
+                                    Click to Browse Image or Drag & Drop File Here
+                                </div>
+                                <div style="font-size: 11px; color: #94a3b8;">
+                                    Supports JPEG, PNG, WebP, GIF • You can also press <kbd style="background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 3px; font-size: 10px; color: #38bdf8;">Ctrl+V</kbd> anywhere
+                                </div>
+                            </div>
+                            <input type="file" id="direct-image-file-input" accept="image/*" style="display: none;">
+
+                            <!-- Image Preview & Detected Match Banner -->
+                            <div id="direct-image-preview-panel" style="display: none; align-items: center; justify-content: space-between; gap: 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 14px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <img id="direct-image-preview-img" src="" alt="Selected Product Preview" style="width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);">
+                                    <div style="text-align: left;">
+                                        <div id="direct-image-detected-title" style="font-size: 13px; font-weight: 700; color: #f8fafc;">Scanning image...</div>
+                                        <div id="direct-image-detected-subtitle" style="font-size: 11px; color: #34d399; font-weight: 600;">Extracting brand and model...</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button type="button" id="btn-direct-arbitrate-now" class="control-btn" style="background: rgba(14, 165, 233, 0.25); border-color: #38bdf8; color: #38bdf8; font-weight: 700; padding: 6px 14px; font-size: 12px;">
+                                        ⚡ Arbitrate This Deal
+                                    </button>
+                                    <button type="button" id="btn-clear-direct-image" style="background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 4px;" title="Remove Image">✕</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Benchmark Quick Sample Presets -->
+                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-size: 11px; color: #64748b; font-weight: 600;">Instant Benchmark Presets:</span>
+                            <button type="button" class="preset-image-chip" data-product="Sony WH-1000XM5" data-sample="sony-xm5" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">🎧 Sony WH-1000XM5</button>
+                            <button type="button" class="preset-image-chip" data-product="Apple MacBook Pro 16 M3 Max" data-sample="macbook-m3" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">💻 MacBook Pro 16 M3</button>
+                            <button type="button" class="preset-image-chip" data-product="iPhone 16 Pro" data-sample="iphone-16" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">📱 iPhone 16 Pro</button>
+                            <button type="button" class="preset-image-chip" data-product="Epson EcoTank L3250 Wi-Fi All-in-One Ink Tank Printer" data-sample="epson-l3250" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">🖨️ Epson L3250 Printer</button>
+                            <button type="button" class="preset-image-chip" data-product="Nintendo Switch OLED Mario Edition" data-sample="switch-oled" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">🎮 Nintendo Switch OLED</button>
+                            <button type="button" class="preset-image-chip" data-product="Herman Miller Aeron Chair" data-sample="aeron" style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer;">💺 Aeron Chair</button>
+                        </div>
                     </div>
 
                     <!-- Interactive Bundle Builder (Active in Bundle Mode) -->
@@ -758,6 +813,6 @@
     <div id="toast-container"></div>
 
     <!-- Core App Bootstrap Module (Versioned for cache-busting) -->
-    <script type="module" src="./js/app.js?v=2.5"></script>
+    <script type="module" src="./js/app.js?v=2.6"></script>
 </body>
 </html>
