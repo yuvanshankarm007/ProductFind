@@ -305,8 +305,9 @@ class StrategyCompiler:
             ]
 
         if not live_verified_pool:
-            # Absolute last resort fallback: any non-dead option
-            live_verified_pool = [opt for opt in eligible_pool if not getattr(opt.listing, 'is_dead_link', False)] or eligible_pool
+            # NO DEFAULT FALLBACK ALLOWED!
+            # If no verified in-stock listing survives audit, return empty results rather than padding with dead/fake links
+            return [], comparison_matrix
 
         # 1. OPTIMAL VALUE CHAMPION (In-stock domestic verified retailer with zero import customs risk)
         domestic_candidates = [opt for opt in live_verified_pool if opt.listing.origin_country == preferences.country]
@@ -335,37 +336,36 @@ class StrategyCompiler:
             max_protect.rank = 2
             curated.append(max_protect)
         else:
-            max_protect = optimal.model_copy(deep=True)
-            max_protect.recommendation_tier = "MAX_PROTECTION"
-            max_protect.tier_reason = f"Selected for buyer protection with {max_protect.trust.overall_score}/100 seller trust rating (verified in stock)."
-            max_protect.rank = 2
-            curated.append(max_protect)
+            max_protect = None
 
         # 3. BUDGET STICKER (Lowest Initial Outlay from live verified pool)
-        pool_budget = [opt for opt in live_verified_pool if opt.id not in (optimal.id, max_protect.id)]
-        if not pool_budget:
-            # If 2 distinct items exist in live verified pool, pick the other one
-            pool_budget = [opt for opt in live_verified_pool if opt.id != optimal.id]
+        used_ids = {optimal.id}
+        if max_protect:
+            used_ids.add(max_protect.id)
+        pool_budget = [opt for opt in live_verified_pool if opt.id not in used_ids]
 
         if pool_budget:
             candidate_budget = sorted(pool_budget, key=lambda x: x.converted_cash_outlay)[0]
             budget = candidate_budget.model_copy(deep=True)
             budget.recommendation_tier = "BUDGET_STICKER"
             budget.tier_reason = f"Lowest initial cash outlay ({self.fx.format_price(budget.converted_cash_outlay, curr)}) among verified live in-stock retailers."
-            budget.rank = 3
+            budget.rank = len(curated) + 1
             curated.append(budget)
         else:
-            budget = (optimal or max_protect).model_copy(deep=True)
-            budget.recommendation_tier = "BUDGET_STICKER"
-            budget.tier_reason = f"Lowest initial cash outlay ({self.fx.format_price(budget.converted_cash_outlay, curr)}) among verified live in-stock retailers."
-            budget.rank = 3
-            curated.append(budget)
+            budget = None
+
+        summary_parts = [f"1) Optimal Value ({optimal.listing.merchant})"]
+        if max_protect:
+            summary_parts.append(f"2) Max Protection ({max_protect.listing.merchant})")
+        if budget:
+            summary_parts.append(f"{len(summary_parts)+1}) Budget Sticker ({budget.listing.merchant})")
+        curated_summary = ", ".join(summary_parts)
 
         await self.bus.emit(
             source="StrategyCompiler",
             target="ClientUI",
             event_type="SYNTHESIZED",
-            content=f"Curated strategic options in {curr}: 1) Optimal Value ({optimal.listing.merchant}), 2) Max Protection ({max_protect.listing.merchant}), 3) Budget Sticker ({budget.listing.merchant}). Comparison matrix compiled for {len(comparison_matrix)} listings.",
+            content=f"Curated {len(curated)} strategic in-stock options in {curr}: {curated_summary}. Comparison matrix compiled for {len(comparison_matrix)} listings.",
             payload={"count": len(curated), "currency": curr}
         )
 

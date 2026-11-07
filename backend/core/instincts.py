@@ -337,26 +337,55 @@ class CommerceInstinctsVault:
             enforce_in_stock = True
             banned_domains = []
 
+        # 0. Empty Link Check (Omit useless links if URL field is defined)
+        has_url_field = ("listing_url" in listing or "url" in listing) if isinstance(listing, dict) else (hasattr(listing, "listing_url") or hasattr(listing, "url"))
+        if has_url_field and (not url or url.strip() == ""):
+            return True, f"Quarantined Empty Direct Link: {merchant}"
+
         # 1. 404 / Dead-Link Check
-        if enforce_no_404 and (is_dead or http_status == 404 or "404" in stock_status):
+        if enforce_no_404 and (is_dead or http_status in (404, 410) or "404" in stock_status or "omitted" in stock_status or "dead" in stock_status):
             return True, f"Quarantined 404 Dead Link: {url or merchant}"
 
-        # 2. Out-of-Stock Check (including 'notify me' and 'sold out')
+        # 2. Out-of-Stock Check (including 'notify me' and 'sold out' and 'currently unavailable')
         is_out_of_stock = (
             not in_stock
             or not is_avail
             or "out of stock" in stock_status
             or "sold out" in stock_status
             or "notify me" in stock_status
+            or "unavailable" in stock_status
+            or "depleted" in stock_status
             or price <= 0
         )
         if enforce_in_stock and is_out_of_stock:
             return True, f"Quarantined Out-of-Stock Inventory: {merchant} ({stock_status})"
 
+        # 2.5 Regional Deliverability Check
+        if "does_not_ship" in stock_status or "cannot be shipped" in stock_status:
+            return True, f"Quarantined Regional Shipping Block: {merchant} does not ship to destination"
+
         # 3. User Banned Domain Check
         for b_dom in banned_domains:
             if b_dom.lower() in merchant_domain or b_dom.lower() in merchant.lower():
                 return True, f"Quarantined Banned Domain: {merchant} matches user prompt blacklist '{b_dom}'"
+
+        # 3.5 No-Accessories Constraint Check (Accessory Hijack Filter)
+        enforce_no_acc = False
+        if constraints is not None:
+            if isinstance(constraints, dict):
+                enforce_no_acc = bool(constraints.get("no_accessories", False))
+            else:
+                enforce_no_acc = bool(getattr(constraints, "no_accessories", False))
+        if enforce_no_acc:
+            p_title = str(_get("product_title") or "").lower()
+            acc_keywords = [
+                'brush', 'roller', 'pad', 'mop', 'cloth', 'filter', 'attachment', 'dock',
+                'cleaner head', 'spare part', 'repair kit', 'dustbin', 'accessories kit',
+                'accessories', 'accessory', 'charging cable', 'cable', 'battery pack',
+                'cleaning head', 'hepa', 'dust bag', 'bag replacement'
+            ]
+            if any(k in p_title for k in acc_keywords):
+                return True, f"Quarantined Accessory Item: {merchant} matches prompt negative constraint 'no accessories'"
 
         # Check against registered USER_QUARANTINE_MERCHANT instincts
         for inst in self._instincts.values():

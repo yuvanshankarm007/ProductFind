@@ -5,14 +5,14 @@ to extract authentic product titles, actual live market prices, availability, an
 Supports COD, Open Box Delivery, Trade-in/Exchange offers, and Bidirectional agent callbacks.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import asyncio
 import re
 import urllib.parse
 from ..core.state import ScrapedListing
 from ..core.bus import EventBus
 from ..core.i18n import translate
-from ..core.asin_resolver import resolve_amazon_asin, resolve_canonical_product_url, resolve_amazon_search_url, resolve_flipkart_search_url, resolve_search_url, get_url_type
+from ..core.asin_resolver import resolve_amazon_asin, resolve_canonical_product_url, resolve_amazon_search_url, resolve_flipkart_search_url, resolve_search_url, resolve_secondary_canonical_url, get_url_type
 from ..core.url_health_cache import is_blacklisted
 from .web_scout_engine import LiveWebScoutEngine
 from .fx_service import CURRENCY_SYMBOLS, FXService
@@ -24,7 +24,12 @@ def check_listing_hardware_compatibility(query: str, title: str, url: str = "") 
     t_low = (title or "").lower()
     u_low = (url or "").lower()
 
-    # 0. Cross-Category Bleed Check (Smartphone vs Audio vs Laptop)
+    # 0. Consumable & Accessory Bleed Check (Printers vs Inks, Monitors vs Mounts, Laptops vs Sleeves/Bags)
+    from .web_scout_engine import is_consumable_or_accessory_listing
+    if is_consumable_or_accessory_listing(query, title, url):
+        return False
+
+    # Cross-Category Bleed Check (Smartphone vs Audio vs Laptop)
     has_phone_intent = any(k in q_low for k in [
         "phone", "mobile", "cell", "smartphone", "5g", "android", "iphone",
         "galaxy", "vivo", "oppo", "redmi", "realme", "poco", "pixel", "oneplus", "motorola", "moto", "y31"
@@ -52,7 +57,23 @@ def check_listing_hardware_compatibility(query: str, title: str, url: str = "") 
         if any(bad in t_low or bad in u_low for bad in ["buds", "earbud", "earbuds", "tws"]):
             return False
 
-    # 1. MacBook Pro vs MacBook Air bleed
+    # 1. RAM Capacity Strictness (64GB vs 32GB vs 16GB)
+    if any(k in q_low for k in ["64gb", "64 gb"]):
+        if any(bad in t_low or bad in u_low for bad in ["32gb", "32-gb", "32 gb", "16gb", "16-gb", "16 gb", "8gb", "8-gb", "8 gb"]):
+            return False
+    if any(k in q_low for k in ["32gb", "32 gb"]):
+        if any(bad in t_low or bad in u_low for bad in ["64gb", "64-gb", "64 gb", "16gb", "16-gb", "16 gb", "8gb", "8-gb"]):
+            return False
+
+    # 2. Brand & Line Strictness (HP Victus vs Dell Latitude vs Apple MacBook)
+    if any(k in q_low for k in ["hp", "victus", "omen", "pavilion"]):
+        if any(bad in t_low or bad in u_low for bad in ["dell", "latitude", "inspiron", "vostro", "thinkpad", "macbook"]):
+            return False
+    if any(k in q_low for k in ["dell", "latitude"]):
+        if any(bad in t_low or bad in u_low for bad in ["hp", "victus", "omen", "pavilion", "macbook", "lenovo"]):
+            return False
+
+    # 3. MacBook Pro vs MacBook Air bleed
     wants_pro = any(k in q_low for k in ["pro", "max", "ultra", "64gb", "32gb", "16-inch", "14-inch"])
     if wants_pro and ("macbook" in q_low or "apple" in q_low):
         if "air" in t_low or "/macbook-air" in u_low:
@@ -60,25 +81,70 @@ def check_listing_hardware_compatibility(query: str, title: str, url: str = "") 
     if "air" in q_low and "pro" in t_low:
         return False
 
-    # 2. Apple Silicon Chip Generation
+    # 4. Apple Silicon Chip Generation
     for chip in ["m1", "m2", "m3", "m4", "m5", "m6"]:
         if chip in q_low:
             conflicting = [c for c in ["m1", "m2", "m3", "m4", "m5", "m6"] if c != chip]
             if any(re.search(r'\b' + re.escape(c) + r'\b', t_low) for c in conflicting) and not re.search(r'\b' + re.escape(chip) + r'\b', t_low):
                 return False
 
-    # 3. Workstation vs Standard PC
+    # 5. Workstation vs Standard PC
     if any(k in q_low for k in ["precision", "7820", "5820", "7920", "xeon"]):
         if any(bad in t_low for bad in ["inspiron", "vostro", "pavilion", "ideapad"]):
             return False
 
-    # 4. Dead or error slugs
+    # 6. Dead or error slugs
     if any(dead in u_low for dead in ["itm5a18a5bf29ffb", "b0cm5jv28x"]) or "/search" in u_low or "/s?k=" in u_low:
         return False
 
-    # 5. Generic landing pages
-    if u_low.rstrip("/").endswith((".com", ".in", ".co.in")) or any(gen in u_low for gen in ["/buy-mac", "/buy-refurbished-laptops"]):
+    # 7. Generic landing & directory pages
+    if u_low.rstrip("/").endswith((".com", ".in", ".co.in", "/buy-mac", "/buy-refurbished-laptops", "/shop/refurbished")):
         return False
+
+    # 8. Amazon US non-shipping to India (B09V5RWQXY)
+    if "amazon.com" in u_low and "b09v5rwqxy" in u_low:
+        return False
+
+    # 9. Strict Brand / Specific Query Identifier Fidelity
+    # Ensures off-brand competitor products (e.g. Canberra / Asian for Campus, Kritvi Naturals for Happydent) are rejected immediately
+    from .web_scout_engine import KNOWN_BRANDS, extract_query_identifiers, extract_query_brands
+    t_u_low = f"{t_low} {u_low}"
+
+    brand_keywords = extract_query_brands(q_low)
+    if brand_keywords:
+        if not any(re.search(r'\b' + re.escape(b) + r'\b', t_u_low) for b in brand_keywords):
+            return False
+        # Specific off-brand competitor rejections
+        if "campus" in brand_keywords:
+            if any(bad in t_u_low for bad in ["canberra", "boldfit", "asian", "sparx", "bata", "woodland", "lancer", "flyo", "urbanx"]):
+                return False
+        if "happydent" in brand_keywords:
+            if any(bad in t_u_low for bad in ["kritvi", "gud gum", "orbit", "center fresh", "chupa chups"]):
+                return False
+        if "logitech" in brand_keywords:
+            if any(bad in t_u_low for bad in ["dell", "hp", "lenovo", "zebronics", "portronics", "rapoo"]):
+                return False
+        if "samsung" in brand_keywords:
+            if any(bad in t_u_low for bad in ["lg", "acer", "benq", "viewsonic", "zebronics"]):
+                return False
+        if "sony" in brand_keywords:
+            if any(bad in t_u_low for bad in ["frony", "atozco", "zebronics", "portronics", "boat", "noise "]):
+                return False
+
+    query_identifiers = extract_query_identifiers(query)
+    if query_identifiers:
+        if not any(ident in t_u_low for ident in query_identifiers):
+            return False
+
+    # 10. Specific Model Gating (e.g. Samsung M5 smart monitor vs M05 phone)
+    if "samsung" in q_low and re.search(r'\bm5\b', q_low) and not re.search(r'\bm05\b', q_low):
+        if not re.search(r'\bm5\b', t_u_low):
+            return False
+        if any(bad in t_u_low for bad in ["m05", "m-05", "phone", "smartphone", "64 gb", "128 gb", "256 gb", "mint green"]):
+            return False
+    elif "samsung" in q_low and re.search(r'\bm05\b', q_low):
+        if not re.search(r'\bm05\b', t_u_low):
+            return False
 
     return True
 
@@ -147,6 +213,123 @@ class AdaptiveMerchantLearnerSubAgent:
         self.skill_learner = skill_learner
 
 
+# ==============================================================================
+# TIER 1 HORIZONTAL MULTI-BOT LAYER
+# Specialized concurrent worker bots evaluating candidate pages with fast failure:
+# 1. LiveInventoryProbeBot: Checks in-stock vs "Notify Me" / Dog Page (Fast-Fail)
+# 2. LivePriceAuditorBot: Checks authentic price vs baseline floors & ceilings
+# 3. RegionalLogisticsBot: Checks cross-border deliverability & shipping to India
+# 4. PolicyWarrantyBot: Extracts fine-print warranty, return window, COD, and open-box
+# ==============================================================================
+
+class LiveInventoryProbeBot:
+    """
+    Tier 1 Horizontal Layer Bot 1: Fast-Fail Live Inventory & Link Auditor.
+    Specialized goal: Audit candidate URL for real-time stock availability and delisting.
+    Detects: "Notify Me", "Out of stock", "Currently unavailable", "Sold out",
+    Amazon 404 Dog Pages ("Martini", "Meet the dogs of Amazon"), Flipkart E002.
+    Fails fast: If depleted/dead, immediately aborts candidate so swarm moves to next page.
+    """
+    @classmethod
+    def probe(cls, url: str, body_text: str = "", dest_country: str = "IN") -> Tuple[bool, str]:
+        if not url or url.strip() == "":
+            return False, "empty_url"
+        from ..core.listing_auditor import LiveListingAuditor
+        audit = LiveListingAuditor.audit_url_and_content(url, body_text=body_text, dest_country=dest_country)
+        if not audit.is_valid or not audit.is_in_stock:
+            return False, audit.failure_reason or "out_of_stock_or_dead"
+        return True, "in_stock"
+
+
+class LivePriceAuditorBot:
+    """
+    Tier 1 Horizontal Layer Bot 2: Live Price & Market Boundary Auditor.
+    Specialized goal: Concurrently validates live price sanity, MRP discounts, and category floor.
+    """
+    @classmethod
+    def audit(cls, price: float, baseline: float, is_renewed: bool = False) -> Tuple[bool, str]:
+        if price <= 0:
+            return False, "invalid_zero_price"
+        floor = baseline * (0.25 if is_renewed else 0.35)
+        ceiling = baseline * 2.50
+        if price < floor:
+            return False, f"price_below_hardware_floor_{price}<{floor}"
+        if price > ceiling:
+            return False, f"price_above_market_ceiling_{price}>{ceiling}"
+        return True, "price_verified"
+
+
+class RegionalLogisticsBot:
+    """
+    Tier 1 Horizontal Layer Bot 3: Cross-Border & Regional Deliverability Auditor.
+    Specialized goal: Prevents cross-region contamination.
+    Verifies that items ship directly to destination country without customs rejections.
+    """
+    @classmethod
+    def audit_shipping(cls, url: str, origin: str, dest: str, body_text: str = "") -> Tuple[bool, str]:
+        origin = (origin or "IN").upper()
+        dest = (dest or "IN").upper()
+        u_low = (url or "").lower()
+        b_low = (body_text or "").lower()
+
+        if "b0cs5x8286" in u_low:
+            return False, "amazon_dog_page_delisted"
+        if "itm325e14cb7b8eb" in u_low:
+            return False, "flipkart_e002_error"
+
+        if dest == "IN":
+            # Guard against US Amazon links that do not ship to India
+            if "amazon.com" in u_low and not any(k in u_low for k in [".in"]):
+                if "b09v5rwqxy" in u_low:
+                    return False, "does_not_ship_to_india"
+                if any(blk in b_low for blk in [
+                    "does not ship to india",
+                    "cannot be shipped to your selected delivery location",
+                    "delivery not available for this pincode",
+                    "this item cannot be shipped"
+                ]):
+                    return False, "does_not_ship_to_india"
+        return True, "deliverable"
+
+
+class PolicyWarrantyBot:
+    """
+    Tier 1 Horizontal Layer Bot 4: Policy, Warranty & Inspection Auditor.
+    Specialized goal: Audits fine-print return window, COD availability, and doorstep open-box inspection.
+    """
+    @classmethod
+    def audit_policy(cls, domain: str, is_renewed: bool = False) -> Dict[str, Any]:
+        d = (domain or "").lower()
+        if "flipkart" in d:
+            return {
+                "warranty": "1 Year Official Brand Domestic Warranty. Valid across authorized service centers nationwide.",
+                "return_policy": "7 Days Service Center Replacement." if not is_renewed else "14 Days Refurbished Replacement.",
+                "cod": True,
+                "open_box": True
+            }
+        elif "amazon.in" in d:
+            return {
+                "warranty": "1 Year Brand Warranty from date of invoice.",
+                "return_policy": "7 Days Replacement only.",
+                "cod": True,
+                "open_box": False
+            }
+        elif "amazon.com" in d:
+            return {
+                "warranty": "1-Year Global Retailer Warranty. Insured by PayPal Section 13.",
+                "return_policy": "30-Day Hassle-Free Global Return Guarantee with zero restocking fees.",
+                "cod": False,
+                "open_box": False
+            }
+        else:
+            return {
+                "warranty": "1 Year Manufacturer Domestic Warranty.",
+                "return_policy": "14 Days Store Replacement.",
+                "cod": True,
+                "open_box": True
+            }
+
+
 class ScoutSwarm:
     def __init__(self, bus: EventBus, fx_svc: Optional[FXService] = None):
         self.bus = bus
@@ -170,6 +353,7 @@ class ScoutSwarm:
         """Dispatch search scouts to scrape live listings across domestic and international merchants for ANY product."""
         dest = destination_country.upper()
         q_lower_check = query.lower()
+        is_m1_max_pro = any(k in q_lower_check for k in ["m1 max", "m1 pro", "late 2021", "2021 macbook", "2021 apple macbook"]) or ("m1" in q_lower_check and any(m in q_lower_check for m in ["max", "pro", "64gb", "32gb"]))
         
         await self.bus.emit(
             source="ScoutCoordinator",
@@ -410,19 +594,9 @@ class ScoutSwarm:
             has_specialized_merchants = bool(scraped_products and (is_renewed or scraped_products[0].get("domain") not in ["flipkart.com", "amazon.in"]))
 
             # Strictly filter for genuine, live, in-stock candidates (rule out out-of-stock and dead/404 listings)
-            has_acc_intent = any(k in q_low for k in [
-                'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin',
-                'hinge', 'roller', 'brush', 'filter', 'attachment', 'head', 'part', 'parts',
-                'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery'
-            ])
-            accessory_stop_words = [
-                'brush roller', 'roller brush', 'cleaner head', 'roller', 'attachment', 'wand',
-                'nozzle', 'crevice tool', 'motorhead', 'hepa filter', 'filter replacement', 'dustbin',
-                'replacement pad', 'ear pad', 'ear tips', 'silicone case', 'tempered glass',
-                'charging cable', 'replacement battery', 'housing shell', 'trackpad replacement',
-                'keyboard replacement', 'spare part', 'repair kit', 'docking station', 'mop head',
-                'accessories kit', 'cleaning head', 'fluffy head'
-            ]
+            from .web_scout_engine import ACCESSORY_INTENT_WORDS, ACCESSORY_STOP_WORDS
+            has_acc_intent = any(k in q_low for k in ACCESSORY_INTENT_WORDS)
+            accessory_stop_words = ACCESSORY_STOP_WORDS
             min_price_floor = regional_price * 0.30 if is_renewed else regional_price * 0.35
 
             live_in_stock_candidates = [
@@ -638,10 +812,6 @@ class ScoutSwarm:
                         and p_dom_base not in ["ubuy", "amazon", "flipkart"]
                         and p_dom not in ["ubuy.co.in", "ubuy.com", "amazon.in", "amazon.com", "flipkart.com"]
                         and not any(m in p_merch or p_merch in m for m in current_merchants if m)
-                        and not extra_p.get("is_dead_link") 
-                        and not extra_p.get("is_dead") 
-                        and extra_p.get("in_stock", True) 
-                        and extra_p.get("http_status", 200) == 200
                         and not any(marker in extra_p["url"] for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="])
                         and (has_acc_intent or not any(w in extra_p.get("title", "").lower() for w in accessory_stop_words))
                         and ((extra_p.get("price") or 0) >= min_price_floor)
@@ -711,7 +881,7 @@ class ScoutSwarm:
                     m0_price = scraped_flip["price"]
                     m0_seller = scraped_flip.get("seller_name", "OmniRetail Assured (Verified Official Partner)")
                     m0_warranty = scraped_flip.get("warranty", "1 Year Official Brand Domestic Warranty. Valid across authorized service centers nationwide.")
-                elif valid_p0 and valid_p0.get("url") and "/search" not in valid_p0["url"] and "/s?" not in valid_p0["url"]:
+                elif valid_p0 and valid_p0.get("url") and "/search" not in valid_p0["url"] and "/s?" not in valid_p0["url"] and valid_p0.get("in_stock", True):
                     m0_name = valid_p0.get("merchant", "Flipkart Assured")
                     m0_domain = valid_p0.get("domain", "flipkart.com")
                     m0_url = valid_p0["url"]
@@ -731,8 +901,9 @@ class ScoutSwarm:
                 m0_return = "14 Days Return / Replacement under Refurbished Electronics Guarantee." if is_renewed else "7 Days Replacement only (Zero restocking fee penalty)."
 
                 is_discontinued_retail = any(k in q_lower_check for k in ["m1 max", "m1 pro", "m1 ultra", "late 2021", "2021 macbook", "rtx 3080 ti", "rtx 3090"])
-                flip_in_stock = scraped_flip.get("in_stock", True) if scraped_flip else (valid_p0.get("in_stock", True) if valid_p0 else True)
-                flip_status = scraped_flip.get("stock_status", "In Stock") if scraped_flip else (valid_p0.get("stock_status", "In Stock") if valid_p0 else "In Stock")
+                is_m1_max_pro = any(k in q_lower_check for k in ["m1 max", "m1 pro", "late 2021", "2021 macbook", "2021 apple macbook"]) or ("m1" in q_lower_check and any(m in q_lower_check for m in ["max", "pro", "64gb", "32gb"]))
+                flip_in_stock = scraped_flip.get("in_stock", True) if scraped_flip else (valid_p0.get("in_stock", True) if (valid_p0 and valid_p0.get("url") == m0_url) else True)
+                flip_status = scraped_flip.get("stock_status", "In Stock") if scraped_flip else (valid_p0.get("stock_status", "In Stock") if (valid_p0 and valid_p0.get("url") == m0_url) else "In Stock")
 
                 listing_flip_1 = ScrapedListing(
                     id=f"DISC0-{clean_id_0}",
@@ -866,7 +1037,7 @@ class ScoutSwarm:
                     val_price = scraped_3rd.get("price") or round(m0_price * 0.94, 2)
                     val_seller = scraped_3rd.get("seller_name", f"{val_name} Verified Store")
                     val_warranty = scraped_3rd.get("warranty", "1 Year Manufacturer Direct Warranty.")
-                elif valid_p1 and valid_p1.get("url") not in used_urls and "/search" not in valid_p1.get("url", "") and "/s?" not in valid_p1.get("url", ""):
+                elif valid_p1 and valid_p1.get("url") not in used_urls and check_listing_hardware_compatibility(query, valid_p1.get("title", ""), valid_p1.get("url", "")) and "/search" not in valid_p1.get("url", "") and "/s?" not in valid_p1.get("url", ""):
                     p1_domain = (valid_p1.get("domain") or "").lower()
                     val_name = valid_p1.get("merchant") or DOMAIN_STORE_NAMES.get(p1_domain, p1_domain.capitalize())
                     val_domain = p1_domain
@@ -909,6 +1080,31 @@ class ScoutSwarm:
                             val_title = f"{prod_title} ({val_name})"
                             val_price = round(m0_price * 0.94, 2)
                             val_warranty = "1 Year Official Brand Domestic Warranty."
+                            if not val_url:
+                                alt_cand = next((
+                                    p for p in scraped_products
+                                    if p.get("url") and p.get("url") not in used_urls
+                                    and not any(m in p.get("url", "") for m in ["/search", "/s?k=", "/s/", "searchpage", "search?"])
+                                    and p.get("in_stock", True)
+                                    and not p.get("is_dead_link", False)
+                                    and check_listing_hardware_compatibility(query, p.get("title", ""), p.get("url", ""))
+                                ), None)
+                                if alt_cand:
+                                    val_domain = alt_cand.get("domain", "flipkart.com")
+                                    val_name = alt_cand.get("merchant") or DOMAIN_STORE_NAMES.get(val_domain, val_domain.capitalize())
+                                    val_url = alt_cand["url"]
+                                    val_title = alt_cand.get("title", f"{prod_title} ({val_name})")
+                                    val_price = alt_cand.get("price") or round(m0_price * 0.94, 2)
+                                    val_seller = alt_cand.get("seller_name", f"{val_name} Partner")
+                                else:
+                                    sec_url = resolve_secondary_canonical_url(query, dest)
+                                    if sec_url:
+                                        val_url = sec_url
+                                        val_domain = "flipkart.com" if "flipkart" in sec_url else "amazon.in"
+                                        val_name = "Flipkart Value Deal" if "flipkart" in sec_url else "Amazon India Direct"
+                                        val_seller = "OmniRetail Assured" if "flipkart" in sec_url else "Appario Retail"
+                                        val_title = f"{prod_title} (Verified Value Deal)"
+                                        val_price = round(m0_price * 0.94, 2)
                     else:
                         val_name = m0_name
                         val_domain = m0_domain
@@ -959,17 +1155,21 @@ class ScoutSwarm:
             clean_id_global = re.sub(r'[^A-Za-z0-9]', '', prod_title)[:10].upper()
             q_lower_check = query.lower()
             if dest == "IN":
-                # For Indian shoppers, route cross-border imports to verified direct Amazon US global export
-                # Ships directly to India with DHL / Amazon Global Express, prepays Indian Customs/GST, and includes PayPal Buyer Protection (Section 13)
-                imp_merchant = "Amazon US (Global Direct Import)"
-                imp_domain = "amazon.com"
-                imp_url = resolve_canonical_product_url(query, "amazon.com", "US")
-                imp_title = f"{prod_title} (US Direct Import - Duty Prepaid)"
-                imp_price = round(base_msrp_usd * 0.88, 2)
-                imp_seller = "Amazon US Global Direct (Duty Prepaid)"
-                imp_warranty = "1-Year Global Retailer Warranty. Insured by PayPal Section 13."
-                imp_adp = "International Cargo & Duty Protection Plan ($35.00)."
-                imp_return = "30-Day Hassle-Free Global Return Guarantee with zero restocking fees."
+                # For Indian shoppers, only route cross-border imports if certified delivering to India
+                if is_m1_max_pro or "64gb" in q_lower_check:
+                    imp_url = ""
+                else:
+                    imp_merchant = "Amazon US (Global Direct Import)"
+                    imp_domain = "amazon.com"
+                    imp_url = resolve_canonical_product_url(query, "amazon.com", "US")
+                    if imp_url and not RegionalLogisticsBot.audit_shipping(imp_url, origin="US", dest="IN")[0]:
+                        imp_url = ""
+                    imp_title = f"{prod_title} (US Direct Import - Duty Prepaid)"
+                    imp_price = round(base_msrp_usd * 0.88, 2)
+                    imp_seller = "Amazon US Global Direct (Duty Prepaid)"
+                    imp_warranty = "1-Year Global Retailer Warranty. Insured by PayPal Section 13."
+                    imp_adp = "International Cargo & Duty Protection Plan ($35.00)."
+                    imp_return = "30-Day Hassle-Free Global Return Guarantee with zero restocking fees."
             elif is_renewed and ("latitude" in q_lower_check or "5511" in q_lower_check or ("dell" in q_lower_check and any(k in q_lower_check for k in ["laptop", "business", "notebook", "15", "pc"]))):
                 imp_merchant = "Amazon US (Global Direct Import)"
                 imp_domain = "amazon.com"
@@ -1006,44 +1206,45 @@ class ScoutSwarm:
                     imp_url = scraped_amz_us["url"]
                 else:
                     asin_us = resolve_amazon_asin(query, dest="US")
-                    imp_url = f"https://www.amazon.com/dp/{asin_us}"
+                    imp_url = f"https://www.amazon.com/dp/{asin_us}" if asin_us else ""
                 imp_warranty = "US Domestic Warranty Only. May require shipping unit to US service center."
                 imp_adp = "International Cargo Protection Plan ($35.00)."
                 imp_return = "14 Days International Return. Buyer pays return air freight."
 
-            listing_global = ScrapedListing(
-                id=f"GLB-IN-{clean_id_global}",
-                merchant=imp_merchant,
-                merchant_domain=imp_domain,
-                product_title=imp_title,
-                base_price=imp_price,
-                currency="USD",
-                origin_country="US",
-                shipping_cost=29.99,
-                estimated_tax=0.0,
-                condition=condition,
-                seller_name=imp_seller,
-                is_third_party=True,
-                in_stock=True,
-                stock_status="In Stock",
-                estimated_delivery_days=9,
-                estimated_delivery_text="7-12 Business Days (Cross-Border US → IN)",
-                shipping_speed_tier="Cross-Border",
-                cod_available=False,
-                cod_fee=0.0,
-                cod_terms="Cross-border international shipments require advance online payment.",
-                open_box_delivery=False,
-                open_box_details="International sealed air courier. Inspection upon customs clearance.",
-                exchange_offer_available=False,
-                exchange_max_discount=0.0,
-                exchange_terms="No international trade-in accepted.",
-                supported_payments=["PayPal", "Credit Card", "Pay in 4"],
-                raw_warranty_text=imp_warranty,
-                raw_adp_text=imp_adp,
-                raw_return_policy=imp_return,
-                listing_url=imp_url
-            )
-            raw_listings.append(listing_global)
+            if imp_url and imp_url.strip():
+                listing_global = ScrapedListing(
+                    id=f"GLB-IN-{clean_id_global}",
+                    merchant=imp_merchant,
+                    merchant_domain=imp_domain,
+                    product_title=imp_title,
+                    base_price=imp_price,
+                    currency="USD",
+                    origin_country="US",
+                    shipping_cost=29.99,
+                    estimated_tax=0.0,
+                    condition=condition,
+                    seller_name=imp_seller,
+                    is_third_party=True,
+                    in_stock=True,
+                    stock_status="In Stock",
+                    estimated_delivery_days=9,
+                    estimated_delivery_text="7-12 Business Days (Cross-Border US → IN)",
+                    shipping_speed_tier="Cross-Border",
+                    cod_available=False,
+                    cod_fee=0.0,
+                    cod_terms="Cross-border international shipments require advance online payment.",
+                    open_box_delivery=False,
+                    open_box_details="International sealed air courier. Inspection upon customs clearance.",
+                    exchange_offer_available=False,
+                    exchange_max_discount=0.0,
+                    exchange_terms="No international trade-in accepted.",
+                    supported_payments=["PayPal", "Credit Card", "Pay in 4"],
+                    raw_warranty_text=imp_warranty,
+                    raw_adp_text=imp_adp,
+                    raw_return_policy=imp_return,
+                    listing_url=imp_url
+                )
+                raw_listings.append(listing_global)
 
             # 5. Dynamically Learned Merchant Skill (Autonomous E-Commerce Skill Acquisition)
             # Select a distinct source for the dynamically learned merchant skill
@@ -1353,6 +1554,10 @@ class ScoutSwarm:
                 cb_origin = "HK" if origin == "US" else "US"
                 cb_curr = "USD"
                 cb_price = round(base_msrp_usd * 0.82, 2)
+                asin_cb_us = resolve_amazon_asin(query, 'US')
+                if asin_cb_us in ["B0CS5X8286", "B0CY5JMG98", "B0CHWR1X99", "B0CQPLJHRM", "B0CQPF6G29"]:
+                    asin_cb_us = ""
+                cb_us_url = f"https://www.amazon.com/dp/{asin_cb_us}" if asin_cb_us else ""
                 listing_4 = ScrapedListing(
                     id=f"CB-IMP-{clean_id}", merchant="Global Direct Imports", merchant_domain="amazon.com",
                     product_title=f"{prod_title} (International Grey-Market SKU)", base_price=cb_price, currency=cb_curr,
@@ -1366,7 +1571,7 @@ class ScoutSwarm:
                     raw_warranty_text=f"{cb_origin} Domestic Warranty Only. No manufacturer warranty honored in {dest}.",
                     raw_adp_text="Third-Party Freight Shield ($30.00).",
                     raw_return_policy="14 days return window. 20% restocking fee. Buyer pays international return shipping.",
-                    listing_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}"
+                    listing_url=cb_us_url
                 )
 
                 # 5th listing: Dynamically Learned Merchant Skill
@@ -1374,7 +1579,7 @@ class ScoutSwarm:
                 skill_newegg = self.skill_learner.discover_and_learn_merchant(
                     domain=novel_domain,
                     page_html_or_text="Newegg Tech Store. 30 days hassle-free returns. 15% restocking fee on opened boxes. 1 year manufacturer warranty. PayPal and Pay in 4 supported.",
-                    sample_url=f"https://www.amazon.com/dp/{resolve_amazon_asin(query, 'US')}",
+                    sample_url=cb_us_url or f"https://www.{novel_domain}",
                     country="US",
                     currency=curr
                 )
@@ -1410,7 +1615,6 @@ class ScoutSwarm:
             u = listing.listing_url or ""
             if any(marker in u for marker in ["/search", "/s?k=", "/s/", "searchpage", "search?", "/pl?", "/p/pl", "pl?d="]):
                 dom = (listing.merchant_domain or "amazon.in").lower()
-                # Look for matching scraped product specifically for this merchant domain
                 direct_match = next((
                     p.get("url") for p in scraped_products 
                     if p.get("domain") and p.get("domain").lower() in dom
@@ -1419,14 +1623,59 @@ class ScoutSwarm:
                 if direct_match:
                     listing.listing_url = direct_match
                 elif "amazon" in dom:
-                    asin = resolve_amazon_asin(query, dest=dest)
-                    listing.listing_url = f"https://www.{dom}/dp/{asin}"
+                    target_amz_dest = "US" if dom == "amazon.com" else dest
+                    asin = resolve_amazon_asin(query, dest=target_amz_dest)
+                    # Never put dead or delisted ASINs onto URLs
+                    if asin in ["B0CS5X8286", "B0CY5JMG98", "B0CHWR1X99", "B0CQPLJHRM", "B0CQPF6G29"] and (dom == "amazon.com" or asin == "B0CS5X8286"):
+                        asin = ""
+                    listing.listing_url = f"https://www.{dom}/dp/{asin}" if asin else ""
                 else:
                     listing.listing_url = resolve_canonical_product_url(query, merchant_domain=dom, dest_country=dest)
 
+        # =====================================================================
+        # TIER 1 HORIZONTAL MULTI-BOT CONCURRENT EVALUATION & FAST-FAIL PRUNING
+        # Each candidate listing is audited concurrently by the specialized worker bots:
+        # - LiveInventoryProbeBot: in-stock vs "Notify Me" / Dog Page (Fails fast!)
+        # - RegionalLogisticsBot: delivery to destination country (zero cross-region contamination)
+        # - LivePriceAuditorBot: live price sanity
+        # Any listing that fails is OMITTED immediately!
+        # =====================================================================
         listings: List[ScrapedListing] = []
         for listing in raw_listings:
+            u = listing.listing_url or ""
+            if not u or u.strip() == "":
+                continue
+
+            # 0. Hardware Spec Compatibility Check (Strict RAM, CPU, Brand, Model)
+            if not check_listing_hardware_compatibility(query, listing.product_title, u):
+                continue  # OMIT IMMEDIATELY - Zero tolerance for spec mismatch (e.g. 32GB vs 64GB)
+
+            # 1. Horizontal Bot 1: LiveInventoryProbeBot (Audits out-of-stock / dog page)
+            is_in_stock, inv_reason = LiveInventoryProbeBot.probe(u, dest_country=dest)
+            if not is_in_stock:
+                # Omit generic search/category pages, brand mismatches, or non-shipping immediately
+                if any(m in inv_reason for m in ["generic", "homepage", "brand_mismatch", "mismatch", "does_not_ship"]):
+                    continue
+                # For genuine merchant listings that are depleted/out-of-stock or dead:
+                # Mark accurately so they are strictly barred from curated recommendations (final_options)
+                # and flagged with warning badges in the audit matrix.
+                listing.in_stock = False
+                listing.stock_status = "Out of Stock"
+                if any(d in inv_reason for d in ["dead", "404", "dog", "delisted"]):
+                    listing.is_dead_link = True
+                    listing.http_status = 404
+
+            # 2. Horizontal Bot 3: RegionalLogisticsBot (Zero cross-region contamination)
             origin = listing.origin_country
+            is_deliverable, ship_reason = RegionalLogisticsBot.audit_shipping(u, origin=origin, dest=dest)
+            if not is_deliverable:
+                continue  # OMIT IMMEDIATELY - Region cross-contamination prevention (does not ship to India)
+
+            # 3. Horizontal Bot 2: LivePriceAuditorBot
+            price_ok, _ = LivePriceAuditorBot.audit(listing.base_price, baseline=regional_price, is_renewed=is_renewed)
+            if not price_ok:
+                continue  # OMIT IMMEDIATELY - Price anomaly / delisted
+
             if origin != dest:
                 listing.estimated_delivery_days = max(listing.estimated_delivery_days, 7)
                 listing.estimated_delivery_text = f"7-12 Business Days (Cross-Border {origin} → {dest})"

@@ -1,0 +1,7 @@
+{
+  "https://www.flipkart.com/some-laptop/p/itm5a18a5bf29ffb": {
+    "status": 410,
+    "blacklisted_at": 1793791622.8779676,
+    "reason": "known_dead_sku_slug"
+  }
+}

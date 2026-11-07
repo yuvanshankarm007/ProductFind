@@ -6,7 +6,7 @@
   "currency": "USD",
   "is_auto_synthesized": true,
   "verification_score": 0.95,
-  "learned_at": "2026-11-04T05:00:27Z",
+  "learned_at": "2026-11-05T23:03:16Z",
   "success_count": 1,
   "policy_rules": {
     "return_window_days": 30,
@@ -24,5 +24,5 @@
   },
   "paypal_shield_required": true,
   "synthesized_code": "# Autonomously Synthesized E-Commerce Parsing Skill: skill_newegg_com_v1\n# Target Domain: newegg.com (US / USD)\ndef audit_merchant_newegg_com(listing):\n    return {\n        'return_days': 30,\n        'restocking_fee_pct': 15.0,\n        'warranty_type': 'Authorized Brand Warranty',\n        'paypal_protection_mandate': True\n    }\n",
-  "sample_url": "https://www.amazon.com/dp/B0D83J6JJ9"
+  "sample_url": "https://www.newegg.com"
 }

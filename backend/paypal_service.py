@@ -204,11 +204,11 @@ class PayPalService:
 
         curr_upper = currency.upper()
         if curr_upper == "INR":
-            is_pay_later_eligible = (total_bundle >= 1000.0 and total_bundle <= 300000.0)
+            is_pay_later_eligible = (total_bundle >= 1000.0 and total_bundle <= 500000.0)
         elif curr_upper in ("EUR", "GBP"):
-            is_pay_later_eligible = (total_bundle >= 30.0 and total_bundle <= 2500.0)
+            is_pay_later_eligible = (total_bundle >= 30.0 and total_bundle <= 8000.0)
         else:
-            is_pay_later_eligible = (total_bundle >= 30.0 and total_bundle <= 3000.0)
+            is_pay_later_eligible = (total_bundle >= 30.0 and total_bundle <= 10000.0)
 
         return {
             "recommend_paypal": recommend,

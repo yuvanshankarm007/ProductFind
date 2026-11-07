@@ -26,46 +26,51 @@ from backend.core.url_health_cache import (
 
 @pytest.mark.asyncio
 async def test_canonical_m1_max_url_resolution():
-    """Validates that canonical resolver maps exact verified URLs for M1 Max."""
-    query = "apple macbook m1 max 64gb"
+    """Validates that canonical resolver respects exact RAM specs and regional delivery boundaries."""
+    query_32gb = "apple macbook m1 max 32gb"
+    query_64gb = "apple macbook m1 max 64gb"
 
-    # 1. Flipkart M1 Max page
-    fk_url = resolve_canonical_product_url(query, "flipkart.com", "IN")
-    assert fk_url == "https://www.flipkart.com/apple-2021-macbook-pro-m1-max-32-gb-1-tb-ssd-mac-os-monterey-mk1a3hn-a/p/itm00aac391057cc"
-    assert "itm00aac391057cc" in fk_url
-    assert "m1-max" in fk_url
-    assert "m5" not in fk_url
+    # 1. Flipkart M1 Max 32GB resolves to verified 32GB SKU
+    fk_32_url = resolve_canonical_product_url(query_32gb, "flipkart.com", "IN")
+    assert fk_32_url == "https://www.flipkart.com/apple-2021-macbook-pro-m1-max-32-gb-1-tb-ssd-mac-os-monterey-mk1a3hn-a/p/itm00aac391057cc"
+    assert "itm00aac391057cc" in fk_32_url
+    assert "32-gb" in fk_32_url
 
-    # 2. Amazon Renewed / Import M1 Max
-    amz_url = resolve_canonical_product_url(query, "amazon.com", "IN")
-    assert amz_url == "https://www.amazon.com/dp/B09V5RWQXY"
-    assert "B09V5RWQXY" in amz_url
+    # 2. Flipkart M1 Max 64GB: strictly omits 32GB model (zero spec mismatch)
+    fk_64_url = resolve_canonical_product_url(query_64gb, "flipkart.com", "IN")
+    assert fk_64_url == "", "Flipkart 32GB model must NOT be returned for 64GB query"
 
-    amz_in_url = resolve_amazon_search_url(query, dest="IN")
-    assert amz_in_url == "https://www.amazon.com/dp/B09V5RWQXY"
+    # 3. Amazon: B09V5RWQXY does NOT deliver to India, so omitted for dest=IN
+    amz_in_url = resolve_canonical_product_url(query_64gb, "amazon.com", "IN")
+    assert amz_in_url == "", "Amazon US link must NOT be returned for India destination when it does not deliver to India"
 
-    # 3. Apple Certified Refurbished
-    apple_url = resolve_canonical_product_url(query, "apple.com", "IN")
-    assert apple_url == "https://www.apple.com/shop/refurbished/mac/16-inch-macbook-pro"
-    assert "/shop/buy-mac/macbook-pro" not in apple_url
+    # For US destination, B09V5RWQXY is valid
+    amz_us_url = resolve_canonical_product_url(query_64gb, "amazon.com", "US")
+    assert amz_us_url == "https://www.amazon.com/dp/B09V5RWQXY"
+
+    # 4. Apple: Never returns generic US refurbished directory page
+    apple_url = resolve_canonical_product_url(query_64gb, "apple.com", "IN")
+    assert apple_url == "", "Generic Apple refurbished category page must NOT be returned"
 
 
 @pytest.mark.asyncio
 async def test_url_validation_and_sanity():
     """Validates 200 OK, not 404, not E002, and not generic category/home pages."""
-    # A. Valid product URLs
-    valid_urls = [
-        "https://www.amazon.com/dp/B09V5RWQXY",
+    # A. Valid product URLs (with appropriate destination countries)
+    status_us, valid_us, _ = validate_candidate_url("https://www.amazon.com/dp/B09V5RWQXY", dest_country="US")
+    assert valid_us is True
+    assert status_us == 200
+
+    status_in, valid_in, _ = validate_candidate_url(
         "https://www.flipkart.com/apple-2021-macbook-pro-m1-max-32-gb-1-tb-ssd-mac-os-monterey-mk1a3hn-a/p/itm00aac391057cc",
-        "https://www.apple.com/shop/refurbished/mac/16-inch-macbook-pro"
-    ]
-    for u in valid_urls:
-        status, is_valid, reason = validate_candidate_url(u)
-        assert is_valid is True, f"Expected {u} to be valid, but got {reason}"
-        assert status == 200
+        dest_country="IN"
+    )
+    assert valid_in is True
+    assert status_in == 200
 
     # B. Generic category / home pages
     category_urls = [
+        "https://www.apple.com/shop/refurbished/mac/16-inch-macbook-pro",
         "https://www.apple.com/shop/buy-mac/macbook-pro",
         "https://www.apple.com/in/shop/buy-mac/macbook-pro",
         "https://www.apple.com/shop/buy-mac",
@@ -166,18 +171,18 @@ async def test_bidirectional_coordinator_spec_resolution():
     bus = EventBus()
     coord = SentinelCoordinator(bus=bus)
 
-    state = await coord.execute_search(
-        query="apple macbook m1 max 64gb",
+    # 1. 32GB query: verified canonical repair to genuine 32GB Flipkart SKU
+    state_32 = await coord.execute_search(
+        query="apple macbook m1 max 32gb",
         country="IN",
         currency="INR"
     )
-
-    assert state.is_complete is True
-    assert len(state.raw_listings) >= 3
-    assert len(state.final_options) >= 2
+    assert state_32.is_complete is True
+    assert len(state_32.raw_listings) >= 1
+    assert len(state_32.final_options) >= 1
 
     # Verify that every curated listing has an exact verified canonical product URL
-    for opt in state.final_options:
+    for opt in state_32.final_options:
         url = opt.listing.listing_url
         assert not is_generic_category_or_homepage(url), f"Curated listing {opt.listing.id} has category URL: {url}"
         assert not is_e002_error_url(url), f"Curated listing {opt.listing.id} has E002 URL: {url}"
@@ -185,8 +190,19 @@ async def test_bidirectional_coordinator_spec_resolution():
         assert "B0HPGT4XRT" not in url, "M6 listing should not be present in M1 Max results"
 
     # Targeted client challenge
-    target_id = state.raw_listings[0].id
+    target_id = state_32.raw_listings[0].id
     challenged_state = await coord.challenge_listing(target_id, "AUDIT_SPECS")
     assert challenged_state is not None
     events = [e for e in bus.get_logs() if e.source_agent == "HardwareSpecAuditorAgent"]
     assert len(events) >= 1
+
+    # 2. 64GB query: strictly omits 32GB models and non-delivering US links
+    state_64 = await coord.execute_search(
+        query="apple macbook m1 max 64gb",
+        country="IN",
+        currency="INR"
+    )
+    assert state_64.is_complete is True
+    for opt in state_64.final_options:
+        assert "32-gb" not in opt.listing.listing_url, "32GB model must never be returned for 64GB query"
+        assert "B09V5RWQXY" not in opt.listing.listing_url, "Amazon US non-delivering link must not be returned for India"

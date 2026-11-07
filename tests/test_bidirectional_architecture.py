@@ -31,7 +31,6 @@ async def test_horizontal_vertical_division_of_labour_flow():
     assert "DomesticScoutSubAgent" in sources
     assert "RefurbishedSpecialistSubAgent" in sources
     assert "StrategyCompiler" in sources or "StrategyCompilerSubAgent" in sources
-    assert "CHALLENGE" in event_types
 
     # 2. Horizontal Re-arbitration & Dynamic Re-ranking
     # Boost warranty to 100% and drop speed to 0%
@@ -47,6 +46,7 @@ async def test_horizontal_vertical_division_of_labour_flow():
     target_id = state.raw_listings[0].id
     challenged_state = await coord.challenge_listing(target_id, "VERIFY_STOCK")
     assert challenged_state is not None
+    assert "CHALLENGE" in {e.event_type for e in bus.get_logs()}
 
     challenged_warranty_state = await coord.challenge_listing(target_id, "AUDIT_WARRANTY")
     assert challenged_warranty_state is not None

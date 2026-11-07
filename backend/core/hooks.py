@@ -80,11 +80,22 @@ class SwarmLifecycleHooks:
 
         for opt in final_options:
             commerce_agent_shield.validate_listing(opt.listing, query=query, dest_country=dest_country)
-            is_q, reason = commerce_instincts.evaluate_and_quarantine(opt.listing, constraints=constraints)
-            if is_q:
-                quarantined.append({"merchant": opt.listing.merchant, "reason": reason})
+            is_dead = getattr(opt.listing, "is_dead_link", False) or getattr(opt.listing, "http_status", 200) in (404, 410)
+            is_oos = (not opt.listing.in_stock) or (not getattr(opt.listing, "is_available", True)) or ("out of stock" in str(opt.listing.stock_status).lower()) or ("notify me" in str(opt.listing.stock_status).lower())
+            from ..agents.tier1_scouts import check_listing_hardware_compatibility
+            is_hw_ok = check_listing_hardware_compatibility(query, opt.listing.product_title, opt.listing.listing_url)
+            if is_dead:
+                quarantined.append({"merchant": opt.listing.merchant, "reason": "Dead Link 404"})
+            elif is_oos:
+                quarantined.append({"merchant": opt.listing.merchant, "reason": "Out of Stock (Notify Me)"})
+            elif not is_hw_ok:
+                quarantined.append({"merchant": opt.listing.merchant, "reason": "Hardware Spec Mismatch"})
             else:
-                retained.append(opt)
+                is_q, reason = commerce_instincts.evaluate_and_quarantine(opt.listing, constraints=constraints)
+                if is_q:
+                    quarantined.append({"merchant": opt.listing.merchant, "reason": reason})
+                else:
+                    retained.append(opt)
 
         if quarantined:
             await self.bus.emit(

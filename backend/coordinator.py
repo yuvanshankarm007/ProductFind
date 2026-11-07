@@ -34,7 +34,7 @@ from .core.prompt_learner import PromptLearnerEngine, PromptConstraint
 from .core.instincts import commerce_instincts
 
 # Circuit-breaker timeout (seconds) for ultra-fast 3-4s search SLAs
-_SCOUT_TIMEOUT = 1.4
+_SCOUT_TIMEOUT = 2.6
 
 
 class SentinelCoordinator:
@@ -350,6 +350,17 @@ class SentinelCoordinator:
                 det_chip = spec_audit.get("detected_chip") or "Detected"
                 det_ram = spec_audit.get("detected_ram") or "Detected"
                 
+                await scoped_bus.emit(
+                    source="HardwareSpecAuditorAgent",
+                    target="Coordinator",
+                    event_type="CHALLENGE",
+                    content=(
+                        f"HARDWARE SPEC MISMATCH CHALLENGE: Listing [{listing.id}] ({listing.merchant}) detected with {det_chip}/{det_ram} "
+                        f"instead of required {exp_chip}/{exp_ram}. Challenging Coordinator for canonical URL repair."
+                    ),
+                    payload={"listing_id": listing.id, "expected_chip": exp_chip, "detected_chip": det_chip}
+                )
+                
                 # Coordinator handles the challenge bidirectionally by resolving exact canonical URL
                 canonical_url = resolve_canonical_product_url(
                     query=clean_query,
@@ -358,7 +369,9 @@ class SentinelCoordinator:
                 )
                 
                 # Check if canonical_url resolves the mismatch and is not generic category / E002
-                if canonical_url and not is_generic_category_or_homepage(canonical_url) and not is_e002_error_url(canonical_url):
+                from .agents.tier1_scouts import check_listing_hardware_compatibility
+                is_compatible = check_listing_hardware_compatibility(clean_query, listing.product_title, canonical_url) if canonical_url else False
+                if canonical_url and not is_generic_category_or_homepage(canonical_url) and not is_e002_error_url(canonical_url) and is_compatible:
                     old_url = listing.listing_url
                     listing.listing_url = canonical_url
                     if "apple" in clean_query.lower() and exp_chip in ["M1 Max", "M1 Pro", "M2 Max", "M3 Max"]:
@@ -404,13 +417,19 @@ class SentinelCoordinator:
         final_options = await hooks.pre_render(final_options, query=clean_query, dest_country=preferences.country, constraints=prompt_constraints)
 
         # Enforce learned negative constraints on comparison matrix (AG Grid rows)
+        def _get_row_val(obj, key, default=None):
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
         if prompt_constraints.in_stock_only or prompt_constraints.no_404_dead_links:
             comp_matrix = [
                 row for row in comp_matrix
-                if getattr(row, "in_stock", True)
-                and not getattr(row, "is_dead_link", False)
-                and "out of stock" not in str(getattr(row, "stock_status", "")).lower()
-                and getattr(row, "http_status", 200) != 404
+                if _get_row_val(row, "in_stock", True) is not False
+                and not _get_row_val(row, "is_dead_link", False)
+                and "out of stock" not in str(_get_row_val(row, "stock_status", "")).lower()
+                and "notify me" not in str(_get_row_val(row, "stock_status", "")).lower()
+                and _get_row_val(row, "http_status", 200) not in (404, 410)
             ]
 
         state.final_options = final_options

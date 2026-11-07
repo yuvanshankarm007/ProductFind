@@ -252,6 +252,38 @@ async def get_preferences():
     }
 
 
+@app.get("/api/search")
+async def api_search_get(
+    q: Optional[str] = None,
+    query: Optional[str] = None,
+    country: Optional[str] = None,
+    currency: Optional[str] = None,
+    language: Optional[str] = "en",
+    preferred_payment: Optional[str] = "all"
+):
+    """GET handler for browser URL inspection or query param search."""
+    search_q = (q or query or "").strip()
+    if not search_q:
+        return {
+            "status": "online",
+            "endpoint": "/api/search",
+            "message": "ProductFind Search API is operational. Submit an HTTP POST request with JSON body or GET /api/search?q=your+query"
+        }
+    target_country = (country or "IN").upper()
+    if not currency:
+        target_currency = "INR" if target_country == "IN" else ("GBP" if target_country == "GB" else ("EUR" if target_country == "DE" else "USD"))
+    else:
+        target_currency = currency.upper()
+    req = SearchRequest(
+        query=search_q,
+        country=target_country,
+        currency=target_currency,
+        language=language or "en",
+        preferred_payment=preferred_payment or "all"
+    )
+    return await api_search(req)
+
+
 @app.post("/api/search")
 async def api_search(req: SearchRequest):
     """Trigger agent swarm search via HTTP with dynamic risk preferences and session isolation."""

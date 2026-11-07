@@ -13,6 +13,7 @@ import warnings
 from typing import List, Dict, Any, Optional
 from curl_cffi import requests as curl_requests
 
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*renamed to.*")
 warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*duckduckgo_search.*")
 
 _DDGS_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="ddgs_scout")
@@ -77,7 +78,10 @@ class ExternalStealthBotBrowser:
         has_acc_intent = any(k in q_lower for k in [
             'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin',
             'hinge', 'roller', 'brush', 'filter', 'attachment', 'head', 'part', 'parts',
-            'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery'
+            'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery',
+            'ink', 'toner', 'bottle', 'refill', 'cartridge', 'ribbon', 'paper', 'printhead',
+            'sleeve', 'bag', 'backpack', 'stand', 'mousepad', 'keycap', 'keycaps', 'switch',
+            'switches', 'cleaning kit'
         ])
         accessory_stop_words = [
             'brush roller', 'roller brush', 'cleaner head', 'roller', 'attachment', 'wand',
@@ -85,13 +89,18 @@ class ExternalStealthBotBrowser:
             'replacement pad', 'ear pad', 'ear tips', 'silicone case', 'tempered glass',
             'charging cable', 'replacement battery', 'housing shell', 'trackpad replacement',
             'keyboard replacement', 'spare part', 'repair kit', 'docking station', 'mop head',
-            'accessories kit', 'cleaning head', 'fluffy head'
+            'accessories kit', 'cleaning head', 'fluffy head',
+            'ink bottle', 'ink bottles', 'refill ink', 'toner cartridge', 'ink cartridge', 'toner',
+            'bottle', 'bottles', 'refill', 'refills', 'cartridge', 'cartridges', 'ribbon', 'printhead',
+            'pump assembly', 'photo paper', 'glossy paper', 'sublimation ink', 'maintenance box',
+            'cleaning kit', 'mount bracket', 'wall bracket', 'monitor arm', 'monitor stand', 'vesa mount',
+            'mousepad', 'mouse pad', 'desk mat', 'wrist rest', 'cooling pad', 'keyboard cover'
         ]
 
         def _sync_ddgs():
             items = []
             try:
-                with DDGS(timeout=1.0) as ddgs:
+                with DDGS(timeout=3.0) as ddgs:
                     raw_res = list(ddgs.text(search_query, max_results=max_results * 2))
                     for r in raw_res:
                         href = r.get("href", "")
@@ -121,13 +130,20 @@ class ExternalStealthBotBrowser:
                                 if any(re.search(r'\b' + re.escape(c) + r'\b', t_low) for c in conflicting) and not re.search(r'\b' + re.escape(chip) + r'\b', t_low):
                                     continue
 
-                        # Extract price if present in body or title
+                        # Extract price if present in body or title with currency conversion to dest_country
                         combined_text = f"{title} {body}"
                         price_match = re.search(r'(₹|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]+)?)', combined_text)
                         price = None
                         if price_match:
                             try:
-                                price = float(price_match.group(2).replace(",", ""))
+                                curr_marker = price_match.group(1).lower()
+                                raw_val = float(price_match.group(2).replace(",", ""))
+                                is_inr = any(s in curr_marker for s in ["₹", "rs", "inr"])
+                                if dest_country in ["US", "CA", "GB", "DE"] and is_inr:
+                                    raw_val = round(raw_val / 86.8, 2)
+                                elif dest_country == "IN" and not is_inr:
+                                    raw_val = round(raw_val * 86.8, 2)
+                                price = raw_val
                             except Exception:
                                 price = None
 
@@ -146,7 +162,7 @@ class ExternalStealthBotBrowser:
 
         try:
             loop = asyncio.get_event_loop()
-            results = await asyncio.wait_for(loop.run_in_executor(_DDGS_EXECUTOR, _sync_ddgs), timeout=0.8)
+            results = await asyncio.wait_for(loop.run_in_executor(_DDGS_EXECUTOR, _sync_ddgs), timeout=2.5)
         except Exception:
             pass
 

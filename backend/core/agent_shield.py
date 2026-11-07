@@ -92,6 +92,24 @@ class CommerceAgentShield:
             price = listing.get("base_price") or listing.get("price") or 0.0
             if price <= 0 or price > 5000000.0:
                 listing["base_price"] = 29999.0
+
+            # Content & Link Audit via LiveListingAuditor
+            from .listing_auditor import LiveListingAuditor
+            if not clean_url:
+                listing["is_dead_link"] = True
+                listing["is_available"] = False
+                listing["in_stock"] = False
+                listing["stock_status"] = "Omitted (No Verified Direct URL)"
+                listing["http_status"] = 404
+            else:
+                audit = LiveListingAuditor.audit_url_and_content(clean_url, dest_country=dest_country, query=query)
+                if not audit.is_valid or not audit.is_in_stock or not audit.ships_to_destination:
+                    listing["is_dead_link"] = not audit.is_valid
+                    listing["is_available"] = audit.is_valid and audit.is_in_stock and audit.ships_to_destination
+                    listing["in_stock"] = audit.is_in_stock
+                    listing["stock_status"] = audit.failure_reason or "Omitted (Audit Failed)"
+                    if audit.status_code in (404, 410):
+                        listing["http_status"] = audit.status_code
         else:
             raw_url = getattr(listing, "listing_url", "") or getattr(listing, "url", "")
             domain = getattr(listing, "merchant_domain", "") or getattr(listing, "domain", "")
@@ -104,6 +122,24 @@ class CommerceAgentShield:
             if price <= 0 or price > 5000000.0:
                 if hasattr(listing, "base_price"):
                     setattr(listing, "base_price", 29999.0)
+
+            # Content & Link Audit via LiveListingAuditor
+            from .listing_auditor import LiveListingAuditor
+            if not clean_url:
+                setattr(listing, "is_dead_link", True)
+                setattr(listing, "is_available", False)
+                setattr(listing, "in_stock", False)
+                setattr(listing, "stock_status", "Omitted (No Verified Direct URL)")
+                setattr(listing, "http_status", 404)
+            else:
+                audit = LiveListingAuditor.audit_url_and_content(clean_url, dest_country=dest_country, query=query)
+                if not audit.is_valid or not audit.is_in_stock or not audit.ships_to_destination:
+                    setattr(listing, "is_dead_link", not audit.is_valid)
+                    setattr(listing, "is_available", audit.is_valid and audit.is_in_stock and audit.ships_to_destination)
+                    setattr(listing, "in_stock", audit.is_in_stock)
+                    setattr(listing, "stock_status", audit.failure_reason or "Omitted (Audit Failed)")
+                    if audit.status_code in (404, 410):
+                        setattr(listing, "http_status", audit.status_code)
 
         return True
 

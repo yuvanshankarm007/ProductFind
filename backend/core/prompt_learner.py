@@ -54,6 +54,11 @@ class PromptLearnerEngine:
         r"\b(?:full\s*(?:unit|product|laptop|headphones|camera)\s*only|actual\s*product\s*only|not?\s*an?\s*accessory|body\s*only)\b"
     ]
 
+    REFURBISHED_PATTERNS = [
+        r"\b(?:no|without|skip|exclude|avoid|dont?\s*show(?:\s*me)?|never)\s*(?:any\s*)?(?:refurbished|renewed|pre-owned|used|refurb)\b",
+        r"\b(?:brand\s*new\s*only|new\s*only)\b"
+    ]
+
     # Explicit domain ban pattern: e.g. "no ebay", "exclude indiamart", "ban shady-store.com", "do not show scam.com"
     DOMAIN_BAN_PATTERN = r"\b(?:no|exclude|ban|avoid|skip|block|do not show|don't show|dont show|filter out|without)\s+([a-zA-Z0-9.-]+\.(?:com|in|org|net|biz|co|co\.in))\b"
 
@@ -104,6 +109,12 @@ class PromptLearnerEngine:
             if re.search(pat, prompt_lower):
                 no_accessories = True
                 tags.append("ANTI_ACCESSORY_HIJACK")
+                cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
+
+        # 4.5 Detect and strip Refurbished modifiers
+        for pat in cls.REFURBISHED_PATTERNS:
+            if re.search(pat, prompt_lower):
+                tags.append("NO_REFURBISHED")
                 cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
 
         # 5. Extract specific domain bans

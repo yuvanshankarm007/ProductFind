@@ -6,7 +6,7 @@
   "currency": "EUR",
   "is_auto_synthesized": true,
   "verification_score": 0.9,
-  "learned_at": "2026-11-04T04:59:22Z",
+  "learned_at": "2026-11-05T23:01:57Z",
   "success_count": 1,
   "policy_rules": {
     "return_window_days": 30,

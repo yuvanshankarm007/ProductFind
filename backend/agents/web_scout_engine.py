@@ -10,6 +10,7 @@ import time
 import httpx
 import re
 import urllib.parse
+import statistics
 from typing import Dict, Any, List, Optional, Tuple
 from .stealth_browser import stealth_bot_browser
 
@@ -68,26 +69,243 @@ KNOWN_BRANDS = [
     'cmf', 'nothing', 'oneplus', 'bose', 'sennheiser', 'jbl', 'boat', 'noise',
     'realme', 'xiaomi', 'redmi', 'poco', 'google', 'pixel', 'motorola', 'oppo',
     'vivo', 'iqoo', 'nike', 'adidas', 'nintendo', 'xbox', 'playstation', 'logitech',
-    'razer', 'corsair', 'canon', 'nikon', 'lg', 'panasonic', 'anker', 'marshall', 'dyson'
+    'razer', 'corsair', 'canon', 'nikon', 'lg', 'panasonic', 'anker', 'marshall', 'dyson',
+    'happydent', 'orbit', 'center fresh', 'center fruit', 'mentos', 'cadbury', 'nestle',
+    'amul', 'britannia', 'parle', 'lays', 'kurkure', 'doritos', 'pringles', 'pepsi',
+    'coke', 'coca-cola', 'red bull', 'colgate', 'pepsodent', 'dettol', 'dove', 'nivea',
+    'campus', 'puma', 'reebok', 'asics', 'skechers', 'woodland', 'bata', 'sparx', 'asian'
 ]
+
+GENERIC_CATEGORY_WORDS = {
+    # Confectionery, grocery, food & beverages
+    'gum', 'gums', 'chewing', 'bubble', 'candy', 'candies', 'mints', 'mint', 'chocolate', 'chocolates',
+    'snack', 'snacks', 'food', 'drink', 'drinks', 'beverage', 'beverages', 'tea', 'coffee', 'water',
+    'biscuit', 'biscuits', 'cookie', 'cookies', 'wafer', 'wafers', 'chips', 'crisps', 'bar', 'bars',
+    'pack', 'packs', 'packet', 'packets', 'bottle', 'bottles', 'box', 'boxes', 'can', 'cans',
+    # Consumer electronics & computing
+    'laptop', 'laptops', 'notebook', 'notebooks', 'phone', 'phones', 'smartphone', 'smartphones',
+    'mobile', 'mobiles', 'cellphone', 'cellphones', 'tablet', 'tablets', 'pad', 'pads',
+    'monitor', 'monitors', 'display', 'displays', 'screen', 'screens', 'tv', 'tvs', 'television', 'televisions',
+    'smart', 'led', 'va', 'ips', 'oled', 'panel', 'fhd', 'uhd', '4k', 'hd',
+    'mouse', 'mice', 'keyboard', 'keyboards', 'keypad', 'keypads',
+    'optical', 'wireless', 'wired', 'bluetooth', 'ergonomic', 'gaming', 'dpi',
+    'headphone', 'headphones', 'earphone', 'earphones', 'earbud', 'earbuds', 'headset', 'headsets',
+    'speaker', 'speakers', 'audio', 'sound', 'mic', 'microphone', 'microphones',
+    'canceling', 'cancelling', 'cancellation', 'anc', 'isolation', 'reduction', 'bass', 'stereo', 'surround',
+    'camera', 'cameras', 'lens', 'lenses', 'printer', 'printers', 'scanner', 'scanners',
+    'router', 'routers', 'modem', 'modems', 'charger', 'chargers', 'cable', 'cables', 'wire', 'wires',
+    'adapter', 'adapters', 'battery', 'batteries', 'powerbank', 'powerbanks', 'drive', 'drives', 'harddrive',
+    # Wearables & personal goods
+    'watch', 'watches', 'smartwatch', 'smartwatches', 'band', 'bands', 'tracker', 'trackers',
+    'shoe', 'shoes', 'sneaker', 'sneakers', 'boot', 'boots', 'sandal', 'sandals', 'footwear', 'slippers',
+    'jogging', 'running', 'walking', 'trainer', 'trainers', 'athletic', 'sports', 'sport', 'casual', 'formal', 'gym', 'racing', 'outdoor', 'marathon',
+    'shirt', 'shirts', 'tshirt', 'tshirts', 't-shirt', 't-shirts', 'pants', 'trousers', 'jeans',
+    'jacket', 'jackets', 'coat', 'coats', 'hoodie', 'hoodies', 'apparel', 'cloth', 'clothes', 'clothing',
+    'bag', 'bags', 'backpack', 'backpacks', 'wallet', 'wallets', 'purse', 'purses',
+    # Personal care & grooming
+    'perfume', 'perfumes', 'deodorant', 'deodorants', 'shampoo', 'shampoos', 'soap', 'soaps',
+    'cream', 'creams', 'lotion', 'lotions', 'oil', 'oils', 'paste', 'brush', 'brushes',
+    'toothbrush', 'toothbrushes', 'razor', 'razors', 'blade', 'blades',
+    # Home & appliances
+    'chair', 'chairs', 'table', 'tables', 'desk', 'desks', 'sofa', 'sofas', 'bed', 'beds',
+    'mattress', 'mattresses', 'pillow', 'pillows', 'fan', 'fans', 'ac', 'cooler', 'coolers',
+    'heater', 'heaters', 'purifier', 'purifiers', 'cleaner', 'cleaners', 'vacuum', 'vacuums',
+    'iron', 'irons', 'oven', 'ovens', 'microwave', 'microwaves', 'refrigerator', 'refrigerators',
+    'fridge', 'fridges', 'washer', 'washers', 'dryer', 'dryers',
+    # Vehicles & mobility
+    'cycle', 'cycles', 'bicycle', 'bicycles', 'bike', 'bikes', 'car', 'cars', 'helmet', 'helmets',
+    'tyre', 'tyres', 'tire', 'tires',
+    # Generic product qualifiers
+    'device', 'devices', 'gadget', 'gadgets', 'product', 'products', 'item', 'items', 'combo'
+}
+
+QUERY_STOP_WORDS = {
+    'in', 'on', 'at', 'for', 'with', 'by', 'from', 'to', 'the', 'a', 'an', 'and', 'or', 'of',
+    'under', 'over', 'price', 'prices', 'buy', 'online', 'india', 'best', 'cheap', 'deals',
+    'deal', 'offer', 'offers', 'cost', 'review', 'reviews', 'vs', 'genuine', 'original',
+    'official', 'new', 'renewed', 'refurbished', 'used'
+}
+
+def extract_query_brands(q_lower: str) -> List[str]:
+    """Extracts known brand keywords from query with disambiguation for audio/feature collisions."""
+    bks = [b for b in KNOWN_BRANDS if re.search(r'\b' + re.escape(b) + r'\b', q_lower)]
+    if "noise" in bks and (
+        any(b in bks for b in ['sony', 'bose', 'apple', 'sennheiser', 'jbl', 'samsung', 'boat', 'realme', 'oneplus']) or
+        any(k in q_lower for k in ['cancel', 'cancellation', 'cancelling', 'reduction', 'isolation', 'headphone', 'headset', 'audio'])
+    ):
+        bks.remove("noise")
+    return bks
+
+def extract_query_identifiers(query: str) -> List[str]:
+    """
+    Extracts brand and specific identifying tokens from a user search query,
+    filtering out generic product category nouns and common stop words.
+    E.g. 'happydent gum' -> ['happydent']
+         'logitech mouse' -> ['logitech']
+         'chewing gum' -> []
+    """
+    tokens = re.findall(r'\b[a-zA-Z0-9-]+\b', (query or "").lower())
+    q_low = (query or "").lower()
+    has_noise_feature = (
+        any(k in q_low for k in ['cancel', 'cancellation', 'cancelling', 'reduction', 'isolation', 'headphone', 'headset', 'audio']) or
+        any(b in q_low for b in ['sony', 'bose', 'apple', 'sennheiser', 'jbl', 'samsung', 'boat', 'realme', 'oneplus'])
+    )
+    identifiers = []
+    for t in tokens:
+        if t in GENERIC_CATEGORY_WORDS or t in QUERY_STOP_WORDS:
+            continue
+        if t == "noise" and has_noise_feature:
+            continue
+        if t.isdigit() and len(t) <= 2:
+            continue
+        identifiers.append(t)
+    return identifiers
 
 ACCESSORY_INTENT_WORDS = [
     'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin',
     'hinge', 'roller', 'brush', 'filter', 'attachment', 'head', 'part', 'parts',
-    'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery'
+    'spare', 'replacement', 'dock', 'charger', 'mount', 'wand', 'nozzle', 'battery',
+    'ink', 'toner', 'bottle', 'refill', 'cartridge', 'ribbon', 'paper', 'printhead',
+    'sleeve', 'bag', 'backpack', 'stand', 'mousepad', 'keycap', 'keycaps', 'switch',
+    'switches', 'cleaning kit'
 ]
 
 ACCESSORY_STOP_WORDS = [
     'case', 'cover', 'silicone', 'cushion', 'replacement pad', 'ear pad', 'ear tips',
     'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter',
     'hinge kit', 'lcd replacement', 'screen replacement', 'top assembly', 'lcd screen display',
-    'spare part', 'repair kit', 'replacement battery', 'housing shell', 'trackpad replacement',
+    'spare part', 'repair kit', 'replacement battery', 'battery', 'housing shell', 'trackpad replacement',
     'keyboard replacement', 'brush roller', 'roller', 'cleaner head', 'attachment', 'wand',
     'nozzle', 'crevice tool', 'motorhead', 'hepa filter', 'filter replacement', 'dustbin',
     'docking station', 'mop head', 'scrubber', 'brush head', 'extension pipe', 'extension hose',
     'replacement head', 'replacement part', 'accessories kit', 'cleaning head', 'roller brush',
-    'fluffy head', 'direct drive cleaner head', 'filter kit', 'dock mount', 'wall mount'
+    'fluffy head', 'direct drive cleaner head', 'filter kit', 'dock mount', 'wall mount',
+    'accessory', 'accessories', 'accessory kit', 'mop pad', 'mop pads', 'mop cloth', 'dust bag',
+    'dust bags', 'cleaning brush', 'side brush', 'main brush', 'spare parts', 'replacement parts',
+    'remote', 'remote control', 'replacement remote',
+    # Consumables & accessories for printers, monitors, peripherals
+    'ink bottle', 'ink bottles', 'refill ink', 'toner cartridge', 'ink cartridge', 'toner',
+    'bottle', 'bottles', 'refill', 'refills', 'cartridge', 'cartridges', 'ribbon', 'printhead',
+    'pump assembly', 'photo paper', 'glossy paper', 'sublimation ink', 'maintenance box',
+    'cleaning kit', 'mount bracket', 'wall bracket', 'monitor arm', 'monitor stand', 'vesa mount',
+    'mousepad', 'mouse pad', 'desk mat', 'wrist rest', 'cooling pad', 'keyboard cover'
 ]
+
+def is_consumable_or_accessory_listing(query: str, title: str, url: str = "") -> bool:
+    """
+    Detects when a listing is an accessory, consumable, refill, or replacement part
+    for a physical product (printer, monitor, laptop, phone, mouse, keyboard, audio, etc.)
+    rather than the physical device itself.
+    """
+    q_low = (query or "").lower()
+    t_low = (title or "").lower()
+    u_low = (url or "").lower()
+
+    # 1. If query explicitly asked for an accessory or consumable, do NOT reject
+    has_explicit_accessory_intent = any(
+        re.search(r'\b' + re.escape(w) + r'\b', q_low)
+        for w in ACCESSORY_INTENT_WORDS
+    )
+    if has_explicit_accessory_intent:
+        return False
+
+    # 2. Identify physical hardware product intent
+    is_printer = any(k in q_low for k in ["printer", "printers", "all-in-one", "inkjet", "laserjet", "ecotank"])
+    is_monitor = any(k in q_low for k in ["monitor", "monitors", "display", "smart monitor"])
+    is_laptop = any(k in q_low for k in ["laptop", "laptops", "notebook", "notebooks", "macbook", "latitude", "thinkpad", "zenbook", "vivobook", "computer", "pc", "workstation", "desktop"])
+    is_phone_tablet = any(k in q_low for k in ["phone", "smartphone", "mobile", "iphone", "ipad", "tablet", "galaxy", "pixel"])
+    is_audio = any(k in q_low for k in ["headphone", "headphones", "earphone", "earphones", "earbud", "earbuds", "tws", "airpod", "airpods", "headset", "speaker", "speakers", "soundbar"])
+    is_mouse_kb = any(k in q_low for k in ["mouse", "keyboard", "keyboards"])
+    is_router = any(k in q_low for k in ["router", "routers", "modem"])
+    is_camera = any(k in q_low for k in ["camera", "cameras", "dslr"])
+
+    has_hardware_intent = (
+        is_printer or is_monitor or is_laptop or is_phone_tablet or
+        is_audio or is_mouse_kb or is_router or is_camera
+    )
+
+    if not has_hardware_intent:
+        return False
+
+    # A. Printer consumables & accessories:
+    if is_printer:
+        printer_consumables = [
+            r'\bbottle\b', r'\bbottles\b', r'\bink\s+bottle\b', r'\bink\s+bottles\b',
+            r'\brefill\b', r'\brefills\b', r'\brefill\s+ink\b',
+            r'\bcartridge\b', r'\bcartridges\b', r'\bink\s+cartridge\b',
+            r'\btoner\b', r'\btoners\b', r'\btoner\s+cartridge\b',
+            r'\bribbon\b', r'\bribbons\b', r'\bprinthead\b', r'\bprint\s+head\b',
+            r'\bpump\s+assembly\b', r'\bsublimation\s+ink\b',
+            r'\bphoto\s+paper\b', r'\bglossy\s+paper\b', r'\bmatte\s+paper\b',
+            r'\bmaintenance\s+box\b', r'\bwaste\s+ink\b',
+            r'\b\d+\s*ml\b',
+            r'\bink\s+for\b',
+            r'\b(?:black|cyan|magenta|yellow|tri-color)\s+ink\b'
+        ]
+        if any(re.search(pat, t_low) for pat in printer_consumables):
+            return True
+
+    # B. Monitor accessories:
+    if is_monitor:
+        monitor_accessories = [
+            r'\bstand\b', r'\bdesk\s+stand\b', r'\barm\b', r'\bmonitor\s+arm\b',
+            r'\bmount\b', r'\bwall\s+mount\b', r'\bdesk\s+mount\b', r'\bvesa\b',
+            r'\bbracket\b', r'\bscreen\s+protector\b', r'\bhood\b', r'\bdust\s+cover\b'
+        ]
+        if any(re.search(pat, t_low) for pat in monitor_accessories):
+            return True
+
+    # C. Laptop accessories:
+    if is_laptop:
+        laptop_accessories = [
+            r'\bskin\b', r'\bskins\b', r'\bsleeve\b', r'\bcase\b', r'\bcover\b',
+            r'\bbackpack\b', r'\bbag\b', r'\bcooling\s+pad\b', r'\bkeyboard\s+cover\b',
+            r'\bpower\s+adapter\b', r'\bcharger\b', r'\bcharging\s+cable\b',
+            r'\bscreen\s+protector\b', r'\bscreen\s+guard\b', r'\bhinge\b',
+            r'\btrackpad\s+replacement\b', r'\bkeyboard\s+replacement\b',
+            r'\blcd\s+screen\b', r'\btop\s+assembly\b', r'\bspare\s+part\b', r'\brepair\s+kit\b'
+        ]
+        if any(re.search(pat, t_low) for pat in laptop_accessories):
+            return True
+
+    # D. Phone / Tablet accessories:
+    if is_phone_tablet:
+        phone_accessories = [
+            r'\bcase\b', r'\bcover\b', r'\bback\s+cover\b', r'\btempered\s+glass\b',
+            r'\bscreen\s+guard\b', r'\bscreen\s+protector\b', r'\bskin\b', r'\bpouch\b',
+            r'\bcharger\b', r'\bcharging\s+cable\b', r'\bholder\b', r'\bmount\b', r'\bdock\b'
+        ]
+        if any(re.search(pat, t_low) for pat in phone_accessories):
+            return True
+
+    # E. Audio accessories:
+    if is_audio:
+        audio_accessories = [
+            r'\bear\s*pad\b', r'\bear\s*pads\b', r'\bearpad\b', r'\bearpads\b',
+            r'\bcushion\b', r'\bcushions\b', r'\bsilicone\s+case\b', r'\bear\s*tips\b',
+            r'\bheadband\b', r'\breplacement\s+pad\b'
+        ]
+        if any(re.search(pat, t_low) for pat in audio_accessories):
+            return True
+
+    # F. Mouse / Keyboard accessories:
+    if is_mouse_kb:
+        mouse_kb_accessories = [
+            r'\bmousepad\b', r'\bmouse\s+pad\b', r'\bdesk\s+mat\b', r'\bwrist\s+rest\b',
+            r'\bkeycap\b', r'\bkeycaps\b', r'\bswitch\b', r'\bswitches\b'
+        ]
+        if any(re.search(pat, t_low) for pat in mouse_kb_accessories):
+            return True
+
+    # G. General accessories across all hardware products:
+    general_accessories = [
+        r'\bcleaning\s+kit\b', r'\baccessories\s+kit\b', r'\baccessory\s+kit\b',
+        r'\bspare\s+parts?\b', r'\breplacement\s+parts?\b', r'\brepair\s+kit\b'
+    ]
+    if any(re.search(pat, t_low) for pat in general_accessories):
+        return True
+
+    return False
 
 # Fast in-memory TTL query cache for ultra-responsive 3-4s search SLAs
 _SCOUT_PROFILE_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
@@ -188,16 +406,8 @@ class LiveWebScoutEngine:
                 items = []
                 
                 q_lower = query.lower()
-                has_accessory_intent = any(k in q_lower for k in [
-                    'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin'
-                ])
-                accessory_stop_words = [
-                    'case', 'cover', 'silicone', 'cushion', 'replacement pad', 'ear pad',
-                    'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter',
-                    'hinge kit', 'lcd replacement', 'screen replacement', 'top assembly', 'lcd screen display',
-                    'spare part', 'repair kit', 'replacement battery', 'housing shell', 'trackpad replacement',
-                    'keyboard replacement'
-                ]
+                has_accessory_intent = any(k in q_lower for k in ACCESSORY_INTENT_WORDS)
+                accessory_stop_words = ACCESSORY_STOP_WORDS
 
                 # Every Flipkart product listing is tagged with data-id="PRODUCT_ID"
                 blocks = html.split('data-id="')
@@ -209,6 +419,7 @@ class LiveWebScoutEngine:
                     if not link_m:
                         link_m = re.search(r'href="(/[^"?]+)"', b)
                         
+                    brand_m = re.search(r'class="(?:Fo1I0b|syl9yP)"[^>]*>([^<]+)<', b)
                     # 2. Product Title (check anchor title attribute, class tags, then img alt)
                     title_m = re.search(r'<a[^>]*title="([^"]+)"', b)
                     if not title_m:
@@ -228,6 +439,10 @@ class LiveWebScoutEngine:
                         raw_title = title_m.group(1).strip()
                         raw_title = re.sub(r'<[^>]+>', '', raw_title)
                         raw_title = raw_title.replace('&quot;', '"').replace('&amp;', '&').replace('&#x27;', "'").strip()
+                        if brand_m:
+                            raw_brand = brand_m.group(1).strip()
+                            if raw_brand and raw_brand.lower() not in raw_title.lower():
+                                raw_title = f"{raw_brand} {raw_title}"
                         
                         if len(raw_title) < 5 or any(w in raw_title.lower() for w in ['buying guide', 'supercoin', 'advertisement', 'plus assured']):
                             continue
@@ -236,11 +451,18 @@ class LiveWebScoutEngine:
                         title_lower = raw_title.lower()
                         if not has_accessory_intent and any(w in title_lower for w in accessory_stop_words):
                             continue
+                        if is_consumable_or_accessory_listing(query, raw_title, link_m.group(1)):
+                            continue
                         
-                        # Brand relevance gating: reject competitor brands & cheap clones
+                        # Brand & specific query identifier gating: reject competitor brands & cheap clones
                         q_lower = query.lower()
-                        brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
-                        if brand_keywords and not any(b in title_lower for b in brand_keywords):
+                        clean_url = "https://www.flipkart.com" + link_m.group(1).split("?")[0]
+                        t_u_low = f"{title_lower} {clean_url.lower()}"
+                        query_idents = extract_query_identifiers(query)
+                        if query_idents and not any(ident in t_u_low for ident in query_idents):
+                            continue
+                        brand_keywords = extract_query_brands(q_lower)
+                        if brand_keywords and not any(re.search(r'\b' + re.escape(b) + r'\b', t_u_low) for b in brand_keywords):
                             continue
                             
                         try:
@@ -277,11 +499,13 @@ class LiveWebScoutEngine:
                         seen_urls.add(it["url"])
                         unique_items.append(it)
 
-                # Check if query has an explicit model number (e.g. "5511", "3511", "5420")
+                # Check if query has an explicit model number (e.g. "5511", "3511", "5420", "m5", "m7", "s8")
                 q_words = re.findall(r'\b[a-zA-Z0-9]+\b', q_lower)
                 model_digits = [
                     w for w in q_words 
-                    if any(c.isdigit() for c in w) and len(w) >= 3 and w not in ["2023", "2024", "2025", "2026", "11th", "12th", "13th", "14th", "10th", "512", "256", "128", "16gb", "8gb", "32gb", "1tb", "2tb"]
+                    if any(c.isdigit() for c in w) and (len(w) >= 3 or (len(w) == 2 and any(c.isalpha() for c in w))) and w not in [
+                        "2023", "2024", "2025", "2026", "11th", "12th", "13th", "14th", "10th", "512", "256", "128", "64", "32", "16", "16gb", "8gb", "32gb", "64gb", "128gb", "256gb", "512gb", "1tb", "2tb", "4g", "5g", "3g", "2g", "6g", "8g", "12g"
+                    ]
                 ]
                 is_renewed_q = any(k in q_lower for k in ["renewed", "refurbished", "refurb", "pre-owned"])
 
@@ -289,12 +513,30 @@ class LiveWebScoutEngine:
                 def calc_relevance(item: Dict[str, Any]) -> float:
                     t_lower = item["title"].lower()
                     score = 0.0
+                    # Consumable / accessory bleed rejection
+                    if is_consumable_or_accessory_listing(query, item.get("title", ""), item.get("url", "")):
+                        return -1000.0
+
+                    # Strict Brand / Primary Query Identifier Fidelity
+                    query_idents = extract_query_identifiers(query)
+                    if query_idents:
+                        has_ident = any(re.search(r'\b' + re.escape(ident) + r'\b', t_lower) or ident in t_lower for ident in query_idents)
+                        if not has_ident:
+                            return -1000.0
+                        score += 300.0
 
                     if model_digits:
-                        has_model = any(re.search(r'\b' + re.escape(m) + r'\b', t_lower) for m in model_digits)
+                        has_model = any(
+                            re.search(r'\b' + re.escape(m) + r'\b', t_lower)
+                            for m in model_digits
+                        )
                         if not has_model:
                             return -500.0
                         score += 200.0
+
+                    # Specific model disambiguation (e.g. M5 vs M05 phone)
+                    if "m5" in q_words and re.search(r'\bm05\b', t_lower):
+                        return -1000.0
 
                     for w in q_words:
                         if any(c.isdigit() for c in w):
@@ -344,12 +586,14 @@ class LiveWebScoutEngine:
                         "title": matched_items[0]["title"]
                     }
                 elif not any(c.isdigit() for c in q_lower) and unique_items:
-                    return {
-                        "found": True,
-                        "products": unique_items,
-                        "prices": [it["price"] for it in unique_items],
-                        "title": unique_items[0]["title"]
-                    }
+                    brand_matches = [it for it in unique_items if any(re.search(r'\b' + re.escape(b) + r'\b', it["title"].lower()) for b in brand_keywords)] if brand_keywords else unique_items
+                    if brand_matches:
+                        return {
+                            "found": True,
+                            "products": brand_matches,
+                            "prices": [it["price"] for it in brand_matches],
+                            "title": brand_matches[0]["title"]
+                        }
         except Exception:
             pass
             
@@ -415,16 +659,8 @@ class LiveWebScoutEngine:
                 blocks = html.split('data-asin="')
 
             q_lower = query.lower()
-            has_accessory_intent = any(k in q_lower for k in [
-                'case', 'cover', 'cushion', 'pad', 'cable', 'adapter', 'strap', 'guard', 'skin', 'hinge'
-            ])
-            accessory_stop_words = [
-                'case', 'cover', 'silicone', 'cushion', 'replacement pad', 'ear pad',
-                'protector', 'tempered glass', 'skin wrap', 'charging cable', 'pouch', 'adapter',
-                'hinge kit', 'lcd replacement', 'screen replacement', 'top assembly', 'lcd screen display',
-                'spare part', 'repair kit', 'replacement battery', 'housing shell', 'trackpad replacement',
-                'keyboard replacement'
-            ]
+            has_accessory_intent = any(k in q_lower for k in ACCESSORY_INTENT_WORDS)
+            accessory_stop_words = ACCESSORY_STOP_WORDS
 
             items = []
             for b in blocks[1:]:
@@ -442,33 +678,40 @@ class LiveWebScoutEngine:
                 if not asin or len(asin) != 10:
                     continue
 
-                # 2. Product Title (robust to tag attribute ordering)
-                title_m = re.search(r'<h2[^>]*>[\s\S]*?<span[^>]*>(.*?)</span>', b)
-                if not title_m:
-                    title_m = re.search(r'<h2[^>]*>[\s\S]*?<a[^>]*>(.*?)</a>', b)
-                if not title_m:
-                    title_m = re.search(r'<h2[^>]*>(.*?)</h2>', b, re.DOTALL)
+                # 2. Product Title (robust to multiple h2 tags like brand headers + product titles)
+                h2_matches = re.findall(r'<h2[^>]*>(.*?)</h2>', b, re.DOTALL)
+                clean_h2s = [re.sub(r'<[^>]+>', ' ', h).strip() for h in h2_matches]
+                clean_h2s = [
+                    h.replace("Sponsored Ad - ", "").replace('&quot;', '"').replace('&amp;', '&').replace('&#x27;', "'").strip()
+                    for h in clean_h2s
+                    if len(h.strip()) >= 5 and not any(w in h.lower() for w in ['buying guide', 'advertisement', 'explore more', 'results'])
+                ]
                 img_alt_m = re.search(r'<img[^>]*\balt="([^"]+)"', b)
 
                 raw_title = ""
-                if title_m:
-                    raw_title = re.sub(r'<[^>]+>', '', title_m.group(1)).strip()
+                if clean_h2s:
+                    raw_title = max(clean_h2s, key=len)
                 elif img_alt_m and len(img_alt_m.group(1).strip()) > 5:
                     raw_title = img_alt_m.group(1).strip()
 
-                raw_title = raw_title.replace("Sponsored Ad - ", "").strip()
-                raw_title = raw_title.replace('&quot;', '"').replace('&amp;', '&').replace('&#x27;', "'").strip()
-                if len(raw_title) < 5 or any(w in raw_title.lower() for w in ['buying guide', 'advertisement', 'explore more']):
+                if len(raw_title) < 5:
                     continue
 
                 # Filter accessories unless explicitly requested
                 title_lower = raw_title.lower()
                 if not has_accessory_intent and any(w in title_lower for w in accessory_stop_words):
                     continue
+                if is_consumable_or_accessory_listing(query, raw_title, asin):
+                    continue
 
                 # Brand & query relevance filter: eliminate sponsored cross-brand ads and knockoffs
-                brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
-                if brand_keywords and not any(b in title_lower for b in brand_keywords):
+                query_idents = extract_query_identifiers(query)
+                if query_idents and not any(ident in title_lower for ident in query_idents):
+                    continue
+                brand_keywords = extract_query_brands(q_lower)
+                has_brand_in_title = any(re.search(r'\b' + re.escape(b) + r'\b', title_lower) for b in brand_keywords)
+                has_model_ident_in_title = bool(query_idents and any(ident in title_lower for ident in query_idents))
+                if brand_keywords and not has_brand_in_title and not has_model_ident_in_title:
                     continue
                 # Specific series check (e.g. latitude or xm5 or cmf)
                 if 'latitude' in q_lower and not any(k in title_lower for k in ['latitude', 'dell']):
@@ -493,6 +736,16 @@ class LiveWebScoutEngine:
                             p_val = float(off_m.group(1).replace(",", ""))
                         except Exception:
                             pass
+
+                if p_val:
+                    sym_m = re.search(r'class="a-price-symbol"[^>]*>(.*?)</span>', b)
+                    off_m = re.search(r'class="a-offscreen"[^>]*>(.*?)</span>', b)
+                    curr_text = f"{sym_m.group(1) if sym_m else ''} {off_m.group(1) if off_m else ''}".lower()
+                    is_inr_symbol = any(s in curr_text for s in ["inr", "₹", "rs"])
+                    if dest in ["US", "CA", "GB", "DE"] and is_inr_symbol:
+                        p_val = round(p_val / 86.8, 2)
+                    elif dest == "IN" and not is_inr_symbol and ("$" in curr_text or "usd" in curr_text):
+                        p_val = round(p_val * 86.8, 2)
 
                 if not p_val or not (min_bound <= p_val <= max_bound) or p_val in [2023.0, 2024.0, 2025.0, 2026.0]:
                     continue
@@ -542,20 +795,38 @@ class LiveWebScoutEngine:
             q_words = re.findall(r'\b[a-zA-Z0-9]+\b', q_lower)
             model_digits = [
                 w for w in q_words
-                if any(c.isdigit() for c in w) and len(w) >= 3 and w not in ["2023", "2024", "2025", "2026", "11th", "12th", "13th", "14th", "10th", "512", "256", "128", "16gb", "8gb", "32gb", "1tb", "2tb"]
+                if any(c.isdigit() for c in w) and (len(w) >= 3 or (len(w) == 2 and any(c.isalpha() for c in w))) and w not in [
+                    "2023", "2024", "2025", "2026", "11th", "12th", "13th", "14th", "10th", "512", "256", "128", "64", "32", "16", "16gb", "8gb", "32gb", "64gb", "128gb", "256gb", "512gb", "1tb", "2tb", "4g", "5g", "3g", "2g", "6g", "8g", "12g"
+                ]
             ]
             is_renewed_q = any(k in q_lower for k in ["renewed", "refurbished", "refurb", "pre-owned"])
 
             def calc_relevance(item: Dict[str, Any]) -> float:
                 t_lower = item["title"].lower()
+                # Consumable / accessory bleed rejection
+                if is_consumable_or_accessory_listing(query, item.get("title", ""), item.get("url", "")):
+                    return -1000.0
+
                 score = 0.0
+
+                # Strict Brand / Primary Query Identifier Fidelity
+                query_idents = extract_query_identifiers(query)
+                if query_idents:
+                    has_ident = any(re.search(r'\b' + re.escape(ident) + r'\b', t_lower) or ident in t_lower for ident in query_idents)
+                    if not has_ident:
+                        return -1000.0
+                    score += 300.0
 
                 if item.get("is_sponsored"):
                     score -= 30.0
 
                 # STRICT MODEL CHECK
                 if model_digits:
-                    has_model = any(re.search(r'\b' + re.escape(m) + r'\b', t_lower) for m in model_digits)
+                    has_model = any(
+                        re.search(r'\b' + re.escape(m) + r'\b', t_lower) or
+                        (m.startswith('m') and re.search(r'\bm0?' + re.escape(m[1:]) + r'\b', t_lower))
+                        for m in model_digits
+                    )
                     if not has_model:
                         return -500.0
                     score += 200.0
@@ -742,7 +1013,7 @@ class LiveWebScoutEngine:
                     if min_bound <= p <= max_bound:
                         result["price"] = p
                         return result
-        except Exception:
+        except (Exception, asyncio.CancelledError):
             pass
         return result
 
@@ -769,13 +1040,22 @@ class LiveWebScoutEngine:
         Discovers verified merchant listings, certified refurbishers, and direct retail URLs without getting blocked.
         """
         q_lower = query.lower()
-        is_renewed = any(k in q_lower for k in ["renewed", "refurbished", "refurb", "pre-owned", "used"])
+        is_renewed = (
+            any(k in q_lower for k in ["renewed", "refurbished", "refurb", "pre-owned", "used"])
+            and not any(neg in q_lower for neg in [
+                "no refurbished", "no refurb", "not refurbished", "exclude refurbished",
+                "avoid refurbished", "without refurbished", "no used", "brand new only",
+                "new only", "not renewed", "no renewed"
+            ])
+        )
         
-        # Extract model digits (e.g. "5511", "3511")
+        # Extract model digits (e.g. "5511", "3511", "m5", "m7", "s8")
         q_words = re.findall(r'\b[a-zA-Z0-9]+\b', q_lower)
         model_digits = [
             w for w in q_words
-            if any(c.isdigit() for c in w) and len(w) >= 3 and w not in ["2023", "2024", "2025", "2026", "11th", "12th", "13th", "14th", "10th", "512", "256", "128", "16gb", "8gb", "32gb", "1tb", "2tb"]
+            if any(c.isdigit() for c in w) and (len(w) >= 3 or (len(w) == 2 and any(c.isalpha() for c in w))) and w not in [
+                "2023", "2024", "2025", "2026", "11th", "12th", "13th", "14th", "10th", "512", "256", "128", "64", "32", "16", "16gb", "8gb", "32gb", "64gb", "128gb", "256gb", "512gb", "1tb", "2tb", "4g", "5g", "3g", "2g", "6g", "8g", "12g"
+            ]
         ]
 
         dest_kw = "buy online price in india" if dest_country == "IN" else "buy online price"
@@ -796,10 +1076,19 @@ class LiveWebScoutEngine:
                     continue
                 if not has_acc_intent and any(w in t_low for w in ACCESSORY_STOP_WORDS):
                     continue
+                if is_consumable_or_accessory_listing(query, bi["title"], bi.get("url", "")):
+                    continue
+                query_idents = extract_query_identifiers(query)
+                if query_idents and not any(ident in t_low for ident in query_idents):
+                    continue
                 brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
                 if brand_keywords and not any(b in t_low for b in brand_keywords):
                     continue
-                if model_digits and not any(re.search(r'\b' + re.escape(m) + r'\b', t_low) for m in model_digits):
+                if model_digits and not any(
+                    re.search(r'\b' + re.escape(m) + r'\b', t_low) or
+                    (m.startswith('m') and re.search(r'\bm0?' + re.escape(m[1:]) + r'\b', t_low))
+                    for m in model_digits
+                ):
                     continue
                 p_val = bi.get("price")
                 if p_val and not (min_bound <= p_val <= max_bound):
@@ -856,14 +1145,21 @@ class LiveWebScoutEngine:
                     if not has_acc_intent and any(w in t_lower for w in ACCESSORY_STOP_WORDS):
                         continue
                     
-                    # Brand relevance gating: reject competitor brands & cheap clones
+                    # Brand & identifier relevance gating: reject competitor brands & cheap clones
+                    query_idents = extract_query_identifiers(query)
+                    if query_idents and not any(ident in t_lower for ident in query_idents):
+                        continue
                     brand_keywords = [b for b in KNOWN_BRANDS if b in q_lower]
                     if brand_keywords and not any(b in t_lower for b in brand_keywords):
                         continue
 
                     # STRICT MODEL FILTER: Disqualify any listing lacking explicit model digits
                     if model_digits:
-                        if not any(re.search(r'\b' + re.escape(m) + r'\b', t_lower) for m in model_digits):
+                        if not any(
+                            re.search(r'\b' + re.escape(m) + r'\b', t_lower) or
+                            (m.startswith('m') and re.search(r'\bm0?' + re.escape(m[1:]) + r'\b', t_lower))
+                            for m in model_digits
+                        ):
                             continue
 
                     # Extract price and currency from snippet or title
@@ -937,7 +1233,7 @@ class LiveWebScoutEngine:
                                 it["is_dead_link"] = p_res.get("is_dead", False)
                                 it["is_available"] = p_res.get("is_available", True)
                                 it["http_status"] = p_res.get("http_status", 200)
-                    except (asyncio.TimeoutError, Exception):
+                    except (asyncio.TimeoutError, asyncio.CancelledError, Exception):
                         pass
 
                 # Calibrated merchant stock & link validity verification
@@ -972,7 +1268,7 @@ class LiveWebScoutEngine:
                             it["is_dead_link"] = False
                             it["is_available"] = True
                             if it["price"] is None:
-                                it["price"] = 48400.0
+                                it["price"] = 48400.0 if dest_country == "IN" else 550.0
                         elif it["price"] is None:
                             if "buyrefurb" in d:
                                 it["price"] = 31400.0
@@ -1147,15 +1443,28 @@ class LiveWebScoutEngine:
             }
 
         # 2. Footwear & Sneakers
-        elif any(f in q for f in ["jordan", "air jordan", "sneaker", "shoe", "yeezy", "dunk", "air force", "ultraboost"]):
+        elif any(f in q for f in ["jordan", "air jordan", "sneaker", "shoe", "shoes", "yeezy", "dunk", "air force", "ultraboost", "campus", "running", "jogging", "walking", "footwear"]):
+            is_budget = any(b in q for b in ["campus", "sparx", "asian", "bata", "woodland"])
+            if is_budget:
+                brand = "Campus" if "campus" in q else ("Sparx" if "sparx" in q else "Footwear OEM")
+                b_usd = 16.00
+                b_inr = 1299.00
+                min_inr, max_inr = 499.0, 4999.0
+                min_usd, max_usd = 8.0, 70.0
+            else:
+                brand = "Nike" if any(w in q for w in ["nike", "jordan", "dunk", "air force"]) else "Footwear OEM"
+                b_usd = 140.00
+                b_inr = 11995.00
+                min_inr, max_inr = 3000.0, 35000.0
+                min_usd, max_usd = 40.0, 400.0
             return {
                 "category": "Authentic Athletic Footwear",
-                "brand": "Nike" if any(w in q for w in ["nike", "jordan", "dunk", "air force"]) else "Footwear OEM",
+                "brand": brand,
                 "title": f"{query.title()} Authentic Sneakers",
-                "base_usd": 140.00,
-                "inr_baseline": 11995.00,
-                "min_inr": 3000.0, "max_inr": 35000.0,
-                "min_usd": 40.0, "max_usd": 400.0,
+                "base_usd": b_usd,
+                "inr_baseline": b_inr,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
                 "adp_provider": "Authenticity Guarantee",
                 "adp_usd": 0.0, "adp_inr": 0.0,
                 "ex_usd": 0.0, "ex_inr": 0.0
@@ -1383,7 +1692,8 @@ class LiveWebScoutEngine:
                     b_usd = 1999.00 if is_renewed else 2599.00
                     b_inr = 199900.00 if is_renewed else 249900.00
                     brand = "Apple"
-                    title = f"Apple MacBook Pro 16 ({chip} / 64GB Unified Memory / 1TB SSD / Liquid Retina XDR)"
+                    ram_spec = "32GB Unified Memory" if any(k in q for k in ["32gb", "32 gb"]) else ("64GB Unified Memory" if any(k in q for k in ["64gb", "64 gb"]) else "32GB Unified Memory")
+                    title = f"Apple MacBook Pro 16 ({chip} / {ram_spec} / 1TB SSD / Liquid Retina XDR)"
                     min_inr, max_inr = 160000.0, 480000.0
                     min_usd, max_usd = 1600.0, 5000.0
                 elif any(k in q for k in ["pro", "32gb", "32 gb"]):
@@ -1417,8 +1727,26 @@ class LiveWebScoutEngine:
                 b_usd, b_inr, brand = 799.00, 69990.00, "Lenovo"
                 title = f"Lenovo LOQ 15 Gaming Laptop (Intel Core i5 / RTX 3050 / 16GB / 512GB SSD){storage_spec}"
             elif "victus" in q:
-                b_usd, b_inr, brand = 699.00, 62990.00, "HP"
-                title = f"HP Victus 15 Gaming Laptop (AMD Ryzen 5 / RTX 3050 / 16GB / 512GB SSD){storage_spec}"
+                gpu_m = re.search(r'\b(?:rtx\s*)?(5050|5060|5070|5080|5090|4050|4060|4070|4080|4090|3050|3060|2050)\b', q)
+                detected_gpu = f"RTX {gpu_m.group(1)}" if gpu_m else "RTX 4050"
+                if "5050" in q or "4060" in q:
+                    b_usd, b_inr = 849.00, 78990.00
+                elif "5060" in q or "4070" in q:
+                    b_usd, b_inr = 1099.00, 98990.00
+                else:
+                    b_usd, b_inr = 699.00, 62990.00
+                brand = "HP"
+                title = f"HP Victus 15 Gaming Laptop ({detected_gpu} / 16GB RAM / 512GB SSD){storage_spec}"
+            elif "omen" in q:
+                gpu_m = re.search(r'\b(?:rtx\s*)?(5050|5060|5070|5080|5090|4050|4060|4070|4080|4090|3050|3060)\b', q)
+                detected_gpu = f"RTX {gpu_m.group(1)}" if gpu_m else "RTX 4060"
+                b_usd, b_inr, brand = 1199.00, 114990.00, "HP"
+                title = f"HP OMEN 16 Gaming Laptop ({detected_gpu} / 16GB RAM / 1TB SSD){storage_spec}"
+            elif "legion" in q:
+                gpu_m = re.search(r'\b(?:rtx\s*)?(5050|5060|5070|5080|5090|4050|4060|4070|4080|4090|3050|3060)\b', q)
+                detected_gpu = f"RTX {gpu_m.group(1)}" if gpu_m else "RTX 4060"
+                b_usd, b_inr, brand = 1299.00, 124990.00, "Lenovo"
+                title = f"Lenovo Legion 5 Pro Gaming Laptop ({detected_gpu} / 16GB RAM / 1TB SSD){storage_spec}"
             elif "tuf" in q:
                 b_usd, b_inr, brand = 729.00, 63990.00, "ASUS"
                 title = f"ASUS TUF Gaming F15 Laptop (Intel Core i5 / RTX 3050 / 16GB / 512GB SSD){storage_spec}"
@@ -1432,10 +1760,10 @@ class LiveWebScoutEngine:
                 ])
                 b_inr = 79990.00 if is_gaming_flagship else 59990.00
                 b_usd = 949.00 if is_gaming_flagship else 699.00
-                brand = "ASUS" if "vivobook" in q else ("HP" if "hp" in q or "victus" in q else ("Dell" if "dell" in q else "Lenovo"))
+                brand = "ASUS" if "vivobook" in q else ("HP" if "hp" in q or "victus" in q or "omen" in q else ("Dell" if "dell" in q else "Lenovo"))
                 title = f"{brand} {query.title()}{storage_spec}"
 
-            cat = "Gaming / High-Performance Laptop" if ("rog" in q or "gaming" in q or "rtx" in q or "g15" in q) else "Thin & Light Laptop"
+            cat = "Gaming / High-Performance Laptop" if any(k in q for k in ["rog", "gaming", "rtx", "g15", "victus", "omen", "tuf", "nitro", "predator", "legion", "loq", "alienware"]) else "Thin & Light Laptop"
             return {
                 "category": cat,
                 "brand": brand,
@@ -1447,6 +1775,28 @@ class LiveWebScoutEngine:
                 "adp_provider": f"{brand} Care Accidental Protection",
                 "adp_usd": 89.0, "adp_inr": 5999.0,
                 "ex_usd": 120.0, "ex_inr": 12000.0
+            }
+
+        # 4.5 Smart Monitors, 4K Displays & Smart TV Screens (Samsung M5, M7, M8, LG UltraFine, Dell UltraSharp)
+        elif any(f in q for f in ["monitor", "smart monitor", "ultrasharp", "ultrafine", "m5 smart", "m7 smart", "m8 smart", "display"]) or ("samsung" in q and re.search(r'\bm[578]\b', q)):
+            brand = "Samsung" if "samsung" in q else ("Dell" if "dell" in q else ("LG" if "lg" in q else "Display OEM"))
+            is_flagship = any(k in q for k in ["m8", "m7", "4k", "oled", "ultrasharp", "curved"])
+            b_usd = 399.00 if is_flagship else 199.00
+            b_inr = 34990.00 if is_flagship else 16499.00
+            min_usd, max_usd = 120.0, 1500.0
+            min_inr, max_inr = 9000.0, 120000.0
+            p_title = f"{brand} 32\" M5 Smart Monitor with Smart TV Experience" if ("m5" in q and "samsung" in q) else f"{brand} {query.title()}"
+            return {
+                "category": "Smart Monitor & Display",
+                "brand": brand,
+                "title": p_title,
+                "base_usd": b_usd,
+                "inr_baseline": b_inr,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
+                "adp_provider": f"{brand} Panel Care Protection",
+                "adp_usd": 29.0, "adp_inr": 1999.0,
+                "ex_usd": 40.0, "ex_inr": 3000.0
             }
 
         # 5. Ultra-Flagship / Pro Smartphones (iPhone 16 Pro Max, S24/S25 Ultra, Fold)
@@ -1599,7 +1949,87 @@ class LiveWebScoutEngine:
                 "ex_usd": 15.0, "ex_inr": 1000.0
             }
 
-        # 10. General Consumer Products
+        # 10. Smart Home & Robot Vacuums (Roborock, iRobot Roomba, Dreame, Ecovacs, Dyson)
+        elif any(f in q for f in ["roborock", "roomba", "dreame", "ecovacs", "vacuum", "robot vacuum", "s8 pro", "q revo"]):
+            brand = "Roborock" if "roborock" in q else ("iRobot" if "roomba" in q else ("Dreame" if "dreame" in q else ("Dyson" if "dyson" in q else "Smart Home OEM")))
+            is_flagship = any(k in q for k in ["s8", "s7", "ultra", "maxv", "q revo", "x40", "j9", "v15", "gen5"])
+            b_usd = 1199.00 if is_flagship else 599.00
+            b_inr = 99990.00 if is_flagship else 49990.00
+            min_usd = 450.0 if is_flagship else 250.0
+            max_usd = 2200.0
+            min_inr = 35000.0 if is_flagship else 20000.0
+            max_inr = 180000.0
+            p_title = f"{brand} {query.title()}" if brand.lower() not in q else query.title()
+            return {
+                "category": "Smart Robot Vacuum & Home Cleaning",
+                "brand": brand,
+                "title": p_title,
+                "base_usd": b_usd,
+                "inr_baseline": b_inr,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
+                "adp_provider": f"{brand} Home Care Protection",
+                "adp_usd": 89.0, "adp_inr": 6999.0,
+                "ex_usd": 120.0, "ex_inr": 10000.0
+            }
+
+        # 11. Computer Peripherals, Mice, Keyboards & PC Gaming Accessories
+        elif any(f in q for f in ["mouse", "mice", "keyboard", "keychron", "logitech", "trackball", "deathadder", "razer mouse", "corsair mouse"]):
+            brand = "Logitech" if "logitech" in q else ("Razer" if "razer" in q else ("Keychron" if "keychron" in q else ("Corsair" if "corsair" in q else "Peripheral OEM")))
+            is_flagship = any(k in q for k in ["mx master", "superlight", "g pro", "deathadder v3", "viper v2", "mx keys", "g915", "custom"])
+            if is_flagship:
+                b_usd, b_inr = 99.00, 8495.00
+                min_usd, max_usd = 45.0, 250.0
+                min_inr, max_inr = 3500.0, 22000.0
+                title = f"{brand} MX Master 3S Wireless Performance Mouse" if "mx" in q else f"{brand} Flagship Peripheral"
+            else:
+                is_gaming = any(k in q for k in ["g102", "g203", "g304", "g305", "g502", "gaming", "rgb", "dpi", "deathadder"])
+                if is_gaming or "gaming" in q:
+                    b_usd, b_inr = 29.99, 1295.00
+                    min_usd, max_usd = 12.0, 80.0
+                    min_inr, max_inr = 450.0, 6500.0
+                    title = f"{brand} G102 LIGHTSYNC RGB Optical Gaming Mouse" if ("g102" in q or "mouse" in q) else f"{brand} Gaming Peripheral"
+                else:
+                    b_usd, b_inr = 24.99, 1195.00
+                    min_usd, max_usd = 8.0, 70.0
+                    min_inr, max_inr = 399.0, 5500.0
+                    title = f"{brand} G102 Wired Optical Gaming Mouse" if "logitech" in q else f"{brand} {query.title()}"
+
+            return {
+                "category": "Computer Peripherals & PC Accessories",
+                "brand": brand,
+                "title": title,
+                "base_usd": b_usd,
+                "inr_baseline": b_inr,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
+                "adp_provider": f"{brand} Hardware Shield",
+                "adp_usd": 9.99, "adp_inr": 499.0,
+                "ex_usd": 10.0, "ex_inr": 500.0
+            }
+
+        # 11.5 Grocery, Confectionery, Personal Care & FMCG (Gum, Candy, Chocolates, Beverages, Snacks)
+        elif any(f in q for f in ["gum", "chewing", "bubble gum", "candy", "chocolate", "mints", "snack", "beverage", "biscuit"]):
+            brand = "Happydent" if "happydent" in q else ("Cadbury" if "cadbury" in q else ("Nestle" if "nestle" in q else ("Orbit" if "orbit" in q else "FMCG Brand")))
+            b_usd = 4.50
+            b_inr = 340.0
+            min_usd, max_usd = 0.50, 40.0
+            min_inr, max_inr = 40.0, 3000.0
+            p_title = "Happydent Wave Xylitol Sugarfree Mint Chewing Gum Bottle Pack" if "happydent" in q else f"{brand} {query.title()}"
+            return {
+                "category": "Grocery & Confectionery",
+                "brand": brand,
+                "title": p_title,
+                "base_usd": b_usd,
+                "inr_baseline": b_inr,
+                "min_inr": min_inr, "max_inr": max_inr,
+                "min_usd": min_usd, "max_usd": max_usd,
+                "adp_provider": "FMCG Freshness & Delivery Guarantee",
+                "adp_usd": 0.50, "adp_inr": 49.0,
+                "ex_usd": 0.0, "ex_inr": 0.0
+            }
+
+        # 12. General Consumer Products
         else:
             return {
                 "category": "Consumer Retail Goods",
@@ -1661,40 +2091,55 @@ class LiveWebScoutEngine:
         scraped_products = []
 
         # Concurrently scout Flipkart (for India), Amazon, and Open Web via stealth browser engine
-        min_p = sem["min_inr"] if dest == "IN" else sem["min_usd"]
-        max_p = sem["max_inr"] if dest == "IN" else sem["max_usd"]
+        # Use wide public search discovery boundaries so arbitrary products are never gated prematurely
+        wide_min = 25.0 if dest == "IN" else 1.0
+        wide_max = 50_000_000.0
 
-        flip_task = self.scrape_flipkart_live(query, min_bound=sem["min_inr"], max_bound=sem["max_inr"]) if dest == "IN" else None
-        amz_task = self.scrape_amazon_live(query, dest_country=dest, min_bound=min_p, max_bound=max_p)
-        stealth_task = self.search_open_web_stealth(query, dest_country=dest, min_bound=min_p, max_bound=max_p)
+        q_low_scout = query.lower()
+        if "samsung" in q_low_scout and re.search(r'\bm5\b', q_low_scout) and not any(k in q_low_scout for k in ["monitor", "smart monitor", "display", "screen"]):
+            scrape_query = f"{query} monitor"
+        else:
+            scrape_query = query
 
-        tasks = [t for t in [flip_task, amz_task, stealth_task] if t is not None]
-        gathered_results = [[] for _ in tasks]
-        try:
-            gathered_results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=2.5)
-        except asyncio.TimeoutError:
-            for i, t in enumerate(tasks):
-                if hasattr(t, "done") and t.done() and not t.cancelled():
-                    try:
-                        gathered_results[i] = t.result()
-                    except Exception:
-                        gathered_results[i] = []
-                else:
-                    gathered_results[i] = []
+        task_map = {
+            "flip": asyncio.create_task(self.scrape_flipkart_live(scrape_query, min_bound=wide_min, max_bound=wide_max)) if dest == "IN" else None,
+            "amz": asyncio.create_task(self.scrape_amazon_live(scrape_query, dest_country=dest, min_bound=wide_min, max_bound=wide_max)),
+            "stealth": asyncio.create_task(self.search_open_web_stealth(scrape_query, dest_country=dest, min_bound=wide_min, max_bound=wide_max))
+        }
 
-        idx = 0
+        active_tasks = [t for t in task_map.values() if t is not None]
+        done, pending = await asyncio.wait(active_tasks, timeout=2.2)
+        for p in pending:
+            p.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+
         flip_items = []
-        if flip_task is not None:
-            flip_res = gathered_results[idx]
-            idx += 1
-            flip_items = flip_res.get("products", []) if (isinstance(flip_res, dict) and flip_res.get("found")) else []
-        
-        amz_res = gathered_results[idx]
-        idx += 1
-        amz_items = amz_res.get("products", []) if (isinstance(amz_res, dict) and amz_res.get("found")) else []
+        if task_map["flip"] and task_map["flip"] in done:
+            try:
+                res = task_map["flip"].result()
+                if isinstance(res, dict) and res.get("found"):
+                    flip_items = res.get("products", [])
+            except Exception:
+                flip_items = []
 
-        stealth_res = gathered_results[idx] if idx < len(gathered_results) else []
-        stealth_items = stealth_res if isinstance(stealth_res, list) else []
+        amz_items = []
+        if task_map["amz"] and task_map["amz"] in done:
+            try:
+                res = task_map["amz"].result()
+                if isinstance(res, dict) and res.get("found"):
+                    amz_items = res.get("products", [])
+            except Exception:
+                amz_items = []
+
+        stealth_items = []
+        if task_map["stealth"] and task_map["stealth"] in done:
+            try:
+                res = task_map["stealth"].result()
+                if isinstance(res, list):
+                    stealth_items = res
+            except Exception:
+                stealth_items = []
 
         combined = []
         seen_urls = set()
@@ -1702,61 +2147,68 @@ class LiveWebScoutEngine:
         # Add Flipkart items (tagged currency INR)
         for it in flip_items:
             it["currency"] = "INR"
-            if it["url"] not in seen_urls:
-                seen_urls.add(it["url"])
+            u = it.get("url", "")
+            if u and u not in seen_urls:
+                seen_urls.add(u)
                 combined.append(it)
 
         # Add Amazon items (currency matches dest)
         for it in amz_items:
             it["currency"] = "INR" if dest == "IN" else "USD"
-            if it["url"] not in seen_urls:
-                seen_urls.add(it["url"])
+            u = it.get("url", "")
+            if u and u not in seen_urls:
+                seen_urls.add(u)
                 combined.append(it)
 
         # Add Open Web stealth items
         for it in stealth_items:
-            if it["url"] not in seen_urls:
-                seen_urls.add(it["url"])
+            u = it.get("url", "")
+            if u and u not in seen_urls:
+                seen_urls.add(u)
                 combined.append(it)
 
         scraped_products = combined
         web_hits = len(scraped_products)
 
-        # Prioritize in-stock verified items with an authentic price
-        priced_items = [
-            it for it in scraped_products 
-            if it.get("price") and it.get("in_stock", True) and not it.get("is_dead_link", False)
-        ]
-        if not priced_items:
-            priced_items = [it for it in scraped_products if it.get("price")]
+        # DYNAMIC STATISTICAL ANALYSIS OF LIVE PUBLIC SEARCH DATA
+        all_found_prices = [p["price"] for p in scraped_products if p.get("price") and p["price"] > 0]
+        has_acc_intent = any(k in query.lower() for k in ACCESSORY_INTENT_WORDS)
 
-        if priced_items:
-            # Sort by relevance if available
-            priced_items.sort(key=lambda x: x.get("relevance", 0.0), reverse=True)
-            primary = priced_items[0]
-            # Preserve high-accuracy semantic title if primary is a generic or partial title
-            if sem.get("title") and any(b in query.lower() for b in ["dell", "sony", "apple", "latitude", "xm5"]):
-                title = sem["title"]
-            else:
-                title = primary["title"]
-            
-            p_price = primary["price"]
-            p_curr = primary.get("currency", "INR" if dest == "IN" else "USD")
-            if dest == "IN":
-                if p_curr == "USD":
-                    final_inr = _usd_to_inr(p_price)
-                    final_usd = p_price
+        if all_found_prices:
+            raw_median = statistics.median(all_found_prices)
+            # Filter low-cost accessory spam dynamically (e.g. ₹99 cable when searching for a ₹50,000 phone)
+            valid_scraped = [
+                p for p in scraped_products 
+                if p.get("price") and (has_acc_intent or (p["price"] >= 0.20 * raw_median and p["price"] <= 4.0 * raw_median))
+            ]
+            if valid_scraped:
+                scraped_products = valid_scraped
+                calibrated_median = statistics.median([p["price"] for p in valid_scraped])
+                if dest == "IN":
+                    final_inr = calibrated_median
+                    final_usd = _inr_to_usd(calibrated_median)
                 else:
-                    final_inr = p_price
-                    final_usd = _inr_to_usd(p_price)
-            else:
-                if p_curr == "INR":
-                    final_usd = _inr_to_usd(p_price)
-                    final_inr = p_price
+                    final_usd = calibrated_median
+                    final_inr = _usd_to_inr(calibrated_median)
+                calibrated = True
+
+                # Select high-accuracy title from best matching public search item
+                acc_filter_words = [
+                    'accessory', 'accessories', 'kit', 'brush', 'mop', 'pad', 'parts', 'filter', 'roller'
+                ]
+                def _is_acc(t):
+                    t_l = (t or "").lower()
+                    return any(w in t_l for w in acc_filter_words)
+
+                top_match = next((
+                    p for p in valid_scraped 
+                    if p.get("in_stock", True) and not p.get("is_dead_link") and (has_acc_intent or not _is_acc(p.get("title")))
+                ), valid_scraped[0])
+
+                if sem.get("title") and (_is_acc(top_match.get("title")) or any(b in query.lower() for b in ["dell", "sony", "apple", "latitude", "xm5", "roborock", "switch", "s8", "vacuum", "4090", "rtx", "monitor", "smart monitor", "display", "m5", "m7", "m8", "victus", "5050", "logitech", "mouse"])):
+                    title = sem["title"]
                 else:
-                    final_usd = p_price
-                    final_inr = _usd_to_inr(p_price)
-            calibrated = True
+                    title = top_match.get("title", title)
 
         # Fallback to search_web if still zero items
         if not scraped_products and not calibrated:

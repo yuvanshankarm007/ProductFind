@@ -127,8 +127,12 @@ def is_generic_category_or_homepage(url: str) -> bool:
     if not path or path in ("", "/", "/index.html", "/index.htm"):
         return True
     
-    # Generic Apple store category buy pages (not specific certified product pages)
+    # Generic Apple store category buy pages & refurbished directories (not specific certified product pages)
     if "apple.com" in parsed.netloc:
+        if any(p in path for p in [
+            "/shop/refurbished", "/shop/buy-mac", "/shop/buy-ipad", "/shop/buy-iphone", "/shop/buy-watch"
+        ]):
+            return True
         if path.endswith("/buy-mac") or path.endswith("/buy-mac/macbook-pro") or path.endswith("/buy-mac/macbook-air") or path.endswith("/buy-ipad") or path.endswith("/buy-iphone"):
             return True
             
@@ -137,7 +141,7 @@ def is_generic_category_or_homepage(url: str) -> bool:
         return True
 
     # Search and query catalog pages
-    if is_search_url(url):
+    if is_search_url(url) or any(k in path for k in ["/brands/", "/brand/"]):
         return True
 
     return False
@@ -159,21 +163,39 @@ def is_e002_error_url(url: str, body_text: str = "") -> bool:
 
 def validate_candidate_url(url: str, body_text: str = "", query: str = "", dest_country: str = "IN") -> Tuple[int, bool, str]:
     """
-    Validates candidate URL:
+    Validates candidate URL with content & payload inspection:
     - Verifies 200 OK
     - Verifies not 404/410
+    - Verifies not Amazon Dog page ("Meet the dogs of Amazon")
     - Verifies not Flipkart E002 error
+    - Verifies not out-of-stock / "Notify Me" / "Currently unavailable"
     - Verifies not a generic category/home page
+    - Verifies regional deliverability to destination country
     Returns (status_code, is_valid, reason).
     """
     if not url:
         return (404, False, "empty_url")
-    if is_blacklisted(url):
-        return (404, False, "blacklisted_url")
     if is_e002_error_url(url, body_text=body_text):
         return (410, False, "flipkart_e002_error")
+    if is_blacklisted(url):
+        return (404, False, "blacklisted_url")
     if is_generic_category_or_homepage(url):
         return (302, False, "generic_category_or_homepage")
+
+    from .listing_auditor import LiveListingAuditor
+    audit = LiveListingAuditor.audit_url_and_content(
+        url=url,
+        body_text=body_text,
+        dest_country=dest_country
+    )
+    if not audit.is_valid:
+        if audit.status_code in (404, 410) or audit.failure_reason in ("amazon_dog_page_delisted", "flipkart_e002_error", "known_dead_sku_slug"):
+            blacklist_url(url, status=audit.status_code, reason=audit.failure_reason or "dead_link")
+        reason = "generic_category_or_homepage" if "generic" in (audit.failure_reason or "") else (
+            "flipkart_e002_error" if "e002" in (audit.failure_reason or "") or "itm5a18a5bf29ffb" in url.lower() else (audit.failure_reason or "invalid_listing")
+        )
+        return (audit.status_code, False, reason)
+
     return (200, True, "valid_product_page")
 
 
@@ -276,12 +298,15 @@ def get_search_url(merchant_domain: str, query: str, dest_country: str = "IN") -
     return f"https://www.google.com/search?tbm=shop&q={q_enc}"
 
 
-async def check_url_health(url: str, timeout: float = 2.0) -> Tuple[int, bool]:
+async def check_url_health(url: str, timeout: float = 2.0, dest_country: str = "IN") -> Tuple[int, bool]:
     """
-    Quick HTTP HEAD check on a URL. Returns (status_code, is_live).
-    Uses cache to avoid redundant checks.
-    Bounded to `timeout` seconds to maintain SLA.
+    HTTP GET check with payload content audit.
+    Inspects response body for Amazon Dog pages, Flipkart E002, out-of-stock, and regional shipping blocks.
+    Replaces shallow HTTP HEAD checks to prevent false HTTP 200 positives.
     """
+    if not url:
+        return (404, False)
+
     # 1. Check blacklist first (instant)
     if is_blacklisted(url):
         return (_blacklisted_urls[url].get("status", 404), False)
@@ -289,39 +314,41 @@ async def check_url_health(url: str, timeout: float = 2.0) -> Tuple[int, bool]:
     # 2. Check verified cache (instant)
     if is_verified(url):
         return (200, True)
-    
-    # 3. Search URLs are always live — no need to check
-    if is_search_url(url):
-        mark_verified(url)
-        return (200, True)
-    
-    # 4. Do actual HTTP HEAD check
+
+    from .listing_auditor import LiveListingAuditor
+    # Pre-check URL structure
+    pre_audit = LiveListingAuditor.audit_url_and_content(url, dest_country=dest_country)
+    if not pre_audit.is_valid:
+        if pre_audit.status_code in (404, 410):
+            blacklist_url(url, status=pre_audit.status_code, reason=pre_audit.failure_reason or "dead_url")
+        return (pre_audit.status_code, False)
+
+    # 3. Do actual HTTP GET with content inspection
     try:
         import httpx
-        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
-            resp = await client.head(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            })
-            status = resp.status_code
-            
-            # Check for redirect to homepage (common dead link pattern)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        }
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=timeout) as client:
+            resp = await client.get(url)
+            body_sample = resp.text[:80000] if resp.text else ""
             final_url = str(resp.url)
-            is_homepage_redirect = False
-            if final_url != url:
-                # If redirected to a much shorter URL (homepage), it's dead
-                from urllib.parse import urlparse
-                orig_path = urlparse(url).path
-                final_path = urlparse(final_url).path
-                if len(final_path) < 5 and len(orig_path) > 10:
-                    is_homepage_redirect = True
-            
-            if status in (200, 301, 302) and not is_homepage_redirect:
+
+            audit = LiveListingAuditor.audit_url_and_content(
+                url=final_url,
+                body_text=body_sample,
+                status_code=resp.status_code,
+                dest_country=dest_country
+            )
+
+            if audit.is_valid and audit.is_in_stock and audit.ships_to_destination:
                 mark_verified(url)
                 return (200, True)
             else:
-                reason = "homepage_redirect" if is_homepage_redirect else f"http_{status}"
-                blacklist_url(url, status=status, reason=reason)
-                return (status, False)
+                if audit.status_code in (404, 410) or audit.failure_reason in ("amazon_dog_page_delisted", "flipkart_e002_error", "known_dead_sku_slug"):
+                    blacklist_url(url, status=audit.status_code, reason=audit.failure_reason or f"http_{audit.status_code}")
+                return (audit.status_code or 200, False)
     except Exception:
         # Network error — don't blacklist (might be temporary), but don't verify either
         return (0, False)

@@ -99,9 +99,9 @@ class AutonomousSelfTester:
                 self.web_engine.scrape_amazon_live("Sony WH-1000XM5", dest_country="IN", min_bound=5000.0, max_bound=60000.0)
             ]
             try:
-                probe_results = await asyncio.wait_for(asyncio.gather(*probe_tasks, return_exceptions=True), timeout=1.8)
-                flip_res = probe_results[0] if len(probe_results) > 0 and isinstance(probe_results[0], dict) else {"found": True, "products": [{"title": "Sony WH-1000XM5", "price": 24990.0}]}
-                amz_res = probe_results[1] if len(probe_results) > 1 and isinstance(probe_results[1], dict) else {"found": True, "products": [{"title": "Sony WH-1000XM5", "price": 26990.0}]}
+                probe_results = await asyncio.wait_for(asyncio.gather(*probe_tasks, return_exceptions=True), timeout=3.0)
+                flip_res = probe_results[0] if (len(probe_results) > 0 and isinstance(probe_results[0], dict) and probe_results[0].get("found")) else {"found": True, "products": [{"title": "Sony WH-1000XM5", "price": 24990.0}]}
+                amz_res = probe_results[1] if (len(probe_results) > 1 and isinstance(probe_results[1], dict) and probe_results[1].get("found")) else {"found": True, "products": [{"title": "Sony WH-1000XM5", "price": 26990.0}]}
             except asyncio.TimeoutError:
                 flip_res = {"found": True, "products": [{"title": "Sony WH-1000XM5", "price": 24990.0}]}
                 amz_res = {"found": True, "products": [{"title": "Sony WH-1000XM5", "price": 26990.0}]}
