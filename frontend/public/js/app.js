@@ -85,8 +85,18 @@ export function setMode(mode) {
     const searchBtnLabel = document.getElementById('search-btn-label');
 
     if (mode === 'bundle') {
-        if (singleBtn) singleBtn.classList.remove('active');
-        if (bundleBtn) bundleBtn.classList.add('active');
+        if (singleBtn) {
+            singleBtn.classList.remove('active');
+            singleBtn.style.setProperty('background-color', 'rgba(15, 23, 42, 0.75)', 'important');
+            singleBtn.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
+            singleBtn.style.setProperty('color', '#94a3b8', 'important');
+        }
+        if (bundleBtn) {
+            bundleBtn.classList.add('active');
+            bundleBtn.style.setProperty('background-color', 'rgba(14, 165, 233, 0.18)', 'important');
+            bundleBtn.style.setProperty('border', '1px solid #38bdf8', 'important');
+            bundleBtn.style.setProperty('color', '#38bdf8', 'important');
+        }
         if (bundleBuilder) bundleBuilder.style.display = 'block';
         if (searchBtnLabel) searchBtnLabel.textContent = '📦 Search Bundle Discounts';
         if (searchInput) {
@@ -97,8 +107,18 @@ export function setMode(mode) {
         }
         renderBundlePills();
     } else {
-        if (singleBtn) singleBtn.classList.add('active');
-        if (bundleBtn) bundleBtn.classList.remove('active');
+        if (singleBtn) {
+            singleBtn.classList.add('active');
+            singleBtn.style.setProperty('background-color', 'rgba(14, 165, 233, 0.18)', 'important');
+            singleBtn.style.setProperty('border', '1px solid #38bdf8', 'important');
+            singleBtn.style.setProperty('color', '#38bdf8', 'important');
+        }
+        if (bundleBtn) {
+            bundleBtn.classList.remove('active');
+            bundleBtn.style.setProperty('background-color', 'rgba(15, 23, 42, 0.75)', 'important');
+            bundleBtn.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
+            bundleBtn.style.setProperty('color', '#94a3b8', 'important');
+        }
         if (bundleBuilder) bundleBuilder.style.display = 'none';
         if (searchBtnLabel) searchBtnLabel.textContent = 'Arbitrate Deals';
         if (searchInput) {
