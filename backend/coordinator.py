@@ -476,9 +476,20 @@ class SentinelCoordinator:
             )
             state.applied_wallet_discounts = wallet_calc.model_dump()
 
+        state.is_complete = True
         state.events = scoped_bus.get_logs()
         self._session_states[session_id] = state
         self._last_state = state
+
+        await scoped_bus.emit(
+            source="Coordinator",
+            target="ClientUI",
+            event_type="RESOLVED",
+            content=(
+                f"Knapsack Cart-Split Swarm concluded. "
+                f"Synthesized {len(state.final_options)} strategic options across {len(split_result.sub_carts)} optimized merchant baskets."
+            )
+        )
         return state
 
     async def execute_search(

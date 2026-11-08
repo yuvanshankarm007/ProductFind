@@ -256,31 +256,53 @@ function setupEventListeners() {
     // Search Form Submit & Live Typing Debounce
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
+    const mainSearchSubmitBtn = document.getElementById('main-search-submit-btn');
+
+    function triggerUnifiedSearch() {
+        clearTimeout(searchDebounceTimer);
+        let q = searchInput ? searchInput.value.trim() : '';
+
+        // If query is empty, provide intelligent default based on active mode
+        if (!q) {
+            if (currentSearchMode === 'bundle') {
+                q = (bundleItems && bundleItems.length > 0) ? bundleItems.join(', ') : 'WFH Setup under ₹50,000';
+            } else {
+                q = 'Sony WH-1000XM5';
+            }
+            if (searchInput) searchInput.value = q;
+        }
+
+        lastExecutedQuery = q;
+        const isBundleIntent = currentSearchMode === 'bundle' || 
+            q.includes(',') || 
+            ['setup', 'bundle', 'bulk', 'kit', 'pack', 'knapsack', 'peripherals', 'workstation', 'rig', 'wfh'].some(k => q.toLowerCase().includes(k));
+
+        if (isBundleIntent && currentSearchMode !== 'bundle') {
+            setMode('bundle');
+        }
+
+        let itemsList = null;
+        if (isBundleIntent) {
+            if (bundleItems && bundleItems.length > 0) {
+                itemsList = bundleItems;
+            } else if (q.includes(',')) {
+                itemsList = q.split(',').map(s => s.trim()).filter(Boolean);
+            }
+        }
+        executeSearch(q, isBundleIntent ? 'bundle' : 'single', itemsList);
+    }
+
     if (searchForm) {
         searchForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            clearTimeout(searchDebounceTimer);
-            const q = searchInput ? searchInput.value.trim() : '';
-            if (q) {
-                lastExecutedQuery = q;
-                const isBundleIntent = currentSearchMode === 'bundle' || 
-                    q.includes(',') || 
-                    ['setup', 'bundle', 'bulk', 'kit', 'pack', 'knapsack', 'peripherals', 'workstation', 'rig', 'wfh'].some(k => q.toLowerCase().includes(k));
+            triggerUnifiedSearch();
+        });
+    }
 
-                if (isBundleIntent && currentSearchMode !== 'bundle') {
-                    setMode('bundle');
-                }
-
-                let itemsList = null;
-                if (isBundleIntent) {
-                    if (bundleItems.length > 0) {
-                        itemsList = bundleItems;
-                    } else if (q.includes(',')) {
-                        itemsList = q.split(',').map(s => s.trim()).filter(Boolean);
-                    }
-                }
-                executeSearch(q, isBundleIntent ? 'bundle' : 'single', itemsList);
-            }
+    if (mainSearchSubmitBtn) {
+        mainSearchSubmitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerUnifiedSearch();
         });
     }
 
@@ -507,48 +529,40 @@ export function executeSearch(query, mode = null, itemsList = null) {
         `Deploying Tier-1 Scout Swarm for query: '${query}' in region: ${prefs.country} (${prefs.currency})...`
     );
 
-    // Try WebSocket first
-    const sentWs = wsClient.send('search', payload);
-    if (!sentWs) {
-        // Fallback to HTTP POST
-        fetch('/api/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: currentSearchController.signal
-        })
-        .then(res => res.json())
-        .then(state => {
-            if (searchToken === currentSearchToken) {
-                applySearchResults(state);
+    // Update button loading text
+    const btnLabel = document.getElementById('search-btn-label');
+    if (btnLabel) btnLabel.textContent = isBundle ? 'Knapsack...' : 'Arbitrating...';
+
+    // 1. Stream live agent negotiation traces over WebSocket
+    wsClient.send('search', payload);
+
+    // 2. Concurrently execute HTTP fetch for immediate zero-delay completion
+    fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: currentSearchController.signal
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(state => {
+        if (searchToken === currentSearchToken) {
+            applySearchResults(state);
+            if (btnLabel) {
+                btnLabel.textContent = currentSearchMode === 'bundle' ? 'Knapsack AI' : 'AI Mode';
             }
-        })
-        .catch(err => {
-            if (err.name !== 'AbortError') {
-                console.error("HTTP Search Error:", err);
-                showToast(`Search error: ${err.message}`, "error");
+        }
+    })
+    .catch(err => {
+        if (err.name !== 'AbortError') {
+            console.error("HTTP Search Error:", err);
+            if (btnLabel) {
+                btnLabel.textContent = currentSearchMode === 'bundle' ? 'Knapsack AI' : 'AI Mode';
             }
-        });
-    } else {
-        // Safety fallback: if WebSocket does not deliver within 4s, fetch via HTTP
-        setTimeout(() => {
-            if (searchToken === currentSearchToken && (!store.lastState || store.lastState.search_query !== query)) {
-                fetch('/api/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: currentSearchController.signal
-                })
-                .then(res => res.json())
-                .then(state => {
-                    if (searchToken === currentSearchToken) {
-                        applySearchResults(state);
-                    }
-                })
-                .catch(() => {});
-            }
-        }, 4000);
-    }
+        }
+    });
 }
 
 function handleInboundWebSocket(msg) {
