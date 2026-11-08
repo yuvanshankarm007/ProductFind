@@ -101,6 +101,10 @@ class WalletDiscountCalculation(BaseModel):
     pay_in_4_biweekly: Optional[float] = None
     savings_breakdown: str
 
+    @property
+    def total_discount(self) -> float:
+        return self.net_savings
+
 
 class WalletStackerService:
     def __init__(self):

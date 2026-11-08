@@ -474,7 +474,7 @@ class SentinelCoordinator:
                 retailer="Amazon",
                 order_amount=split_result.optimized_total
             )
-            state.applied_wallet_discounts = wallet_calc
+            state.applied_wallet_discounts = wallet_calc.model_dump()
 
         state.events = scoped_bus.get_logs()
         self._session_states[session_id] = state
@@ -838,13 +838,16 @@ class SentinelCoordinator:
                 retailer=best_opt.listing.merchant,
                 order_amount=best_opt.risk_adjusted_tco
             )
-            state.applied_wallet_discounts = wallet_calc
+            wallet_calc_dict = wallet_calc.model_dump()
+            wallet_calc_dict["total_discount"] = wallet_calc.net_savings
+            state.applied_wallet_discounts = wallet_calc_dict
+            best_card_str = wallet_calc.best_card_name or "Wallet Card"
             await scoped_bus.emit(
                 source="WalletStacker",
                 target="Coordinator",
                 event_type="WALLET_DISCOUNTS_APPLIED",
-                content=f"Applied wallet bonus: Saved {preferences.currency} {wallet_calc['total_discount']:,.2f} using {wallet_calc.get('best_card_name')}.",
-                payload=wallet_calc
+                content=f"Applied wallet bonus: Saved {preferences.currency} {wallet_calc.net_savings:,.2f} using {best_card_str}.",
+                payload=wallet_calc_dict
             )
 
         state.is_complete = True

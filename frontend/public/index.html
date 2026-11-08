@@ -20,7 +20,7 @@
     </script>
 
     <!-- Custom Pre-composed Stylesheet (Replaces 4.7MB runtime overhead) -->
-    <link rel="stylesheet" href="./css/styles.css?v=2.7">
+    <link rel="stylesheet" href="./css/styles.css?v=3.0">
 
     <!-- Zero-White Browser Button Reset & Glassmorphism Defaults (Prevents browser user-agent white flashes) -->
     <style>
@@ -120,6 +120,31 @@
         }
         .search-ai-mode-pill-btn svg {
             color: #38bdf8;
+        }
+        /* Modal & Form Inputs Dark Glassmorphism */
+        input.form-input,
+        textarea.form-input {
+            background: rgba(30, 41, 59, 0.85) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #f8fafc !important;
+            font-size: 0.85rem !important;
+            padding: 0.55rem 0.75rem !important;
+            border-radius: 8px !important;
+            outline: none !important;
+            box-sizing: border-box !important;
+            transition: all 0.2s ease !important;
+        }
+        input.form-input:focus,
+        textarea.form-input:focus {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
+            background: rgba(30, 41, 59, 0.95) !important;
+        }
+        input.form-input[readonly],
+        textarea.form-input[readonly] {
+            background: rgba(15, 23, 42, 0.6) !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed !important;
         }
     </style>
 </head>
@@ -1088,6 +1113,6 @@
     <div id="toast-container"></div>
 
     <!-- Core App Bootstrap Module (Versioned for cache-busting) -->
-    <script type="module" src="./js/app.js?v=2.8"></script>
+    <script type="module" src="./js/app.js?v=3.0"></script>
 </body>
 </html>
