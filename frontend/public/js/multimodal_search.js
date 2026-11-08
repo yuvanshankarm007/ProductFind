@@ -158,16 +158,23 @@ export function initMultimodalSearch(callbacks) {
         });
     }
 
-    // 3. Plus (+) Button: Quick Action Menu / Toggles Modes
+    // 3. Plus (+) Button: Quick Action Menu / Toggles Bundle & Multi-Item Mode
     const btnPlus = document.getElementById('btn-search-plus');
     if (btnPlus) {
         btnPlus.addEventListener('click', (e) => {
             e.preventDefault();
-            const switcher = document.querySelector('.search-mode-switcher');
-            if (switcher) {
-                const isHidden = window.getComputedStyle(switcher).display === 'none';
-                switcher.style.display = isHidden ? 'flex' : 'none';
-                showToast(isHidden ? "⚡ Search modes expanded" : "Search modes collapsed", "info");
+            const bundleBtn = document.getElementById('mode-bundle-btn');
+            const singleBtn = document.getElementById('mode-single-btn');
+            const bundleContainer = document.getElementById('bundle-builder-container');
+            const isBundleActive = bundleContainer && bundleContainer.style.display !== 'none';
+            if (isBundleActive) {
+                if (singleBtn) singleBtn.click();
+            } else {
+                if (bundleBtn) {
+                    bundleBtn.click();
+                    const bundleQuickInput = document.getElementById('bundle-item-quick-input');
+                    if (bundleQuickInput) bundleQuickInput.focus();
+                }
             }
         });
     }

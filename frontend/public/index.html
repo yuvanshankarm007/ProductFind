@@ -20,7 +20,7 @@
     </script>
 
     <!-- Custom Pre-composed Stylesheet (Replaces 4.7MB runtime overhead) -->
-    <link rel="stylesheet" href="./css/styles.css?v=3.0">
+    <link rel="stylesheet" href="./css/styles.css?v=3.1">
 
     <!-- Zero-White Browser Button Reset & Glassmorphism Defaults (Prevents browser user-agent white flashes) -->
     <style>
@@ -236,8 +236,8 @@
             </div>
 
             <div class="search-box-wrapper">
-                <!-- Search Mode Switcher (Hidden by default to match clean Google-style pill bar; toggled via [+] button) -->
-                <div class="search-mode-switcher" id="search-mode-switcher" style="display: none;">
+                <!-- Search Mode Switcher: Single Deal vs Bundle / Bulk Discount (Knapsack) vs Image Search -->
+                <div class="search-mode-switcher" id="search-mode-switcher" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
                     <button type="button" id="mode-single-btn" class="mode-tab-btn active" data-mode="single" style="background-color: rgba(14, 165, 233, 0.18) !important; border: 1px solid #38bdf8 !important; color: #38bdf8 !important;">
                         <span>⚡ Single Deal</span>
                     </button>
@@ -1113,6 +1113,6 @@
     <div id="toast-container"></div>
 
     <!-- Core App Bootstrap Module (Versioned for cache-busting) -->
-    <script type="module" src="./js/app.js?v=3.0"></script>
+    <script type="module" src="./js/app.js?v=3.1"></script>
 </body>
 </html>
