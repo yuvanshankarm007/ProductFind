@@ -232,6 +232,8 @@ class BlackboardState(BaseModel):
     comparison_matrix: List[Dict[str, Any]] = Field(default_factory=list)
     cart_split_result: Optional[Dict[str, Any]] = None
     is_bundle: bool = False
+    versus_result: Optional[Dict[str, Any]] = None
+    applied_wallet_discounts: Optional[Dict[str, Any]] = None
     created_at: str = Field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
     @property

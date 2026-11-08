@@ -1,0 +1,58 @@
+[
+  {
+    "id": "alert-demo-xm5",
+    "product_title": "Sony WH-1000XM5",
+    "target_price": 24000.0,
+    "current_price": 26990.0,
+    "currency": "INR",
+    "user_contact": "shopper@sentinel.ai",
+    "channel": "email",
+    "status": "ACTIVE",
+    "created_at": 1794140028.3389056,
+    "triggered_at": null,
+    "last_scouted_price": null,
+    "notification_log": null
+  },
+  {
+    "id": "alert-demo-m3",
+    "product_title": "Apple MacBook Pro 16 M3 Max",
+    "target_price": 3199.0,
+    "current_price": 3499.0,
+    "currency": "USD",
+    "user_contact": "@deal_sniper_bot",
+    "channel": "telegram",
+    "status": "ACTIVE",
+    "created_at": 1794140028.3389056,
+    "triggered_at": null,
+    "last_scouted_price": null,
+    "notification_log": null
+  },
+  {
+    "id": "alert-4dc37a6a",
+    "product_title": "Sony WH-1000XM5",
+    "target_price": 22000.0,
+    "current_price": 26990.0,
+    "currency": "INR",
+    "user_contact": "@mydeals",
+    "channel": "telegram",
+    "status": "ACTIVE",
+    "created_at": 1794140259.9468386,
+    "triggered_at": null,
+    "last_scouted_price": null,
+    "notification_log": null
+  },
+  {
+    "id": "alert-fec14e3e",
+    "product_title": "Sony WH-1000XM5 Headphones",
+    "target_price": 24000.0,
+    "current_price": 26990.0,
+    "currency": "INR",
+    "user_contact": "tester@sentinel.ai",
+    "channel": "telegram",
+    "status": "TRIGGERED",
+    "created_at": 1794140867.466806,
+    "triggered_at": 1794140867.468345,
+    "last_scouted_price": 23490.0,
+    "notification_log": "\ud83c\udfaf [SIMULATED WATCHDOG DISPATCH] 'Sony WH-1000XM5 Headphones' hit flash floor at INR 23,490.00 (Target: INR 24,000.00 | Net Drop: INR 3,500.00). Alert dispatched to TELEGRAM (tester@sentinel.ai)."
+  }
+]

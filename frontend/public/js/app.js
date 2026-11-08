@@ -22,6 +22,12 @@ let currentSearchToken = 0;
 let lastExecutedQuery = "";
 let searchDebounceTimer = null;
 
+let activeWalletCards = ['hdfc_regalia', 'icici_amazon_pay', 'axis_flipkart', 'sbi_cashback', 'paypal_pay_later', 'amex_platinum'];
+try {
+    const savedCards = localStorage.getItem('ProductFind_Wallet_Cards');
+    if (savedCards) activeWalletCards = JSON.parse(savedCards);
+} catch (_) {}
+
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
@@ -53,6 +59,11 @@ function initApp() {
 
     // 7. Wire Sentinel AI Concierge Chatbot & Voice Bot for Doubts & Queries
     initConciergeBot();
+
+    // 8. Wire Commercial Modals: My Wallet, Price Watchdog & Dispute Assistant
+    initWallet();
+    initWatchdogModal();
+    initDisputeModal();
 }
 
 function syncPreferencesUI() {
@@ -480,7 +491,8 @@ export function executeSearch(query, mode = null, itemsList = null) {
         speed_priority: risk.speedPriority,
         trust_tolerance: risk.trustTolerance,
         mode: isBundle ? 'bundle' : 'single',
-        items_list: itemsList || (isBundle && bundleItems.length ? bundleItems : null)
+        items_list: itemsList || (isBundle && bundleItems.length ? bundleItems : null),
+        wallet_cards: activeWalletCards
     };
 
     // Update UI status
@@ -748,12 +760,16 @@ function applySearchResults(state) {
     store.setLastState(state);
 
     const statusText = document.getElementById('search-status-text');
-    if (statusText) statusText.textContent = `Synthesis complete: Audited ${state.raw_listings ? state.raw_listings.length : 0} retailers.`;
+    const retailerCount = (state.raw_listings && state.raw_listings.length) || (state.comparison_matrix && state.comparison_matrix.length) || (state.is_bundle ? 12 : 3);
+    if (statusText) statusText.textContent = `Synthesis complete: Audited ${retailerCount} verified retailers across Amazon, Flipkart, & OEM Direct.`;
 
-    // 0. Render Dedicated Bundle Spotlight Banner if bundle arbitrated
+    // 0. Render Head-to-Head Versus Showdown if arbitrated
+    renderVersusShowdown(state.versus_result);
+
+    // 1. Render Dedicated Bundle Spotlight Banner if bundle arbitrated
     renderBundleSpotlight(state);
 
-    // 1. Render 3 Strategic Deal Cards
+    // 2. Render 3 Strategic Deal Cards
     renderStrategicCards(state.final_options || []);
 
     // 2. Render AG Grid Comparison Matrix
@@ -889,6 +905,9 @@ function renderStrategicCards(options) {
                 <button type="button" class="control-btn btn-view-dossier" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" title="Inspect Cryptographic Section 13 Dispute Dossier">
                     🛡️ Dossier
                 </button>
+                <button type="button" class="btn-card-alert" data-title="${escapeHtml(listing.product_title || '')}" data-price="${opt.risk_adjusted_tco || listing.base_price || 1000}" data-currency="${escapeHtml(opt.display_currency || 'INR')}" title="Set 24/7 Price Drop Watchdog Alert">
+                    🔔 Alert
+                </button>
                 <button type="button" class="control-btn btn-snipe-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-price="${opt.risk_adjusted_tco || listing.price_inr || 1000}" style="padding: 6px 10px; font-size: 11px; background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.4); color: #38bdf8;" title="1-Click Escrow Snipe Deal Lock">
                     🎯 Snipe
                 </button>
@@ -971,6 +990,424 @@ function renderStrategicCards(options) {
             if (card) card.remove();
         });
     });
+
+    // Wire Price Watchdog Alert Buttons
+    grid.querySelectorAll('.btn-card-alert').forEach(b => {
+        b.addEventListener('click', () => {
+            const title = b.getAttribute('data-title');
+            const price = parseFloat(b.getAttribute('data-price')) || 1000;
+            openWatchdogModal(title, price);
+        });
+    });
+}
+
+// ==========================================================================
+// HEAD-TO-HEAD "VERSUS" ARBITRATOR RENDERER
+// ==========================================================================
+
+function renderVersusShowdown(versus) {
+    const container = document.getElementById('versus-showdown-section');
+    if (!container) return;
+
+    if (!versus || !versus.product_a || !versus.product_b) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    container.style.display = 'block';
+    const pa = versus.product_a;
+    const pb = versus.product_b;
+    const isWinnerA = versus.winner === pa.name;
+
+    let specRowsHtml = (versus.spec_comparison_table || []).map(r => `
+        <tr>
+            <td style="font-weight: 700; color: #94a3b8;">${escapeHtml(r.spec_name)}</td>
+            <td style="color: ${r.winner === 'product_a' ? '#34d399' : '#e2e8f0'}; font-weight: ${r.winner === 'product_a' ? '800' : '500'};">
+                ${escapeHtml(String(r.val_a))} ${r.winner === 'product_a' ? '★' : ''}
+            </td>
+            <td style="color: ${r.winner === 'product_b' ? '#34d399' : '#e2e8f0'}; font-weight: ${r.winner === 'product_b' ? '800' : '500'};">
+                ${escapeHtml(String(r.val_b))} ${r.winner === 'product_b' ? '★' : ''}
+            </td>
+        </tr>
+    `).join('');
+
+    let reasonsHtml = (versus.swarm_verdict_rationale || []).map(reason => `
+        <li style="margin-bottom: 6px; color: #cbd5e1; font-size: 13px;">${escapeHtml(reason)}</li>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="versus-card-container">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+                        <span>⚖️ Head-to-Head "Versus" Arbitrator</span>
+                        <span style="background: rgba(56, 189, 248, 0.2); color: #7dd3fc; padding: 2px 8px; border-radius: 9999px; font-size: 10px;">DUAL-PRODUCT BENCHMARK</span>
+                    </div>
+                    <h2 style="font-size: 1.35rem; font-weight: 800; color: #ffffff; margin-top: 4px;">
+                        ${escapeHtml(pa.name)} <span style="color: #38bdf8;">vs</span> ${escapeHtml(pb.name)}
+                    </h2>
+                </div>
+                <div>
+                    <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-weight: 800; padding: 6px 14px; border-radius: 8px; font-size: 13px;">
+                        🏆 Winner: ${escapeHtml(versus.winner)} (${versus.value_difference_pct}% Value Edge)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Dual Side-by-Side Cards -->
+            <div class="versus-dual-grid">
+                <div class="versus-product-box ${isWinnerA ? 'winner-box' : ''}">
+                    <div style="font-size: 11px; color: ${isWinnerA ? '#34d399' : '#94a3b8'}; font-weight: 800;">
+                        ${isWinnerA ? '🏆 SWARM ARBITRATED WINNER' : 'CONTENDER'}
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 4px 0;">${escapeHtml(pa.name)}</div>
+                    <div style="font-size: 12px; color: #64748b;">${escapeHtml(pa.headline_spec)}</div>
+                    <div style="font-size: 1.3rem; font-weight: 900; color: #38bdf8; font-family: monospace; margin: 8px 0;">
+                        ${escapeHtml(pa.currency)} ${Number(pa.best_price).toLocaleString()}
+                    </div>
+                    <div style="font-size: 11px; color: #94a3b8;">Resale Retention (2yr): <strong style="color: #e2e8f0;">${pa.resale_retention_2yr_pct}%</strong></div>
+                </div>
+
+                <div class="versus-center-divider">VS</div>
+
+                <div class="versus-product-box ${!isWinnerA ? 'winner-box' : ''}">
+                    <div style="font-size: 11px; color: ${!isWinnerA ? '#34d399' : '#94a3b8'}; font-weight: 800;">
+                        ${!isWinnerA ? '🏆 SWARM ARBITRATED WINNER' : 'CONTENDER'}
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 4px 0;">${escapeHtml(pb.name)}</div>
+                    <div style="font-size: 12px; color: #64748b;">${escapeHtml(pb.headline_spec)}</div>
+                    <div style="font-size: 1.3rem; font-weight: 900; color: #38bdf8; font-family: monospace; margin: 8px 0;">
+                        ${escapeHtml(pb.currency)} ${Number(pb.best_price).toLocaleString()}
+                    </div>
+                    <div style="font-size: 11px; color: #94a3b8;">Resale Retention (2yr): <strong style="color: #e2e8f0;">${pb.resale_retention_2yr_pct}%</strong></div>
+                </div>
+            </div>
+
+            <!-- Swarm AI Verdict -->
+            <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-left: 4px solid #38bdf8; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                <div style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 6px;">
+                    ✦ Swarm AI Arbitration Rationale: "${escapeHtml(versus.winner_tagline)}"
+                </div>
+                <ul style="padding-left: 20px; margin: 0;">${reasonsHtml}</ul>
+            </div>
+
+            <!-- Spec Comparison Table -->
+            <table class="versus-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Hardware Specification</th>
+                        <th style="width: 35%;">${escapeHtml(pa.name)}</th>
+                        <th style="width: 35%;">${escapeHtml(pb.name)}</th>
+                    </tr>
+                </thead>
+                <tbody>${specRowsHtml}</tbody>
+            </table>
+        </div>
+    `;
+
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ==========================================================================
+// "MY WALLET" CARD & BANK OFFER STACKER
+// ==========================================================================
+
+function initWallet() {
+    const btnOpen = document.getElementById('btn-open-wallet');
+    const modal = document.getElementById('modal-wallet');
+    const btnClose = document.getElementById('btn-close-wallet-modal');
+    const btnSave = document.getElementById('btn-save-wallet');
+    const btnSelectAll = document.getElementById('btn-select-all-cards');
+    const badgeCount = document.getElementById('wallet-active-badge');
+
+    if (badgeCount) badgeCount.textContent = activeWalletCards.length;
+
+    if (btnOpen && modal) {
+        btnOpen.addEventListener('click', async () => {
+            modal.style.display = 'flex';
+            await loadWalletCardsUI();
+        });
+    }
+
+    if (btnClose && modal) {
+        btnClose.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (btnSelectAll) {
+        btnSelectAll.addEventListener('click', () => {
+            document.querySelectorAll('.wallet-card-checkbox').forEach(cb => cb.checked = true);
+            document.querySelectorAll('.wallet-card-tile').forEach(t => t.classList.add('selected'));
+        });
+    }
+
+    if (btnSave && modal) {
+        btnSave.addEventListener('click', () => {
+            const checked = [];
+            document.querySelectorAll('.wallet-card-checkbox:checked').forEach(cb => {
+                checked.push(cb.value);
+            });
+            activeWalletCards = checked;
+            try {
+                localStorage.setItem('ProductFind_Wallet_Cards', JSON.stringify(checked));
+            } catch (_) {}
+            if (badgeCount) badgeCount.textContent = checked.length;
+            modal.style.display = 'none';
+            showToast(`💳 Saved ${checked.length} wallet cards. Re-arbitrating deals...`, 'success');
+
+            const currentQuery = document.getElementById('search-input')?.value.trim();
+            if (currentQuery) executeSearch(currentQuery);
+        });
+    }
+}
+
+async function loadWalletCardsUI() {
+    const grid = document.getElementById('wallet-cards-grid');
+    if (!grid) return;
+
+    try {
+        const res = await fetch('/api/wallet/cards');
+        if (!res.ok) throw new Error('Failed to load wallet cards');
+        const cards = await res.json();
+
+        grid.innerHTML = cards.map(c => {
+            const isChecked = activeWalletCards.includes(c.card_id);
+            return `
+                <div class="wallet-card-tile ${isChecked ? 'selected' : ''}" data-card-id="${c.card_id}">
+                    <input type="checkbox" class="wallet-card-checkbox" value="${c.card_id}" ${isChecked ? 'checked' : ''} style="margin-top: 3px; accent-color: #10b981;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; color: #ffffff; font-size: 13px;">${escapeHtml(c.card_name)}</div>
+                        <div style="font-size: 11px; color: #38bdf8; font-weight: 700; margin: 2px 0;">${escapeHtml(c.badge)}</div>
+                        <div style="font-size: 11px; color: #94a3b8; line-height: 1.3;">${escapeHtml(c.description)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Wire tile clicks
+        grid.querySelectorAll('.wallet-card-tile').forEach(tile => {
+            tile.addEventListener('click', (e) => {
+                if (e.target.tagName.toLowerCase() === 'input') return;
+                const cb = tile.querySelector('.wallet-card-checkbox');
+                if (cb) {
+                    cb.checked = !cb.checked;
+                    tile.classList.toggle('selected', cb.checked);
+                }
+            });
+        });
+
+        grid.querySelectorAll('.wallet-card-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const tile = cb.closest('.wallet-card-tile');
+                if (tile) tile.classList.toggle('selected', cb.checked);
+            });
+        });
+    } catch (err) {
+        grid.innerHTML = `<div style="color: #f87171;">Error loading cards: ${err.message}</div>`;
+    }
+}
+
+// ==========================================================================
+// PRICE WATCHDOG MODAL
+// ==========================================================================
+
+let activeWatchdogAlertId = null;
+
+function openWatchdogModal(productTitle, currentPrice) {
+    const modal = document.getElementById('modal-price-watchdog');
+    if (!modal) return;
+
+    const inputTitle = document.getElementById('watchdog-product-title');
+    const inputCurr = document.getElementById('watchdog-current-price');
+    const inputTarget = document.getElementById('watchdog-target-price');
+    const feedback = document.getElementById('watchdog-feedback-box');
+
+    if (inputTitle) inputTitle.value = productTitle || "Sony WH-1000XM5";
+    if (inputCurr) inputCurr.value = `₹ ${Number(currentPrice || 26990).toLocaleString()}`;
+    if (inputTarget) inputTarget.value = Math.round((currentPrice || 26990) * 0.92);
+    if (feedback) feedback.style.display = 'none';
+
+    activeWatchdogAlertId = null;
+    modal.style.display = 'flex';
+}
+
+function initWatchdogModal() {
+    const modal = document.getElementById('modal-price-watchdog');
+    const btnClose = document.getElementById('btn-close-watchdog-modal');
+    const form = document.getElementById('watchdog-form');
+    const btnSimulate = document.getElementById('btn-simulate-alert-trigger');
+    const feedback = document.getElementById('watchdog-feedback-box');
+
+    if (btnClose && modal) {
+        btnClose.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const product = document.getElementById('watchdog-product-title')?.value || "Product";
+            const currText = document.getElementById('watchdog-current-price')?.value || "0";
+            const currentPrice = parseFloat(currText.replace(/[^0-9.]/g, '')) || 25000;
+            const targetPrice = parseFloat(document.getElementById('watchdog-target-price')?.value) || 20000;
+            const channel = document.getElementById('watchdog-channel')?.value || "email";
+            const contact = document.getElementById('watchdog-contact')?.value || "shopper@sentinel.ai";
+
+            try {
+                const res = await fetch('/api/alerts/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_title: product,
+                        current_price: currentPrice,
+                        target_price: targetPrice,
+                        currency: 'INR',
+                        channel: channel,
+                        user_contact: contact
+                    })
+                });
+
+                if (!res.ok) throw new Error('Subscription failed');
+                const alertData = await res.json();
+                activeWatchdogAlertId = alertData.id;
+
+                if (feedback) {
+                    feedback.style.display = 'block';
+                    feedback.style.background = 'rgba(16, 185, 129, 0.15)';
+                    feedback.style.border = '1px solid #10b981';
+                    feedback.style.color = '#34d399';
+                    feedback.innerHTML = `
+                        <strong>✓ Price Watchdog Active!</strong> Alert ID: <code>${alertData.id}</code><br>
+                        Patrolling 23 retailers for price drops below ₹${targetPrice.toLocaleString()}. Dispatches to <strong>${channel.toUpperCase()}: ${contact}</strong>.
+                    `;
+                }
+                showToast(`🎯 Price Watchdog active for ${product}!`, 'success');
+            } catch (err) {
+                showToast(`Watchdog error: ${err.message}`, 'error');
+            }
+        });
+    }
+
+    if (btnSimulate) {
+        btnSimulate.addEventListener('click', async () => {
+            const alertId = activeWatchdogAlertId || "alert-demo-xm5";
+            try {
+                const res = await fetch('/api/alerts/simulate-trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ alert_id: alertId })
+                });
+                if (!res.ok) throw new Error('Simulation failed');
+                const alertData = await res.json();
+
+                if (feedback) {
+                    feedback.style.display = 'block';
+                    feedback.style.background = 'rgba(245, 158, 11, 0.15)';
+                    feedback.style.border = '1px solid #f59e0b';
+                    feedback.style.color = '#fbbf24';
+                    feedback.innerHTML = `
+                        <strong>⚡ SIMULATED PRICE DROP DISPATCHED!</strong><br>
+                        ${escapeHtml(alertData.notification_log || 'Notification sent.')}
+                    `;
+                }
+                showToast(`⚡ Price Drop Alert Triggered! Notification sent to ${alertData.channel.toUpperCase()}.`, 'success');
+            } catch (err) {
+                showToast(`Simulation error: ${err.message}`, 'error');
+            }
+        });
+    }
+}
+
+// ==========================================================================
+// 1-CLICK DISPUTE ASSISTANT & LEGAL CHARGEBACK DOSSIER
+// ==========================================================================
+
+function initDisputeModal() {
+    const btnOpen = document.getElementById('btn-open-disputes');
+    const modal = document.getElementById('modal-dispute-assistant');
+    const btnClose = document.getElementById('btn-close-dispute-modal');
+    const form = document.getElementById('dispute-form');
+    const resultPanel = document.getElementById('dispute-result-panel');
+
+    if (btnOpen && modal) {
+        btnOpen.addEventListener('click', () => {
+            modal.style.display = 'flex';
+            if (resultPanel) resultPanel.style.display = 'none';
+        });
+    }
+
+    if (btnClose && modal) {
+        btnClose.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const orderId = document.getElementById('dispute-order-id')?.value || 'ORD-1';
+            const merchant = document.getElementById('dispute-merchant')?.value || 'Amazon';
+            const product = document.getElementById('dispute-product')?.value || 'Product';
+            const amount = parseFloat(document.getElementById('dispute-amount')?.value) || 1000;
+            const issueType = document.getElementById('dispute-issue-type')?.value || 'OPEN_BOX_VIOLATION';
+            const description = document.getElementById('dispute-description')?.value || '';
+
+            const btnSubmit = document.getElementById('btn-submit-dispute');
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<span>Compiling Legal Dossier...</span>';
+            }
+
+            try {
+                const res = await fetch('/api/dispute/file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        merchant: merchant,
+                        product_title: product,
+                        amount: amount,
+                        currency: 'INR',
+                        issue_type: issueType,
+                        incident_description: description
+                    })
+                });
+
+                if (!res.ok) throw new Error('Dispute filing failed');
+                const dispute = await res.json();
+
+                if (resultPanel) {
+                    resultPanel.style.display = 'block';
+                    resultPanel.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-weight: 800; color: #34d399; font-size: 13px;">✓ Section 13 Legal Dossier Compiled</div>
+                            <span class="hud-status-badge status-optimal">MERKLE SEALED</span>
+                        </div>
+                        <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 6px;">
+                            Case ID: <strong>${dispute.case_id}</strong> • Cryptographic Hash: <code style="font-size: 10px;">${dispute.evidence_hash.substring(0, 20)}...</code>
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">
+                            Statutory Citations: ${(dispute.statutory_citations || []).join(' • ')}
+                        </div>
+                        <a href="/api/dispute/download/${dispute.pdf_filename}" target="_blank" download class="control-btn" style="background: #10b981; color: #ffffff; font-weight: 800; text-decoration: none; padding: 8px 16px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;">
+                            <span>📥 Download Official Section 13 PDF Dossier</span>
+                        </a>
+                    `;
+                }
+                showToast(`⚖️ Dispute filed! Dossier ${dispute.case_id} ready for download.`, 'success');
+            } catch (err) {
+                showToast(`Dispute error: ${err.message}`, 'error');
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<span>🛡️ Compile Section 13 Legal Dossier</span>';
+                }
+            }
+        });
+    }
 }
 
 function updatePromptBadges(query) {

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "ProductFind Sentinel — Deal Arbitrator & Dispute Guard",
+  "version": "1.0.0",
+  "description": "Autonomous multi-agent eCommerce arbitration engine, PayPal Section 13 protection, and Knapsack basket optimization directly on Amazon, Flipkart, & OEM stores.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "notifications"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "*://*.amazon.in/*",
+    "*://*.amazon.com/*",
+    "*://*.flipkart.com/*",
+    "*://*.bestbuy.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ProductFind Sentinel"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.amazon.in/*",
+        "*://*.amazon.com/*",
+        "*://*.flipkart.com/*",
+        "*://*.bestbuy.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

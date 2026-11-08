@@ -1,7 +1,7 @@
 {
   "version": "2.1.0",
-  "updated_at": "2026-11-07T17:05:18Z",
-  "total_rules": 83,
+  "updated_at": "2026-11-08T12:28:36Z",
+  "total_rules": 86,
   "instincts": [
     {
       "rule_id": "INST-DEAD-ASIN-B0CKZJ8V3C",
@@ -10,9 +10,9 @@
       "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
       "reason": "Amazon India delisted B0CKZJ8V3C. Replaced with active live 200 OK Dell Latitude listing B0HP26WLF4.",
       "confidence": 1.0,
-      "triggers_count": 62,
+      "triggers_count": 65,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-07T17:03:41Z"
+      "last_triggered_at": "2026-11-08T12:26:24Z"
     },
     {
       "rule_id": "INST-DEAD-ASIN-B09V1K8X1V",
@@ -43,9 +43,9 @@
       "replacement_target": "https://www.amazon.in/Dell-Latitude-Business-Laptop-Renewed/dp/B0HP26WLF4",
       "reason": "Search query URLs (/s?k=) strictly forbidden. Enforce canonical product detail pages (/dp/).",
       "confidence": 1.0,
-      "triggers_count": 130,
+      "triggers_count": 136,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-07T17:03:41Z"
+      "last_triggered_at": "2026-11-08T12:26:24Z"
     },
     {
       "rule_id": "INST-SEARCH-PAGE-NEWEGG",
@@ -54,9 +54,9 @@
       "replacement_target": "https://www.amazon.com/dp/B0D16TS69T",
       "reason": "Newegg search listing queries (/p/pl?) forbidden. Enforce canonical direct item resolution.",
       "confidence": 1.0,
-      "triggers_count": 111,
+      "triggers_count": 114,
       "created_at": "2026-11-02T17:19:44Z",
-      "last_triggered_at": "2026-11-07T17:03:41Z"
+      "last_triggered_at": "2026-11-08T12:26:24Z"
     },
     {
       "rule_id": "INST-BOT-DEFENSE-CF",
@@ -296,9 +296,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Purge all out-of-stock inventory. Only verified in-stock deals permitted.",
       "confidence": 1.0,
-      "triggers_count": 1180,
+      "triggers_count": 1231,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-07T17:05:01Z"
+      "last_triggered_at": "2026-11-08T12:27:31Z"
     },
     {
       "rule_id": "INST-PROMPT-ZERO-404-UNIVERSAL",
@@ -307,9 +307,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Zero tolerance for HTTP 404s and broken links. Quarantine immediately.",
       "confidence": 1.0,
-      "triggers_count": 662,
+      "triggers_count": 693,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-07T17:04:58Z"
+      "last_triggered_at": "2026-11-08T12:27:30Z"
     },
     {
       "rule_id": "INST-PROMPT-ANTI-SCAM-UNIVERSAL",
@@ -318,9 +318,9 @@
       "replacement_target": null,
       "reason": "Universal Quality Rule: Block high-risk counterfeit sellers, unaccredited stores, and trust < 75.",
       "confidence": 1.0,
-      "triggers_count": 577,
+      "triggers_count": 599,
       "created_at": "2026-11-03T13:03:40Z",
-      "last_triggered_at": "2026-11-07T17:04:58Z"
+      "last_triggered_at": "2026-11-08T12:27:31Z"
     },
     {
       "rule_id": "INST-USER_QUARANT-FAKESHADYSTORE-FA50",
@@ -329,9 +329,9 @@
       "replacement_target": null,
       "reason": "User Flagged: Merchant sent replica hardware on merchant 'FakeShadyStore' (listing '')",
       "confidence": 1.0,
-      "triggers_count": 51,
+      "triggers_count": 53,
       "created_at": "2026-11-03T13:07:35Z",
-      "last_triggered_at": "2026-11-07T17:04:05Z"
+      "last_triggered_at": "2026-11-08T12:26:46Z"
     },
     {
       "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-6B5899",
@@ -351,9 +351,9 @@
       "replacement_target": null,
       "reason": "Learned from user prompt: Permanently blacklisted domain 'ebay.com' based on user directive.",
       "confidence": 1.0,
-      "triggers_count": 121,
+      "triggers_count": 125,
       "created_at": "2026-11-03T14:27:59Z",
-      "last_triggered_at": "2026-11-07T17:04:52Z"
+      "last_triggered_at": "2026-11-08T12:27:28Z"
     },
     {
       "rule_id": "INST-USER_QUARANT-SHADY_DEALS_IN-86A8",
@@ -362,9 +362,9 @@
       "replacement_target": null,
       "reason": "Learned from user prompt: Permanently blacklisted domain 'shady-deals.in' based on user directive.",
       "confidence": 1.0,
-      "triggers_count": 112,
+      "triggers_count": 116,
       "created_at": "2026-11-03T14:28:00Z",
-      "last_triggered_at": "2026-11-07T17:04:55Z"
+      "last_triggered_at": "2026-11-08T12:27:29Z"
     },
     {
       "rule_id": "INST-USER_QUARANT-SHADY_DEPOT_COM-C82F",
@@ -373,9 +373,9 @@
       "replacement_target": null,
       "reason": "Learned from user prompt: Permanently blacklisted domain 'shady-depot.com' based on user directive.",
       "confidence": 1.0,
-      "triggers_count": 90,
+      "triggers_count": 94,
       "created_at": "2026-11-03T14:36:16Z",
-      "last_triggered_at": "2026-11-07T17:05:00Z"
+      "last_triggered_at": "2026-11-08T12:27:31Z"
     },
     {
       "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-97F29C",
@@ -914,6 +914,39 @@
       "confidence": 1.0,
       "triggers_count": 0,
       "created_at": "2026-11-07T17:03:42Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-931D46",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-07T17:28:12Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-3AB349",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-08T11:16:17Z",
+      "last_triggered_at": null
+    },
+    {
+      "rule_id": "INST-DEAD-EXPIRED_ITEM_XYZ-234204",
+      "category": "BLACKLIST_DEAD_SKU",
+      "pattern": "EXPIRED-ITEM-XYZ",
+      "replacement_target": "https://www.amazon.in/dp/B0HP26WLF4",
+      "reason": "Merchant confirmed item end of life",
+      "confidence": 1.0,
+      "triggers_count": 0,
+      "created_at": "2026-11-08T12:26:26Z",
       "last_triggered_at": null
     }
   ]

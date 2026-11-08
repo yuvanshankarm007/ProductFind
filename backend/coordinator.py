@@ -34,6 +34,8 @@ from .core.prompt_learner import PromptLearnerEngine, PromptConstraint
 from .core.instincts import commerce_instincts
 from .core.cart_arbitrage import CartArbitrageurAgent, ProductListing
 from .core.arbitrage_catalogue import get_listings_for_workflow, WORKFLOW_PRESETS
+from .core.versus_engine import versus_engine
+from .core.wallet_stacker import wallet_stacker_service
 
 # Circuit-breaker timeout (seconds) for ultra-fast 3-4s search SLAs
 _SCOUT_TIMEOUT = 2.6
@@ -153,7 +155,8 @@ class SentinelCoordinator:
         session_id: str,
         scoped_bus: EventBus,
         items_list: Optional[List[str]] = None,
-        budget_limit: Optional[float] = None
+        budget_limit: Optional[float] = None,
+        wallet_cards: Optional[List[str]] = None
     ) -> BlackboardState:
         raw_candidates = get_listings_for_workflow(query, items_list=items_list)
         candidate_items = [ProductListing(**item) for item in raw_candidates]
@@ -465,6 +468,14 @@ class SentinelCoordinator:
             current_best_price=split_result.optimized_total,
             target_currency=preferences.currency
         )
+        if wallet_cards and state.final_options:
+            wallet_calc = wallet_stacker_service.calculate_best_wallet_discount(
+                wallet_card_ids=wallet_cards,
+                retailer="Amazon",
+                order_amount=split_result.optimized_total
+            )
+            state.applied_wallet_discounts = wallet_calc
+
         state.events = scoped_bus.get_logs()
         self._session_states[session_id] = state
         self._last_state = state
@@ -481,7 +492,8 @@ class SentinelCoordinator:
         risk_prefs: RiskPreferences = None,
         mode: Optional[str] = "single",
         items_list: Optional[List[str]] = None,
-        budget_limit: Optional[float] = None
+        budget_limit: Optional[float] = None,
+        wallet_cards: Optional[List[str]] = None
     ) -> BlackboardState:
         """
         Executes the complete bidirectional multi-agent loop with full user preferences
@@ -515,7 +527,8 @@ class SentinelCoordinator:
                 session_id=session_id,
                 scoped_bus=scoped_bus,
                 items_list=items_list,
-                budget_limit=budget_limit
+                budget_limit=budget_limit,
+                wallet_cards=wallet_cards
             )
 
         state = BlackboardState(
@@ -525,6 +538,25 @@ class SentinelCoordinator:
             session_id=session_id,
             user_preferences=preferences
         )
+
+        # Head-to-Head Versus Arbitration detection
+        if versus_engine.is_versus_query(clean_query):
+            try:
+                versus_res = versus_engine.arbitrate_versus(
+                    query=clean_query,
+                    currency=currency,
+                    country=country
+                )
+                state.versus_result = versus_res.model_dump()
+                await scoped_bus.emit(
+                    source="VersusArbitrator",
+                    target="Coordinator",
+                    event_type="VERSUS_ARBITRATED",
+                    content=f"Head-to-head showdown evaluated: '{versus_res.product_a.name}' vs '{versus_res.product_b.name}'. Swarm declared winner: {versus_res.winner} ({versus_res.winner_tagline}). Value edge: {versus_res.value_difference_pct}%.",
+                    payload=versus_res.model_dump()
+                )
+            except Exception as v_err:
+                pass
 
         # 0. Lifecycle Hook: Pre-Search Ingestion & Geographic Calibration (ECC Pattern)
         await hooks.pre_search(query=clean_query, country=country, currency=currency)
@@ -799,6 +831,22 @@ class SentinelCoordinator:
 
         state.final_options = final_options
         state.comparison_matrix = comp_matrix
+        if wallet_cards and final_options:
+            best_opt = final_options[0]
+            wallet_calc = wallet_stacker_service.calculate_best_wallet_discount(
+                wallet_card_ids=wallet_cards,
+                retailer=best_opt.listing.merchant,
+                order_amount=best_opt.risk_adjusted_tco
+            )
+            state.applied_wallet_discounts = wallet_calc
+            await scoped_bus.emit(
+                source="WalletStacker",
+                target="Coordinator",
+                event_type="WALLET_DISCOUNTS_APPLIED",
+                content=f"Applied wallet bonus: Saved {preferences.currency} {wallet_calc['total_discount']:,.2f} using {wallet_calc.get('best_card_name')}.",
+                payload=wallet_calc
+            )
+
         state.is_complete = True
         state.events = scoped_bus.get_logs()
 

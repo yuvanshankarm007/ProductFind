@@ -251,8 +251,17 @@ export function initConciergeBot() {
         const bubbleDiv = document.createElement('div');
         bubbleDiv.className = 'message-bubble';
         
+        // Clean KaTeX/LaTeX math artifacts into readable Unicode
+        let cleanText = (text || '')
+            .replace(/\$\$\\le\s*([0-9.]+)\\\%\$\$/g, '≤ $1%')
+            .replace(/\$\\le\s*([0-9.]+)\\\%\$/g, '≤ $1%')
+            .replace(/\\le/g, '≤')
+            .replace(/\\ge/g, '≥')
+            .replace(/\\%/g, '%')
+            .replace(/\$\$/g, '');
+
         // Parse simple markdown (bold, lists)
-        let formatted = escapeHtml(text)
+        let formatted = escapeHtml(cleanText)
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/•\s*(.*?)(?=\n|$)/g, '<li>$1</li>')

@@ -61,7 +61,7 @@ class SentinelConciergeBot:
         ),
         "price_history": (
             "Our **Prophet / ARIMA-inspired AI Price Predictor** analyzes 90-day pricing trajectory, holiday volatility, and merchant flash-dip patterns:\n\n"
-            "• If the current price is near the 90-day historic floor ($$\\le 5\\%$$ of minimum), we recommend **BUY NOW**.\n"
+            "• If the current price is near the 90-day historic floor (≤ 5% of minimum), we recommend **BUY NOW**.\n"
             "• If prices are cyclically elevated or a scheduled merchant mega-sale is detected within 14 days, we recommend **WAIT** and display the projected discount."
         ),
         "bundle_arbitrage": (

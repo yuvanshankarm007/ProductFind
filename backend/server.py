@@ -44,6 +44,10 @@ from .core.visual_shield import VisualTruthShieldAgent, VisualVerificationReques
 from .core.temporal_volatility import TemporalVolatilityEngine, VolatilityAnalysis, SnipeLockRequest, SnipeLockResponse
 from .core.visual_search import visual_search_engine, VisualAnalysisResult
 from .core.concierge_bot import SentinelConciergeBot, ChatRequest, ChatResponse
+from .core.price_watchdog import watchdog_service, PriceAlertSubscription
+from .core.versus_engine import versus_engine, VersusArbitrationResult
+from .core.wallet_stacker import wallet_stacker_service, SUPPORTED_WALLET_CARDS, CardOffer
+from .core.dispute_assistant import dispute_assistant_service, DisputeFilingRequest, DisputeCase
 
 _relay_server = None
 
@@ -170,6 +174,34 @@ class SearchRequest(BaseModel):
     mode: Optional[str] = "single"
     items_list: Optional[List[str]] = None
     budget_limit: Optional[float] = None
+    wallet_cards: Optional[List[str]] = None
+
+
+class PriceAlertSubscribeRequest(BaseModel):
+    product_title: str
+    target_price: float
+    current_price: float
+    currency: Optional[str] = "INR"
+    user_contact: Optional[str] = "user@example.com"
+    channel: Optional[str] = "email"
+
+
+class PriceAlertSimulateRequest(BaseModel):
+    alert_id: str
+    simulated_price: Optional[float] = None
+
+
+class VersusArbitrateRequest(BaseModel):
+    query: str
+    currency: Optional[str] = "INR"
+    country: Optional[str] = "IN"
+
+
+class WalletCalculateRequest(BaseModel):
+    wallet_card_ids: List[str]
+    retailer: str
+    order_amount: float
+    items: Optional[List[Dict[str, Any]]] = None
 
 
 class ImageSearchRequest(BaseModel):
@@ -188,6 +220,34 @@ class ImageSearchRequest(BaseModel):
     mode: Optional[str] = "single"
     items_list: Optional[List[str]] = None
     budget_limit: Optional[float] = None
+    wallet_cards: Optional[List[str]] = None
+
+
+class PriceAlertSubscribeRequest(BaseModel):
+    product_title: str
+    target_price: float
+    current_price: float
+    currency: Optional[str] = "INR"
+    user_contact: Optional[str] = "user@example.com"
+    channel: Optional[str] = "email"
+
+
+class PriceAlertSimulateRequest(BaseModel):
+    alert_id: str
+    simulated_price: Optional[float] = None
+
+
+class VersusArbitrateRequest(BaseModel):
+    query: str
+    currency: Optional[str] = "INR"
+    country: Optional[str] = "IN"
+
+
+class WalletCalculateRequest(BaseModel):
+    wallet_card_ids: List[str]
+    retailer: str
+    order_amount: float
+    items: Optional[List[Dict[str, Any]]] = None
 
 
 class VoiceTranscribeRequest(BaseModel):
@@ -413,7 +473,8 @@ async def api_search(req: SearchRequest):
         risk_prefs=risk_prefs,
         mode=req.mode or "single",
         items_list=req.items_list,
-        budget_limit=req.budget_limit
+        budget_limit=req.budget_limit,
+        wallet_cards=req.wallet_cards
     )
     return state.model_dump()
 
@@ -1327,6 +1388,123 @@ async def api_capture_order(req: CaptureOrderRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# 1. Price Drop Watchdog & Automated Notifications
+# ---------------------------------------------------------------------------
+
+@app.post("/api/alerts/subscribe", response_model=PriceAlertSubscription)
+async def api_subscribe_price_alert(req: PriceAlertSubscribeRequest):
+    """Subscribes user to a price threshold drop alert across retail channels."""
+    return watchdog_service.subscribe(
+        product_title=req.product_title,
+        target_price=req.target_price,
+        current_price=req.current_price,
+        currency=req.currency or "INR",
+        user_contact=req.user_contact or "user@example.com",
+        channel=req.channel or "email"
+    )
+
+
+@app.get("/api/alerts")
+async def api_list_price_alerts(contact: Optional[str] = None):
+    """Lists active and triggered price drop alerts."""
+    return watchdog_service.list_alerts(user_contact=contact)
+
+
+@app.delete("/api/alerts/{alert_id}")
+async def api_delete_price_alert(alert_id: str):
+    """Cancels/deletes an active price drop alert subscription."""
+    success = watchdog_service.delete_alert(alert_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"status": "DELETED", "alert_id": alert_id}
+
+
+@app.post("/api/alerts/simulate-trigger")
+async def api_simulate_price_alert_trigger(req: PriceAlertSimulateRequest):
+    """Simulates a flash price dip triggering automated alert dispatch (Email/Telegram/Push)."""
+    alert = watchdog_service.simulate_price_drop(req.alert_id, simulated_price=req.simulated_price)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
+
+
+# ---------------------------------------------------------------------------
+# 2. Head-to-Head "Versus" Arbitrator Engine
+# ---------------------------------------------------------------------------
+
+@app.post("/api/versus/arbitrate", response_model=VersusArbitrationResult)
+async def api_arbitrate_versus(req: VersusArbitrateRequest):
+    """Arbitrates a direct dual-product rivalry (e.g. 'Sony WH-1000XM5 vs Bose QC Ultra')."""
+    return versus_engine.arbitrate_versus(
+        query=req.query,
+        currency=req.currency or "INR",
+        country=req.country or "IN"
+    )
+
+
+@app.get("/api/versus/benchmarks")
+async def api_get_versus_benchmarks():
+    """Lists known head-to-head hardware benchmarks and matchups."""
+    return versus_engine.list_benchmarks()
+
+
+# ---------------------------------------------------------------------------
+# 3. "My Wallet" Card & Bank Offer Stacker
+# ---------------------------------------------------------------------------
+
+@app.get("/api/wallet/cards")
+async def api_get_wallet_cards():
+    """Lists supported cards & bank offers (HDFC, ICICI, Axis, SBI, PayPal, Amex)."""
+    return wallet_stacker_service.list_supported_cards()
+
+
+@app.post("/api/wallet/calculate")
+async def api_calculate_wallet_discounts(req: WalletCalculateRequest):
+    """Calculates personalized stacked card bonuses and best cashback for an order."""
+    return wallet_stacker_service.calculate_best_wallet_discount(
+        wallet_card_ids=req.wallet_card_ids,
+        retailer=req.retailer,
+        order_amount=req.order_amount,
+        items=req.items
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4. 1-Click Dispute Assistant & Legal Chargeback Dossier
+# ---------------------------------------------------------------------------
+
+@app.post("/api/dispute/file", response_model=DisputeCase)
+async def api_file_dispute(req: DisputeFilingRequest):
+    """Files a dispute case, seals cryptographic Merkle hash, and compiles legal PDF dossier."""
+    return dispute_assistant_service.file_dispute(req)
+
+
+@app.get("/api/dispute/cases")
+async def api_list_disputes():
+    """Lists all filed dispute cases and their audit status."""
+    return dispute_assistant_service.list_cases()
+
+
+@app.get("/api/dispute/download/{filename}")
+async def api_download_dispute_dossier(filename: str):
+    """Downloads the generated legal chargeback PDF dossier."""
+    storage_dir = os.path.join(os.path.dirname(__file__), "data", "dossiers")
+    filepath = os.path.join(storage_dir, filename)
+    if not os.path.exists(filepath):
+        # Fallback to pdf_generator generated directory if any
+        fallback = os.path.join(os.path.dirname(__file__), "data", filename)
+        if os.path.exists(fallback):
+            filepath = fallback
+        else:
+            raise HTTPException(status_code=404, detail="Dispute dossier PDF not found")
+    return FileResponse(
+        filepath,
+        media_type="application/pdf",
+        filename=filename
+    )
+
+
 @app.websocket("/ws/negotiate")
 async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = None):
     """Full-duplex WebSocket for streaming live inter-agent negotiations with session routing."""
@@ -1379,6 +1557,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = N
                 mode = data.get("mode", "single")
                 items_list = data.get("items_list")
                 budget_limit = data.get("budget_limit")
+                wallet_cards = data.get("wallet_cards")
 
                 risk_prefs = RiskPreferences(
                     warranty_priority=float(data.get("warranty_priority", 0.5)),
@@ -1398,7 +1577,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = N
                             risk_prefs=risk_prefs,
                             mode=mode,
                             items_list=items_list,
-                            budget_limit=budget_limit
+                            budget_limit=budget_limit,
+                            wallet_cards=wallet_cards
                         )
                         await websocket.send_text(json.dumps({
                             "type": "FINAL_RESULT",

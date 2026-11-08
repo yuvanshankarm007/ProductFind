@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ProductFind Sentinel</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="sentinel-popup">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <span class="shield-icon">🛡️</span>
+        <span class="brand-text">ProductFind <strong>Sentinel</strong></span>
+      </div>
+      <span class="status-badge live">● Swarm Active</span>
+    </header>
+
+    <!-- Detected Tab Info -->
+    <div class="active-detection">
+      <div class="detection-label">Active Retailer Page:</div>
+      <div id="detected-product-title" class="product-title">Detecting current product...</div>
+      <div id="detected-merchant" class="merchant-badge">Auditing DOM...</div>
+    </div>
+
+    <!-- Arbitrated Deal Card -->
+    <div id="arbitrated-card" class="deal-card">
+      <div class="deal-header">
+        <span class="deal-tier">⭐ Optimal Value Deal</span>
+        <span id="deal-savings" class="savings-pill">-₹3,000 Saved</span>
+      </div>
+      <div class="deal-pricing">
+        <div class="price-row">
+          <span class="label">Current Store:</span>
+          <span id="current-price" class="current-price">₹29,990</span>
+        </div>
+        <div class="price-row best">
+          <span class="label">Sentinel Best:</span>
+          <span id="sentinel-price" class="best-price">₹26,990</span>
+        </div>
+        <div class="tco-subtext">Risk-Adjusted TCO includes OEM 24-Mo Warranty & PayPal Section 13 Escrow</div>
+      </div>
+    </div>
+
+    <!-- Features Quick Bar -->
+    <div class="quick-features">
+      <div class="feature-item">
+        <span class="feat-icon">⚖️</span>
+        <span>PayPal Section 13 Shield Active</span>
+      </div>
+      <div class="feature-item">
+        <span class="feat-icon">📦</span>
+        <span>Open Box Doorstep Inspection OTP</span>
+      </div>
+      <div class="feature-item">
+        <span class="feat-icon">📉</span>
+        <span id="price-trend-status">Prophet Price Trend: Buy Now Floor</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="popup-actions">
+      <button id="btn-open-cockpit" class="btn primary-btn">Open Full Cockpit</button>
+      <button id="btn-track-price" class="btn secondary-btn">🔔 Track Price Drop</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
