@@ -103,7 +103,7 @@ export function setMode(mode) {
         activateBtn(bundleBtn);
         if (bundleBuilder) bundleBuilder.style.display = 'block';
         if (imageContainer) imageContainer.style.display = 'none';
-        if (searchBtnLabel) searchBtnLabel.textContent = '📦 Search Bundle Discounts';
+        if (searchBtnLabel) searchBtnLabel.textContent = 'Knapsack AI';
         if (searchInput) {
             searchInput.placeholder = 'e.g. 27-inch 4K Monitor, Mechanical Keyboard, Ergonomic Chair, 1080p Webcam';
             if (!searchInput.value) {
@@ -117,7 +117,7 @@ export function setMode(mode) {
         activateBtn(imageBtn);
         if (bundleBuilder) bundleBuilder.style.display = 'none';
         if (imageContainer) imageContainer.style.display = 'block';
-        if (searchBtnLabel) searchBtnLabel.textContent = 'Arbitrate Deals';
+        if (searchBtnLabel) searchBtnLabel.textContent = 'Visual AI';
         if (searchInput) {
             searchInput.placeholder = 'Upload, drop, or select product image below, or type query...';
         }
@@ -128,7 +128,7 @@ export function setMode(mode) {
         activateBtn(singleBtn);
         if (bundleBuilder) bundleBuilder.style.display = 'none';
         if (imageContainer) imageContainer.style.display = 'none';
-        if (searchBtnLabel) searchBtnLabel.textContent = 'Arbitrate Deals';
+        if (searchBtnLabel) searchBtnLabel.textContent = 'AI Mode';
         if (searchInput) {
             searchInput.placeholder = 'Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, Epson L3250)...';
         }

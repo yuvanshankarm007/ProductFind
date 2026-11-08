@@ -20,7 +20,7 @@
     </script>
 
     <!-- Custom Pre-composed Stylesheet (Replaces 4.7MB runtime overhead) -->
-    <link rel="stylesheet" href="./css/styles.css?v=2.6">
+    <link rel="stylesheet" href="./css/styles.css?v=2.7">
 
     <!-- Zero-White Browser Button Reset & Glassmorphism Defaults (Prevents browser user-agent white flashes) -->
     <style>
@@ -49,26 +49,77 @@
             color: #38bdf8 !important;
             box-shadow: 0 0 16px rgba(56, 189, 248, 0.25) !important;
         }
-        .search-actions-group button,
-        .multimodal-btn {
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            background: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        
+        /* Google-Style Pill Search Capsule */
+        .search-pill-container {
+            display: flex !important;
+            align-items: center !important;
+            background: rgba(15, 23, 42, 0.85) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            border-radius: 9999px !important;
+            padding: 6px 8px 6px 14px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .search-pill-container:focus-within {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25), 0 14px 36px rgba(0, 0, 0, 0.5) !important;
+            background: rgba(15, 23, 42, 0.95) !important;
+        }
+        .search-pill-icon-btn {
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: transparent !important;
+            border: none !important;
             color: #94a3b8 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            outline: none !important;
+            padding: 0 !important;
         }
-        .search-actions-group button svg,
-        .multimodal-btn svg {
-            stroke: #94a3b8;
-        }
-        .search-actions-group button:hover,
-        .multimodal-btn:hover {
-            background-color: rgba(56, 189, 248, 0.15) !important;
-            background: rgba(56, 189, 248, 0.15) !important;
-            border-color: rgba(56, 189, 248, 0.4) !important;
+        .search-pill-icon-btn:hover {
             color: #38bdf8 !important;
+            background: rgba(56, 189, 248, 0.12) !important;
+            transform: translateY(-1px) !important;
         }
-        .multimodal-btn:hover svg {
-            stroke: #38bdf8;
+        .search-pill-icon-btn.listening-active {
+            background: rgba(239, 68, 68, 0.25) !important;
+            color: #ef4444 !important;
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.6) !important;
+            animation: pulse-mic 1.2s infinite alternate ease-in-out !important;
+        }
+        .search-ai-mode-pill-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            padding: 7px 18px !important;
+            border-radius: 9999px !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #f1f5f9 !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            cursor: pointer !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            margin-left: 4px !important;
+            white-space: nowrap !important;
+        }
+        .search-ai-mode-pill-btn:hover {
+            background: rgba(56, 189, 248, 0.18) !important;
+            border-color: #38bdf8 !important;
+            color: #38bdf8 !important;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.3) !important;
+            transform: translateY(-1px) !important;
+        }
+        .search-ai-mode-pill-btn svg {
+            color: #38bdf8;
         }
     </style>
 </head>
@@ -164,26 +215,50 @@
                 </div>
 
                 <form id="search-form">
-                    <div class="search-input-group">
+                    <div class="search-input-group search-pill-container">
+                        <!-- Left Action (+) Button -->
+                        <button type="button" id="btn-search-plus" class="search-pill-icon-btn plus-btn" title="Add items / Toggle search options">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+
+                        <!-- Center Text Input -->
                         <input type="text" id="search-input" class="search-input" placeholder="Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, Epson L3250)..." value="" autocomplete="off">
-                        <div class="search-actions-group">
-                            <button type="button" id="btn-voice-search" class="multimodal-btn voice-btn" title="Voice Search: Click to speak and transcribe directly into search box" style="background-color: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; color: #94a3b8 !important;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <!-- Right Actions Group: Microphone, Google Lens, and AI Mode Button -->
+                        <div class="search-actions-group" style="display: flex; align-items: center; gap: 4px;">
+                            <!-- Microphone Voice Search -->
+                            <button type="button" id="btn-voice-search" class="search-pill-icon-btn voice-btn" title="Voice Search: Click to speak and transcribe directly into search box">
+                                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                                     <line x1="12" y1="19" x2="12" y2="22"></line>
                                 </svg>
                             </button>
+
+                            <!-- Google Lens Image Search Icon -->
+                            <button type="button" id="btn-lens-search" class="search-pill-icon-btn lens-btn" title="Image Search: Upload, drop or paste product photo">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7 3H5a2 2 0 0 0-2 2v2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M17 21h2a2 2 0 0 0 2-2v-2"></path>
+                                    <circle cx="12" cy="12" r="3.5"></circle>
+                                    <circle cx="17.5" cy="16.5" r="1.2" fill="currentColor"></circle>
+                                </svg>
+                            </button>
+
+                            <!-- AI Mode Pill Submit Button -->
+                            <button type="submit" id="main-search-submit-btn" class="search-ai-mode-pill-btn" title="Arbitrate Deals with Agent Swarm">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7"></circle>
+                                    <line x1="21" y1="21" x2="16.2" y2="16.2"></line>
+                                    <path d="m14 8 .5-1.5L16 6l-1.5-.5L14 4l-.5 1.5L12 6l1.5.5L14 8z" fill="currentColor"></path>
+                                </svg>
+                                <span id="search-btn-label">AI Mode</span>
+                            </button>
                         </div>
                         <input type="file" id="multimodal-image-input" accept="image/*" style="display:none;">
                         <input type="file" id="multimodal-audio-input" accept="audio/*" style="display:none;">
-                        <button type="submit" id="main-search-submit-btn" class="search-btn">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                            <span id="search-btn-label">Arbitrate Deals</span>
-                        </button>
                     </div>
 
                     <!-- Visual Search Match Indicator Bar (Shows when visual query is active) -->
@@ -813,6 +888,6 @@
     <div id="toast-container"></div>
 
     <!-- Core App Bootstrap Module (Versioned for cache-busting) -->
-    <script type="module" src="./js/app.js?v=2.6"></script>
+    <script type="module" src="./js/app.js?v=2.7"></script>
 </body>
 </html>

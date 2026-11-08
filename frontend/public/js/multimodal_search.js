@@ -140,6 +140,38 @@ export function initMultimodalSearch(callbacks) {
         });
     }
 
+    // 2. Google Lens Button: Activates Image Search Studio
+    const btnLens = document.getElementById('btn-lens-search');
+    if (btnLens) {
+        btnLens.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modeImageBtn = document.getElementById('mode-image-btn');
+            const imageContainer = document.getElementById('image-search-container');
+            if (modeImageBtn) {
+                modeImageBtn.click();
+            } else if (imageContainer) {
+                imageContainer.style.display = imageContainer.style.display === 'none' ? 'block' : 'none';
+            }
+            if (imageContainer && imageContainer.style.display !== 'none') {
+                imageContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    }
+
+    // 3. Plus (+) Button: Quick Action Menu / Toggles Modes
+    const btnPlus = document.getElementById('btn-search-plus');
+    if (btnPlus) {
+        btnPlus.addEventListener('click', (e) => {
+            e.preventDefault();
+            const switcher = document.querySelector('.search-mode-switcher');
+            if (switcher) {
+                const isHidden = window.getComputedStyle(switcher).display === 'none';
+                switcher.style.display = isHidden ? 'flex' : 'none';
+                showToast(isHidden ? "⚡ Search modes expanded" : "Search modes collapsed", "info");
+            }
+        });
+    }
+
     // 2. Direct Image Search Dropzone
     const directDropzone = document.getElementById('direct-image-dropzone');
     const directFileInput = document.getElementById('direct-image-file-input');
