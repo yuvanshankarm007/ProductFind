@@ -188,6 +188,42 @@ Open your browser to: **http://localhost:8000**
 
 ---
 
+## 🌟 60-Second Interactive Judge Tour
+When you launch `http://localhost:8000`, click the **`🌟 60s Judge Tour`** button in the header nav or quick-pills row to experience an automated, five-stage live walkthrough of:
+1. **Autonomous Swarm Ingestion** (Multimodal text, voice, and Google Lens packaging detection)
+2. **Strategic TCO Champions & AG Grid Cockpit** (Risk-adjusted total cost of ownership matrix)
+3. **Head-to-Head Versus Showdown** (Sony WH-1000XM5 vs Bose QC Ultra with benchmark radar)
+4. **Smart Wallet Stacker** (Credit card cashback optimization + PayPal Pay Later)
+5. **Section 13 Cryptographic Dispute Guard** (1-Click Merkle proof and statutory PDF chargeback generation)
+
+---
+
+## 🔌 Manifest V3 Chrome Extension
+Sentinel includes a full Chrome Extension located in `extension/`:
+1. Open Chrome/Brave and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** (top-right toggle).
+3. Click **Load unpacked** and select the `extension/` folder in this repository.
+4. Navigate to any Amazon, Flipkart, or Best Buy product page — Sentinel automatically activates in-page with real-time price arbitrage and OEM warranty verification!
+
+---
+
+## 🧪 Comprehensive Test Suite (120/120 Passing)
+
+Run the full pytest suite:
+```bash
+pytest
+```
+*Output: `120 passed in 77.72s (100% passing rate across all model fidelity, stealth browsing, session isolation, and commercial expansion tests)`.*
+
+Run individual targeted tests:
+```bash
+pytest tests/test_commercial_expansions.py -v
+pytest tests/test_multimodal_search.py -v
+pytest tests/test_accuracy.py -v
+```
+
+---
+
 ## 🧪 Running Automated Swarm Tests
 
 Run the built-in end-to-end verification suite:

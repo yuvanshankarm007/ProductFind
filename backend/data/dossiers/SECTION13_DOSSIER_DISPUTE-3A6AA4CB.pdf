@@ -1,0 +1,92 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1902 >>
+stream
+BT
+/F1 15 Tf
+50 780 Td
+(FORMAL SECTION 13 BUYER PROTECTION DISPUTE MEMORANDUM) Tj
+/F2 9 Tf
+0 -18 Td
+(Cryptographic Merkle Dispute Dossier | Case Reference: DISPUTE-3A6AA4CB) Tj
+/F1 10.5 Tf
+0 -24 Td
+(1. LEGAL DISPUTE & ESCROW CITATION) Tj
+/F2 8.5 Tf
+0 -14 Td
+(Issuer Chargeback Defense Code: VISA_13_1_SNAD_MERKLE_CERTIFIED) Tj
+0 -12 Td
+(Target Merchant Order ID:       ORD-PYTEST-7788) Tj
+0 -12 Td
+(Product / Listing Name:         Sony WH-1000XM5 Wireless Headphones) Tj
+0 -12 Td
+(Agreed TCO & Condition:         0.0 | Brand New) Tj
+0 -12 Td
+(Cryptographic Anchor Timestamp: 2026-11-08 13:14:22 UTC) Tj
+0 -12 Td
+(Merkle Root Hash \(SHA-256\):     0x5da8679ba7bb4dbc62d75c06fe148854da11bed60a867945...) Tj
+0 -12 Td
+(Tamper-Evident Seal Hash:       0x5da8679ba7bb4dbc62d75c06fe148854da11bed60a867945...) Tj
+/F1 10.5 Tf
+0 -22 Td
+(2. CRYPTOGRAPHIC MERKLE LEAF PROOFS) Tj
+/F2 8 Tf
+0 -14 Td
+(Leaf #0 [SPEC_CONDITION_HASH]: Hash=0x00000000000000000000000000000000...) Tj
+0 -11 Td
+(Leaf #1 [TERMS_AND_WARRANTY_HASH]: Hash=0x00000000000000000000000000000000...) Tj
+0 -11 Td
+(Leaf #2 [PRICING_AND_TCO_HASH]: Hash=0x00000000000000000000000000000000...) Tj
+0 -11 Td
+(Leaf #3 [CRYPTOGRAPHIC_ANCHOR]: Hash=0x5da8679ba7bb4dbc62d75c06fe148854...) Tj
+/F1 10.5 Tf
+0 -22 Td
+(3. ADMISSIBLE EVIDENCE SUMMARY & DECLARATION) Tj
+/F2 8.5 Tf
+0 -14 Td
+(Under Visa Core Rule 13.1 and PayPal Buyer Protection Section 13 standards, the cardholder) Tj
+0 -11 Td
+(hereby certifies that goods received fail holographic packaging integrity and fail authentic) Tj
+0 -11 Td
+(OEM specifications. Cryptographic evidence hashes are permanently anchored in the Merkle escrow tree.) Tj
+0 -11 Td
+(Full unconditional chargeback restitution and financial release is requested.) Tj
+/F1 10 Tf
+0 -22 Td
+(4. VERIFICATION STATUS: CERTIFIED TAMPER-PROOF) Tj
+/F2 8 Tf
+0 -13 Td
+(Digital Notary Signature: 5da8679ba7bb4dbc62d75c06fe148854da11bed6...) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000002211 00000 n 
+0000002286 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2359
+%%EOF

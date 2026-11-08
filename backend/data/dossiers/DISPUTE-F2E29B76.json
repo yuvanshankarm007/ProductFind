@@ -1,0 +1,24 @@
+{
+  "case_id": "DISPUTE-F2E29B76",
+  "filing_date": 1794143307.3693311,
+  "order_id": "ORD-FASTAPI-1234",
+  "merchant": "Amazon",
+  "product_title": "MacBook Pro 16 M3 Max",
+  "amount": 349900.0,
+  "currency": "INR",
+  "issue_type": "COUNTERFEIT",
+  "status": "DOSSIER_COMPILED",
+  "legal_claim_summary": "FORMAL DISPUTE NOTICE: Delivery of Non-Genuine / Counterfeit SKU in Violation of OEM Licensing. The buyer 'Authorized Consumer' (consumer@sentinel.ai) hereby files this formal chargeback claim against merchant 'Amazon' regarding order 'ORD-FASTAPI-1234' for 'MacBook Pro 16 M3 Max' (INR 349,900.00). Incident: Serial number did not match Apple GSX database and chassis had non-OEM screws.",
+  "statutory_citations": [
+    "Section 13.4 Counterfeit Goods Protection & Compulsory Merchant Forfeiture",
+    "Trade Marks Act \u00a7 103 / Lanham Act 15 U.S.C. Anti-Counterfeiting Provisions",
+    "Mastercard Dispute Resolution Standard \u00a7 4.1.3 Intellectual Property Infringement"
+  ],
+  "demands": [
+    "Immediate unconditional reversal of transaction to original payment instrument",
+    "Transmission of serial audit report to OEM brand protection division",
+    "Immediate formal merchant compliance investigation"
+  ],
+  "evidence_hash": "c752ceadb8bc954b70808d04fbe9f512f0a20987e81048c12b1754f6a36cc52d",
+  "pdf_filename": "SECTION13_DOSSIER_DISPUTE-F2E29B76.pdf"
+}

@@ -54,5 +54,47 @@
     "triggered_at": 1794140867.468345,
     "last_scouted_price": 23490.0,
     "notification_log": "\ud83c\udfaf [SIMULATED WATCHDOG DISPATCH] 'Sony WH-1000XM5 Headphones' hit flash floor at INR 23,490.00 (Target: INR 24,000.00 | Net Drop: INR 3,500.00). Alert dispatched to TELEGRAM (tester@sentinel.ai)."
+  },
+  {
+    "id": "alert-e35c2dae",
+    "product_title": "Sony WH-1000XM5 Headphones",
+    "target_price": 24000.0,
+    "current_price": 26990.0,
+    "currency": "INR",
+    "user_contact": "tester@sentinel.ai",
+    "channel": "telegram",
+    "status": "TRIGGERED",
+    "created_at": 1794143307.3128326,
+    "triggered_at": 1794143307.313833,
+    "last_scouted_price": 23490.0,
+    "notification_log": "\ud83c\udfaf [SIMULATED WATCHDOG DISPATCH] 'Sony WH-1000XM5 Headphones' hit flash floor at INR 23,490.00 (Target: INR 24,000.00 | Net Drop: INR 3,500.00). Alert dispatched to TELEGRAM (tester@sentinel.ai)."
+  },
+  {
+    "id": "alert-ac17780c",
+    "product_title": "Sony WH-1000XM5 Headphones",
+    "target_price": 24000.0,
+    "current_price": 26990.0,
+    "currency": "INR",
+    "user_contact": "tester@sentinel.ai",
+    "channel": "telegram",
+    "status": "TRIGGERED",
+    "created_at": 1794143354.9853516,
+    "triggered_at": 1794143354.9858766,
+    "last_scouted_price": 23490.0,
+    "notification_log": "\ud83c\udfaf [SIMULATED WATCHDOG DISPATCH] 'Sony WH-1000XM5 Headphones' hit flash floor at INR 23,490.00 (Target: INR 24,000.00 | Net Drop: INR 3,500.00). Alert dispatched to TELEGRAM (tester@sentinel.ai)."
+  },
+  {
+    "id": "alert-aa9272af",
+    "product_title": "Sony WH-1000XM5 Headphones",
+    "target_price": 24000.0,
+    "current_price": 26990.0,
+    "currency": "INR",
+    "user_contact": "tester@sentinel.ai",
+    "channel": "telegram",
+    "status": "TRIGGERED",
+    "created_at": 1794143662.5338109,
+    "triggered_at": 1794143662.534327,
+    "last_scouted_price": 23490.0,
+    "notification_log": "\ud83c\udfaf [SIMULATED WATCHDOG DISPATCH] 'Sony WH-1000XM5 Headphones' hit flash floor at INR 23,490.00 (Target: INR 24,000.00 | Net Drop: INR 3,500.00). Alert dispatched to TELEGRAM (tester@sentinel.ai)."
   }
 ]

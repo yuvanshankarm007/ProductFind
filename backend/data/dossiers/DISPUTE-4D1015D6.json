@@ -1,0 +1,24 @@
+{
+  "case_id": "DISPUTE-4D1015D6",
+  "filing_date": 1794143354.989817,
+  "order_id": "ORD-PYTEST-7788",
+  "merchant": "Flipkart",
+  "product_title": "Sony WH-1000XM5 Wireless Headphones",
+  "amount": 26990.0,
+  "currency": "INR",
+  "issue_type": "OPEN_BOX_VIOLATION",
+  "status": "DOSSIER_COMPILED",
+  "legal_claim_summary": "FORMAL DISPUTE NOTICE: Breach of Mandated Open-Box Inspection & Tampered Transit Custody. The buyer 'Unit Tester' (tester@sentinel.ai) hereby files this formal chargeback claim against merchant 'Flipkart' regarding order 'ORD-PYTEST-7788' for 'Sony WH-1000XM5 Wireless Headphones' (INR 26,990.00). Incident: Courier refused doorstep unboxing and ran away after demanding delivery OTP.",
+  "statutory_citations": [
+    "PayPal Section 13 'Significantly Not as Described' (SNAD) Escrow Protocols",
+    "Consumer Protection (E-Commerce) Rules 2020 \u00a7 5(3) Mandated Verification",
+    "Visa Core Rules Section 13.3 Counterfeit & Transit Tampering Chargeback Code 53"
+  ],
+  "demands": [
+    "Immediate full refund of transactional outlay without restocking deduction",
+    "Waiver of return freight liability due to merchant courier breach of open-box protocol",
+    "Preservation of digital delivery chain-of-custody and courier GPS delivery logs"
+  ],
+  "evidence_hash": "357fafa2f4a5a9b628e3bc774020fdf5c25e0a37d5e6a6bfc950cb88a3f72656",
+  "pdf_filename": "SECTION13_DOSSIER_DISPUTE-4D1015D6.pdf"
+}
