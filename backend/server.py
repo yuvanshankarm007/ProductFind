@@ -223,33 +223,6 @@ class ImageSearchRequest(BaseModel):
     wallet_cards: Optional[List[str]] = None
 
 
-class PriceAlertSubscribeRequest(BaseModel):
-    product_title: str
-    target_price: float
-    current_price: float
-    currency: Optional[str] = "INR"
-    user_contact: Optional[str] = "user@example.com"
-    channel: Optional[str] = "email"
-
-
-class PriceAlertSimulateRequest(BaseModel):
-    alert_id: str
-    simulated_price: Optional[float] = None
-
-
-class VersusArbitrateRequest(BaseModel):
-    query: str
-    currency: Optional[str] = "INR"
-    country: Optional[str] = "IN"
-
-
-class WalletCalculateRequest(BaseModel):
-    wallet_card_ids: List[str]
-    retailer: str
-    order_amount: float
-    items: Optional[List[Dict[str, Any]]] = None
-
-
 class VoiceTranscribeRequest(BaseModel):
     audio_base64: Optional[str] = None
     filename: Optional[str] = None
@@ -1440,6 +1413,23 @@ async def api_arbitrate_versus(req: VersusArbitrateRequest):
         query=req.query,
         currency=req.currency or "INR",
         country=req.country or "IN"
+    )
+
+
+@app.get("/api/versus/arbitrate", response_model=VersusArbitrationResult)
+async def api_arbitrate_versus_get(
+    product_a: Optional[str] = None,
+    product_b: Optional[str] = None,
+    query: Optional[str] = None,
+    currency: str = "INR",
+    country: str = "IN"
+):
+    """Arbitrates a direct dual-product rivalry via GET query parameters."""
+    full_query = query or (f"{product_a} vs {product_b}" if (product_a and product_b) else "Sony WH-1000XM5 vs Bose QuietComfort Ultra")
+    return versus_engine.arbitrate_versus(
+        query=full_query,
+        currency=currency,
+        country=country
     )
 
 
