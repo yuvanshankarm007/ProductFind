@@ -95,16 +95,6 @@ Instead of showing a flat static table, ProductFind uses advanced AG Grid featur
 
 ---
 
-## 🌟 Interactive 60-Second Judge Tour
-We built a dedicated **`🌟 60s Judge Tour`** engine directly into the UI! Reviewers and judges can click a single button to experience an automated, five-stage guided tour with live telemetry, highlighting:
-1. Autonomous Swarm Ingestion
-2. TCO Champions & AG Grid Cockpit
-3. Head-to-Head Versus Showdown
-4. Smart Wallet Stacker
-5. Cryptographic Section 13 Dispute Guard with live PDF generation
-
----
-
 ## 🔌 Cross-Platform: Manifest V3 Browser Extension
 Sentinel extends beyond the web application with a complete Chrome Extension (`extension/`). When browsing Amazon, Flipkart, or Best Buy, Sentinel automatically detects the product on the active tab and displays an unobtrusive in-page overlay with instant price arbitrage, OEM warranty verification, and PayPal protection score.
 
