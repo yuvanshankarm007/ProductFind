@@ -13,3 +13,6 @@ ENV/
 .idea/
 .agents/
 diagnostic.py
+DEMO_VIDEO_SCRIPT.txt
+*_SCRIPT.txt
+
