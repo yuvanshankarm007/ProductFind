@@ -262,7 +262,7 @@
                         </button>
 
                         <!-- Center Text Input -->
-                        <input type="text" id="search-input" class="search-input" placeholder="Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, WFH Setup under ₹50,000)..." value="" autocomplete="off">
+                        <input type="text" id="search-input" class="search-input" placeholder="Search any product, compare prices, or audit warranty fine print..." value="" autocomplete="off">
 
                         <!-- Right Actions Group: Microphone, Google Lens, and AI Mode Button -->
                         <div class="search-actions-group" style="display: flex; align-items: center; gap: 6px;">
@@ -302,8 +302,8 @@
                     <div id="visual-search-indicator-bar" style="display: none; margin-top: 8px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 6px 12px; align-items: center; justify-content: space-between; font-size: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span id="visual-indicator-badge" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px;">📷 98% Match</span>
-                            <span id="visual-indicator-text" style="color: #f8fafc; font-weight: 700;">Sony WH-1000XM5</span>
-                            <span id="visual-indicator-category" style="color: #94a3b8; font-size: 11px;">(Wireless Noise Cancelling Headphones)</span>
+                            <span id="visual-indicator-text" style="color: #f8fafc; font-weight: 700;">Identified Product</span>
+                            <span id="visual-indicator-category" style="color: #94a3b8; font-size: 11px;">(Verified Hardware)</span>
                         </div>
                         <button type="button" id="btn-clear-visual-search" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; padding: 2px 6px;" title="Clear Visual Match Filter">✕</button>
                     </div>
@@ -391,7 +391,7 @@
 
                 <div class="query-tags">
                     <button type="button" class="query-tag-btn" id="pill-judge-tour" style="border-color: rgba(245, 158, 11, 0.6); background: rgba(245, 158, 11, 0.18); color: #fbbf24; font-weight: 800; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);">🌟 60s Live Judge Showcase</button>
-                    <button type="button" class="query-tag-btn" data-query="Sony WH-1000XM5">🎧 Sony WH-1000XM5</button>
+                    <button type="button" class="query-tag-btn" data-query="Wireless Noise Cancelling Headphones">🎧 Wireless ANC Headphones</button>
                     <button type="button" class="query-tag-btn" data-query="Apple MacBook Pro 16 M3 Max">💻 MacBook Pro 16 M3 Max</button>
                     <button type="button" class="query-tag-btn" data-query="Samsung Galaxy S24 Ultra">📱 Samsung S24 Ultra</button>
                     <button type="button" class="query-tag-btn" data-query="Dell Precision 7820 Workstation">🖥️ Dell Precision 7820</button>
@@ -812,8 +812,8 @@
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                         <div>
                             <div style="font-size: 0.75rem; text-transform: uppercase; color: #38bdf8; font-weight: 700; letter-spacing: 0.05em;">Visual AI Match Confirmed</div>
-                            <div id="visual-result-title" style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin-top: 2px;">Sony WH-1000XM5</div>
-                            <div id="visual-result-category" style="font-size: 0.8rem; color: #94a3b8;">Wireless Noise Cancelling Headphones</div>
+                            <div id="visual-result-title" style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin-top: 2px;">Identified Product</div>
+                            <div id="visual-result-category" style="font-size: 0.8rem; color: #94a3b8;">Verified Hardware SKU</div>
                         </div>
                         <div id="visual-result-confidence-pill" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 20px;">
                             98% Confidence
@@ -1042,21 +1042,21 @@
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 1;">
                             <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Order / Transaction ID</label>
-                            <input type="text" id="dispute-order-id" class="form-input" style="width: 100%; margin-top: 4px; font-family: monospace;" value="ORD-SENTINEL-9921" required>
+                            <input type="text" id="dispute-order-id" class="form-input" style="width: 100%; margin-top: 4px; font-family: monospace;" placeholder="e.g. ORD-SENTINEL-9921" value="" required>
                         </div>
                         <div style="flex: 1;">
                             <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Merchant / Marketplace</label>
-                            <input type="text" id="dispute-merchant" class="form-input" style="width: 100%; margin-top: 4px;" value="Amazon" required>
+                            <input type="text" id="dispute-merchant" class="form-input" style="width: 100%; margin-top: 4px;" placeholder="e.g. Merchant Store" value="" required>
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 2;">
                             <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Product Title</label>
-                            <input type="text" id="dispute-product" class="form-input" style="width: 100%; margin-top: 4px;" value="Sony WH-1000XM5 Wireless Headphones" required>
+                            <input type="text" id="dispute-product" class="form-input" style="width: 100%; margin-top: 4px;" placeholder="Enter purchased product title..." value="" required>
                         </div>
                         <div style="flex: 1;">
                             <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Amount (₹ / $)</label>
-                            <input type="number" id="dispute-amount" class="form-input" style="width: 100%; margin-top: 4px; font-family: monospace;" value="26990" required>
+                            <input type="number" id="dispute-amount" class="form-input" style="width: 100%; margin-top: 4px; font-family: monospace;" placeholder="e.g. 299 or 24990" value="" required>
                         </div>
                     </div>
                     <div>
@@ -1071,7 +1071,7 @@
                     </div>
                     <div>
                         <label style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Incident Narrative Statement</label>
-                        <textarea id="dispute-description" class="form-input" style="width: 100%; margin-top: 4px; height: 60px; resize: vertical;" placeholder="Describe courier conduct, packaging status, or defect..." required>Courier refused mandated doorstep open-box inspection and demanded OTP without opening outer carton. Packaging seal was broken upon inspection.</textarea>
+                        <textarea id="dispute-description" class="form-input" style="width: 100%; margin-top: 4px; height: 60px; resize: vertical;" placeholder="Describe courier conduct, packaging status, or defect..." required></textarea>
                     </div>
                     <div id="dispute-result-panel" style="display: none; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 12px; margin-top: 6px;">
                         <!-- Rendered upon filing -->

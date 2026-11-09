@@ -302,7 +302,7 @@ export async function startVoiceSearch() {
     isListening = true;
     if (btnVoice) btnVoice.classList.add('listening-active');
     if (searchInput) {
-        searchInput.placeholder = "🎙️ Listening... Speak product name clearly (e.g. Sony WH-1000XM5)";
+        searchInput.placeholder = "🎙️ Listening... Speak any product name clearly...";
     }
     showToast("🎙️ Microphone active. Speak product name now...", "info");
 
@@ -463,7 +463,7 @@ export function stopVoiceSearch() {
 
     const searchInput = document.getElementById('search-input');
     if (searchInput && searchInput.placeholder.includes("Listening")) {
-        searchInput.placeholder = "Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, Epson L3250)...";
+        searchInput.placeholder = "Search any product, compare prices, or audit warranty fine print...";
     }
 }
 
@@ -583,7 +583,7 @@ export async function analyzeDirectImage(file, filename) {
 
 export function loadDirectPresetSample(sampleKey, fallbackQuery) {
     const preset = SAMPLE_PRESETS[sampleKey];
-    const query = preset ? preset.query : (fallbackQuery || "Sony WH-1000XM5");
+    const query = preset ? preset.query : (fallbackQuery || "Wireless Headphones");
     const brand = preset ? preset.brand : "Verified Product";
     const model = preset ? preset.model : query;
     const category = preset ? preset.category : "Consumer Electronics";

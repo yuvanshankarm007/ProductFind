@@ -144,7 +144,7 @@ export function setMode(mode) {
         if (imageContainer) imageContainer.style.display = 'none';
         if (searchBtnLabel) searchBtnLabel.textContent = 'AI Mode';
         if (searchInput) {
-            searchInput.placeholder = 'Search any product (e.g., Sony WH-1000XM5, MacBook Pro M3, Epson L3250)...';
+            searchInput.placeholder = 'Search any product, compare prices, or audit warranty fine print...';
         }
     }
 }
@@ -262,14 +262,14 @@ function setupEventListeners() {
         clearTimeout(searchDebounceTimer);
         let q = searchInput ? searchInput.value.trim() : '';
 
-        // If query is empty, provide intelligent default based on active mode
+        // If query is empty, prompt cleanly rather than forcing a branded product
         if (!q) {
-            if (currentSearchMode === 'bundle') {
-                q = (bundleItems && bundleItems.length > 0) ? bundleItems.join(', ') : 'WFH Setup under ₹50,000';
-            } else {
-                q = 'Sony WH-1000XM5';
+            showToast("Please enter a product or query to search.", "info");
+            if (searchInput) {
+                searchInput.placeholder = "Search any product, compare prices, or audit warranty fine print...";
+                searchInput.focus();
             }
-            if (searchInput) searchInput.value = q;
+            return;
         }
 
         lastExecutedQuery = q;
@@ -380,7 +380,7 @@ function setupEventListeners() {
                     preferredPayment: document.getElementById('pref-payment').value,
                 });
                 showToast("Preferences updated. Re-executing active search...", "info");
-                const currentQuery = searchInput ? searchInput.value.trim() : "Sony WH-1000XM5";
+                const currentQuery = searchInput ? searchInput.value.trim() : "";
                 if (currentQuery) executeSearch(currentQuery);
             });
         }
@@ -1241,7 +1241,10 @@ function openWatchdogModal(productTitle, currentPrice) {
     const inputTarget = document.getElementById('watchdog-target-price');
     const feedback = document.getElementById('watchdog-feedback-box');
 
-    if (inputTitle) inputTitle.value = productTitle || "Sony WH-1000XM5";
+    if (inputTitle) {
+        inputTitle.value = productTitle || "";
+        if (!inputTitle.value) inputTitle.placeholder = "Enter product title...";
+    }
     if (inputCurr) inputCurr.value = `₹ ${Number(currentPrice || 26990).toLocaleString()}`;
     if (inputTarget) inputTarget.value = Math.round((currentPrice || 26990) * 0.92);
     if (feedback) feedback.style.display = 'none';
@@ -1488,14 +1491,12 @@ const TOUR_STEPS = [
     {
         badge: "STEP 1 OF 5",
         title: "⚡ 1/5: Autonomous Multi-Agent Swarm Ingestion",
-        desc: "Ingesting 'Sony WH-1000XM5' and triggering 23-agent concurrent arbitration with zero hallucinations.",
+        desc: "Ingesting product query and triggering 23-agent concurrent arbitration with zero hallucinations.",
         target: "#search-form",
         action: async () => {
             const input = document.getElementById('search-input');
-            if (input) {
-                input.value = "Sony WH-1000XM5";
-            }
-            executeSearch("Sony WH-1000XM5", "single");
+            const targetQuery = (input && input.value.trim()) ? input.value.trim() : "Flagship ANC Wireless Headphones";
+            executeSearch(targetQuery, "single");
             const terminal = document.getElementById('terminal-card');
             if (terminal) terminal.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -1513,11 +1514,9 @@ const TOUR_STEPS = [
     {
         badge: "STEP 3 OF 5",
         title: "⚔️ 3/5: Real-Time Head-to-Head Versus Showdown",
-        desc: "Swarm AI arbitrates Sony WH-1000XM5 vs Bose QC Ultra with benchmark radar & dynamic verdict.",
+        desc: "Swarm AI arbitrates competing flagship models with benchmark radar & dynamic verdict.",
         target: "#versus-showdown-section",
         action: async () => {
-            const input = document.getElementById('search-input');
-            if (input) input.value = "Sony WH-1000XM5 vs Bose QuietComfort Ultra";
             try {
                 const res = await fetch('/api/versus/arbitrate?product_a=Sony%20WH-1000XM5&product_b=Bose%20QuietComfort%20Ultra&country=IN');
                 if (res.ok) {
