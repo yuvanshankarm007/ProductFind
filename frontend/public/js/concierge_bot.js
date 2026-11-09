@@ -6,12 +6,16 @@
 
 import { showToast } from './state.js';
 
-let voiceNarrationEnabled = true;
+let voiceNarrationEnabled = false;
 let isListening = false;
 let speechRecognizer = null;
 let currentUtterance = null;
 
 export function initConciergeBot() {
+    // Silence any speech synthesis immediately
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
     const launcherBtn = document.getElementById('sentinel-concierge-launcher');
     const drawer = document.getElementById('sentinel-concierge-drawer');
     const closeBtn = document.getElementById('concierge-close-btn');
@@ -192,14 +196,9 @@ export function initConciergeBot() {
     }
 
     function speakText(text) {
-        if (!voiceNarrationEnabled || !('speechSynthesis' in window) || !text) return;
+        // Disabled: Support bot will not speak aloud via SpeechSynthesis
         stopSpeaking();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.0;
-        utterance.lang = 'en-US';
-        currentUtterance = utterance;
-        window.speechSynthesis.speak(utterance);
+        return;
     }
 
     async function handleUserDoubt(userQuery) {
@@ -280,7 +279,21 @@ export function initConciergeBot() {
                 btn.type = 'button';
                 btn.className = 'concierge-suggestion-pill mini';
                 btn.textContent = sug;
-                btn.addEventListener('click', () => handleUserDoubt(sug));
+                btn.addEventListener('click', () => {
+                    if (sug.toLowerCase().startsWith('search ')) {
+                        const targetTerm = sug.replace(/^search\s+/i, '').trim();
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) searchInput.value = targetTerm;
+                        closeDrawer();
+                        const searchForm = document.getElementById('search-form');
+                        if (searchForm) {
+                            const submitEvent = new Event('submit', { cancelable: true });
+                            searchForm.dispatchEvent(submitEvent);
+                        }
+                    } else {
+                        handleUserDoubt(sug);
+                    }
+                });
                 sugContainer.appendChild(btn);
             });
             msgDiv.appendChild(sugContainer);

@@ -75,6 +75,8 @@ class SentinelConciergeBot:
     def answer_query(cls, query: str, active_product: Optional[str] = None, state_context: Optional[Dict[str, Any]] = None) -> ChatResponse:
         q_low = (query or "").lower().strip()
         active = active_product or "your searched hardware"
+        is_laptop = any(k in q_low for k in ["laptop", "laptops", "notebook", "notebooks", "vivobook", "ideapad", "thinkpad", "macbook", "pc"])
+        has_budget_phrase = any(k in q_low for k in ["under", "below", "budget", "within", "less than", "50k", "50000", "40k", "40000", "30k", "60k", "70k", "80k"])
 
         # 1. Open box & delivery inspection doubts
         if any(k in q_low for k in ["open box", "openbox", "otp", "delivery inspection", "unboxing", "safe delivery", "doorstep"]):
@@ -117,6 +119,49 @@ class SentinelConciergeBot:
             intent = "BUNDLE_ARBITRAGE"
             voice_text = "Combinatorial knapsack cart-splitting identifies individual items across Amazon, Flipkart, and OEM Direct, qualifying each sub-cart for free shipping and stacked card bonuses."
             suggestions = ["Try WFH Setup under ₹50,000", "Try Gaming Rig Peripherals", "What is PayPal Section 13?"]
+
+        # 6.5 Budget Laptop & Hardware Shopping Recommendations (e.g. "laptop under 50k", "phone under 20k", "laptop under 50000")
+        elif is_laptop and (has_budget_phrase or any(k in q_low for k in ["recommend", "suggest", "want", "find", "best", "good", "which"])):
+            # Check for budget thresholds
+            if any(k in q_low for k in ["40k", "40000", "35k"]):
+                budget_label = "₹40,000"
+                rec_1 = ("Acer Aspire Lite (AL15-52)", "₹38,990", "12th Gen Intel Core i3 | 8GB RAM | 512GB SSD | 15.6\" FHD | 1.59 kg")
+                rec_2 = ("Lenovo V15 G3", "₹35,990", "AMD Ryzen 3 7320U | 8GB LPDDR5 RAM | 512GB SSD | Spill-Resistant Keyboard")
+                rec_3 = ("HP 255 G9", "₹33,990", "AMD Ryzen 3 3250U | 8GB RAM | 512GB SSD | Fast Charge")
+                search_chip = "Search Laptop under 40k"
+            elif any(k in q_low for k in ["60k", "60000"]):
+                budget_label = "₹60,000"
+                rec_1 = ("HP Victus 15 Gaming", "₹56,990", "AMD Ryzen 5 5600H | NVIDIA RTX 3050 (4GB) | 16GB RAM | 512GB SSD")
+                rec_2 = ("ASUS Vivobook 16X", "₹54,990", "Intel Core i5-12450H | 16GB RAM | 512GB NVMe SSD | WUXGA 16:10 Display")
+                rec_3 = ("Lenovo IdeaPad Gaming 3", "₹52,990", "Intel Core i5 11th Gen | RTX 3050 | 16GB RAM | 512GB SSD")
+                search_chip = "Search Laptop under 60k"
+            else:
+                # Default under 50k
+                budget_label = "₹50,000"
+                rec_1 = ("ASUS Vivobook 15 (X1502ZA)", "₹44,990", "Intel Core i5-1235U (10 Cores, 12 Threads) | 16GB RAM | 512GB NVMe SSD | 15.6\" FHD Anti-Glare")
+                rec_2 = ("Lenovo IdeaPad Slim 3", "₹42,990", "AMD Ryzen 5 7520U | 16GB LPDDR5 RAM | 512GB SSD | 15.6\" FHD | Rapid Charge (80% in 1 hr)")
+                rec_3 = ("Acer Aspire Lite 15", "₹39,990", "12th Gen Intel Core i5-1235U | 16GB RAM | 512GB SSD | Premium Metal Finish")
+                search_chip = "Search Laptop under 50k"
+
+            reply = (
+                f"### 💻 Top Verified Laptops Under {budget_label}\n\n"
+                f"Here are the top 3 best-value models strictly within your **{budget_label}** budget:\n\n"
+                f"1. **{rec_1[0]}** — **{rec_1[1]}** *(Optimal Value Champion)*\n"
+                f"   • **Specs:** {rec_1[2]}\n"
+                f"   • **Protection:** 1-Year Official On-Site Warranty + Doorstep Open-Box OTP Inspection.\n"
+                f"   • **Best For:** College, multitasking, coding, and day-to-day work.\n\n"
+                f"2. **{rec_2[0]}** — **{rec_2[1]}** *(Best Battery & Build)*\n"
+                f"   • **Specs:** {rec_2[2]}\n"
+                f"   • **Best For:** 8-hour battery endurance and smooth typing.\n\n"
+                f"3. **{rec_3[0]}** — **{rec_3[1]}** *(Maximum Savings)*\n"
+                f"   • **Specs:** {rec_3[2]}\n"
+                f"   • **Best For:** Maximum raw performance and 16GB RAM under ₹40k.\n\n"
+                f"🛡️ **Buying Advice:** Always make sure the seller offers **Doorstep Open-Box OTP Inspection** so you can check for broken seals or scratches before accepting the package.\n\n"
+                f"👉 *Click **'{search_chip}'** below to compare live prices, warranty fine-print, and card discounts!*"
+            )
+            intent = "BUDGET_LAPTOP_RECOMMENDATION"
+            voice_text = f"Top laptops under {budget_label} are the ASUS Vivobook 15 at 44,990 rupees and Lenovo IdeaPad Slim 3 at 42,990 rupees."
+            suggestions = [search_chip, rec_1[0], rec_2[0], "Explain Open Box Delivery"]
 
         # 7. Comparison & recommendation for active product
         elif any(k in q_low for k in ["which deal", "recommend", "best deal", "what should i buy", "difference", "compare", "epson", "sony", "macbook", "dell"]):

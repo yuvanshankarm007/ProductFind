@@ -609,6 +609,24 @@ class SentinelCoordinator:
         )
         # Lifecycle Hook: Post-Scout AgentShield Zero-Trust Link & Price Audit (ECC Pattern)
         listings = await hooks.post_scout(raw_listings, query=clean_query, dest_country=preferences.country, constraints=prompt_constraints)
+
+        # Budget Constraint Enforcement: If user specified a budget ceiling (e.g. "under 50k", "under $800")
+        if prompt_constraints and getattr(prompt_constraints, "max_budget", None):
+            budget_cap = float(prompt_constraints.max_budget)
+            within_budget = [
+                l for l in listings
+                if self.fx_svc.convert_amount(l.base_price, l.currency, preferences.currency) <= (budget_cap * 1.02)
+            ]
+            if within_budget:
+                listings = within_budget
+                await scoped_bus.emit(
+                    source="BudgetEnforcerSubAgent",
+                    target="Coordinator",
+                    event_type="RESOLVED",
+                    content=f"BUDGET CEILING ENFORCED: Filtered down to {len(listings)} authentic listings strictly within {preferences.currency} {budget_cap:,.0f} limit.",
+                    payload={"budget_cap": budget_cap, "retained_count": len(listings)}
+                )
+
         state.raw_listings = listings
 
         # 2. Tier 2: Parallel Specialist Processing with Feedback Loops

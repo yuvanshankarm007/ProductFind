@@ -25,6 +25,8 @@ class PromptConstraint(BaseModel):
     banned_domains: List[str] = Field(default_factory=list)
     banned_keywords: List[str] = Field(default_factory=list)
     detected_intent_tags: List[str] = Field(default_factory=list)
+    max_budget: Optional[float] = None
+    max_budget_currency: Optional[str] = None
 
 
 class PromptLearnerEngine:
@@ -124,6 +126,43 @@ class PromptLearnerEngine:
             tags.append(f"BANNED_DOMAIN:{dom}")
             cleaned = re.sub(rf"\b(?:no|exclude|ban|avoid|skip|block|do not show|don't show|dont show|filter out|without)\s+{re.escape(dom)}\b", "", cleaned, flags=re.IGNORECASE)
 
+        # 5.5 Extract natural language budget limits (e.g. "under 50k", "under 50000", "below ₹50,000", "under $800")
+        max_budget: Optional[float] = None
+        max_budget_curr: Optional[str] = None
+
+        budget_patterns = [
+            r"\b(?:under|below|within|less than|max(?:imum)?(?: price)?(?: of)?|budget(?: of)?)\s*(?:₹|rs\.?|inr|\$|usd|eur|€|£|gbp)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|lakh|lac|thousand)?\b",
+            r"(?:₹|rs\.?|inr|\$|usd|eur|€|£|gbp)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|lakh|lac|thousand)?\s*(?:under|below|budget|max|or less)\b",
+            r"\b(?:<|<=)\s*(?:₹|rs\.?|inr|\$|usd|eur|€|£|gbp)?\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|lakh|lac|thousand)?\b"
+        ]
+
+        for b_pat in budget_patterns:
+            m_budget = re.search(b_pat, prompt_lower)
+            if m_budget:
+                raw_val = m_budget.group(1).replace(",", "")
+                multiplier_str = (m_budget.group(2) or "").lower()
+                try:
+                    val = float(raw_val)
+                    if multiplier_str in ["k", "thousand"]:
+                        val *= 1000.0
+                    elif multiplier_str in ["lakh", "lac"]:
+                        val *= 100000.0
+                    max_budget = val
+                    if any(c in prompt_lower for c in ["₹", "rs", "inr"]):
+                        max_budget_curr = "INR"
+                    elif any(c in prompt_lower for c in ["$", "usd"]):
+                        max_budget_curr = "USD"
+                    elif any(c in prompt_lower for c in ["€", "eur"]):
+                        max_budget_curr = "EUR"
+                    elif any(c in prompt_lower for c in ["£", "gbp"]):
+                        max_budget_curr = "GBP"
+
+                    tags.append(f"BUDGET_CAP:{int(val)}")
+                    cleaned = re.sub(b_pat, "", cleaned, flags=re.IGNORECASE)
+                    break
+                except Exception:
+                    pass
+
         # Clean extraneous commas, semicolons, pipes, and whitespace (preserving alphanumeric symbols like + in DS923+)
         clean_query = re.sub(r'[\,\;\|]+', ' ', cleaned)
         clean_query = re.sub(r'\s+\+\s+', ' ', clean_query)
@@ -143,7 +182,9 @@ class PromptLearnerEngine:
             no_accessories=bool(no_accessories),
             min_trust_score=80.0 if anti_scam else 75.0,
             banned_domains=banned_domains,
-            detected_intent_tags=tags or ["STANDARD_SEARCH"]
+            detected_intent_tags=tags or ["STANDARD_SEARCH"],
+            max_budget=max_budget,
+            max_budget_currency=max_budget_curr
         )
 
         newly_learned: List[Dict[str, Any]] = []

@@ -1772,10 +1772,37 @@ class LiveWebScoutEngine:
                     "victus", "omen", "tuf", "predator", "nitro", "alienware", "legion", 
                     "loq", "katana", "cyborg", "bravo", "rtx 40", "rtx 50", "i7", "i9", "ryzen 7", "ryzen 9"
                 ])
-                b_inr = 79990.00 if is_gaming_flagship else 59990.00
-                b_usd = 949.00 if is_gaming_flagship else 699.00
-                brand = "ASUS" if "vivobook" in q else ("HP" if "hp" in q or "victus" in q or "omen" in q else ("Dell" if "dell" in q else "Lenovo"))
-                title = f"{brand} {query.title()}{storage_spec}"
+                # Check for budget cap in query (e.g. "under 50k", "under 50000", "below 50k", "under 40k", "under 35k")
+                is_under_40k = any(f in q for f in ["under 40", "below 40", "40k", "40000", "under 35", "below 35", "35k", "30k", "under 30"])
+                is_under_50k = is_under_40k or any(f in q for f in ["under 50", "below 50", "50k", "50000", "under 45", "below 45", "45k", "budget"])
+
+                if is_under_40k:
+                    b_inr = 38990.00
+                    b_usd = 469.00
+                    brand = "Acer"
+                    title = f"Acer Aspire Lite 15.6\" Laptop (Intel Core i3 12th Gen / 8GB RAM / 512GB SSD / Windows 11){storage_spec}"
+                    min_inr, max_inr = 25000.0, 39990.0
+                    min_usd, max_usd = 299.0, 489.0
+                elif is_under_50k:
+                    b_inr = 44990.00
+                    b_usd = 539.00
+                    brand = "ASUS" if "asus" in q or "vivobook" in q else ("Lenovo" if "lenovo" in q or "ideapad" in q else ("HP" if "hp" in q else "ASUS"))
+                    if brand == "Lenovo":
+                        title = f"Lenovo IdeaPad Slim 3 Laptop (AMD Ryzen 5 7520U / 16GB RAM / 512GB SSD / 15.6\" FHD){storage_spec}"
+                    elif brand == "HP":
+                        title = f"HP 15s Thin & Light Laptop (Intel Core i5 12th Gen / 16GB RAM / 512GB SSD / FHD){storage_spec}"
+                    else:
+                        title = f"ASUS Vivobook 15 Laptop (Intel Core i5-1235U 12th Gen / 16GB RAM / 512GB SSD / 15.6\" FHD){storage_spec}"
+                    min_inr, max_inr = 34000.0, 49990.0
+                    min_usd, max_usd = 399.0, 599.0
+                else:
+                    b_inr = 79990.00 if is_gaming_flagship else 59990.00
+                    b_usd = 949.00 if is_gaming_flagship else 699.00
+                    brand = "ASUS" if "vivobook" in q else ("HP" if "hp" in q or "victus" in q or "omen" in q else ("Dell" if "dell" in q else "Lenovo"))
+                    clean_title_term = re.sub(r'\b(?:under|below|within|budget)\s*(?:₹|rs\.?|\$)?\s*\d+\s*(?:k)?\b', '', query, flags=re.IGNORECASE).strip()
+                    title = f"{brand} {clean_title_term.title() or 'Laptop'}{storage_spec}"
+                    min_inr, max_inr = 20000.0, 450000.0
+                    min_usd, max_usd = 250.0, 5000.0
 
             cat = "Gaming / High-Performance Laptop" if any(k in q for k in ["rog", "gaming", "rtx", "g15", "victus", "omen", "tuf", "nitro", "predator", "legion", "loq", "alienware"]) else "Thin & Light Laptop"
             return {
