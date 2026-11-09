@@ -83,7 +83,7 @@ function syncPreferencesUI() {
 }
 
 let currentSearchMode = "single";
-let bundleItems = ["27-inch 4K Monitor", "Mechanical Keyboard", "Ergonomic Chair", "1080p Webcam"];
+let bundleItems = [];
 
 export function setMode(mode) {
     currentSearchMode = mode;
@@ -119,10 +119,8 @@ export function setMode(mode) {
         if (imageContainer) imageContainer.style.display = 'none';
         if (searchBtnLabel) searchBtnLabel.textContent = 'Knapsack AI';
         if (searchInput) {
-            searchInput.placeholder = 'e.g. 27-inch 4K Monitor, Mechanical Keyboard, Ergonomic Chair, 1080p Webcam';
-            if (!searchInput.value) {
-                searchInput.value = bundleItems.join(', ');
-            }
+            searchInput.placeholder = 'Enter bundle items separated by commas (e.g. Monitor, Keyboard, Desk, Webcam)...';
+            // Do not force pre-typed items into input value; keep clean unless user typed
         }
         renderBundlePills();
     } else if (mode === 'image') {
@@ -134,6 +132,10 @@ export function setMode(mode) {
         if (searchBtnLabel) searchBtnLabel.textContent = 'Visual AI';
         if (searchInput) {
             searchInput.placeholder = 'Upload, drop, or select product image below, or type query...';
+            // Clear bundle list text if switching to image mode to keep view clean
+            if (bundleItems.length > 0 && searchInput.value === bundleItems.join(', ')) {
+                searchInput.value = '';
+            }
         }
     } else {
         // Single Deal mode (default)
@@ -145,6 +147,9 @@ export function setMode(mode) {
         if (searchBtnLabel) searchBtnLabel.textContent = 'AI Mode';
         if (searchInput) {
             searchInput.placeholder = 'Search any product, compare prices, or audit warranty fine print...';
+            if (bundleItems.length > 0 && searchInput.value === bundleItems.join(', ')) {
+                searchInput.value = '';
+            }
         }
     }
 }
