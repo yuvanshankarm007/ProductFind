@@ -16,6 +16,7 @@ import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
 import { initMultimodalSearch } from './multimodal_search.js';
 import { initConciergeBot } from './concierge_bot.js';
+import { initSearchAutocomplete } from './search_autocomplete.js';
 
 let currentSearchController = null;
 let currentSearchToken = 0;
@@ -322,6 +323,32 @@ function setupEventListeners() {
             }
         });
         updatePromptBadges(searchInput.value);
+
+        // Modern Search Autocomplete Dropdown
+        initSearchAutocomplete(searchInput, (selectedQuery) => {
+            const qLow = (selectedQuery || '').toLowerCase();
+            if (qLow.includes('wfh') || qLow.includes('gaming rig') || qLow.includes('bundle') || qLow.includes('setup')) {
+                setMode('bundle');
+                if (qLow.includes('wfh')) {
+                    bundleItems = ['27-inch 4K Monitor', 'Mechanical Keyboard', 'Ergonomic Chair', 'Webcam'];
+                } else if (qLow.includes('gaming')) {
+                    bundleItems = ['Gaming Monitor', 'Wireless Gaming Mouse', 'RGB Mechanical Keyboard', 'Spatial Audio Headset'];
+                }
+                renderBundlePills();
+                executeSearch(selectedQuery, 'bundle', bundleItems);
+            } else {
+                executeSearch(selectedQuery, 'single');
+            }
+        });
+    }
+
+    // Top Nav Price Watchdog Pill Button
+    const btnOpenWatchdogNav = document.getElementById('btn-open-watchdog-nav');
+    if (btnOpenWatchdogNav) {
+        btnOpenWatchdogNav.addEventListener('click', () => {
+            const q = searchInput ? searchInput.value.trim() : 'Apple iPhone 16';
+            openWatchdogModal(q || 'Apple iPhone 16', 79900);
+        });
     }
 
     // Quick Query Tag & Workflow Preset Buttons

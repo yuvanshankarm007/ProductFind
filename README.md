@@ -187,13 +187,15 @@ Open your browser to: **http://localhost:8000**
 
 ---
 
-## 🌟 60-Second Interactive Judge Tour
-When you launch `http://localhost:8000`, click the **`🌟 60s Judge Tour`** button in the header nav or quick-pills row to experience an automated, five-stage live walkthrough of:
-1. **Autonomous Swarm Ingestion** (Multimodal text, voice, and Google Lens packaging detection)
-2. **Strategic TCO Champions & AG Grid Cockpit** (Risk-adjusted total cost of ownership matrix)
-3. **Head-to-Head Versus Showdown** (Sony WH-1000XM5 vs Bose QC Ultra with benchmark radar)
-4. **Smart Wallet Stacker** (Credit card cashback optimization + PayPal Pay Later)
-5. **Section 13 Cryptographic Dispute Guard** (1-Click Merkle proof and statutory PDF chargeback generation)
+## 🌟 Interactive Live Experience
+When you launch `http://localhost:8000`, you can explore:
+1. **Intelligent Autocomplete & Multi-Agent Swarm**: Click into the search bar to reveal trending deals, budget brackets (under ₹50k laptops, under 1 lakh iPhones), and head-to-head showdowns (`iPhone 16 vs Galaxy S24`).
+2. **Strategic TCO Champions & AG Grid Cockpit**: Real-time comparison grid with sparklines, risk badges, OEM warranty evaluation, and native CSV export.
+3. **Head-to-Head Versus Showdown**: Compare competing flagship hardware side-by-side with swarm arbitration rationale and full specification comparison tables.
+4. **Smart Wallet Stacker (`💳 My Wallet`)**: Dynamically stacks credit card cashback (HDFC, ICICI, Axis, SBI, Amex) and PayPal Pay Later to maximize savings.
+5. **Real-Time Price Watchdog (`🎯 Price Alerts`)**: Set target thresholds with automated simulated flash-drop alerts via Email, Telegram, or Webhooks.
+6. **Section 13 Cryptographic Dispute Guard (`⚖️ Dispute Guard`)**: 1-Click Merkle proof and statutory PDF chargeback evidentiary dossier generation.
+7. **Multimodal Visual & Voice Studio**: Drag-and-drop packaging photos with Google Lens-style feature extraction and zero-crash fallback.
 
 ---
 
