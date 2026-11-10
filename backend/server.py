@@ -54,6 +54,7 @@ from .core.price_watchdog import watchdog_service, PriceAlertSubscription
 from .core.versus_engine import versus_engine, VersusArbitrationResult
 from .core.wallet_stacker import wallet_stacker_service, SUPPORTED_WALLET_CARDS, CardOffer
 from .core.dispute_assistant import dispute_assistant_service, DisputeFilingRequest, DisputeCase
+from .core.autocomplete_service import autocomplete_service, AutocompleteResponse
 
 _relay_server = None
 
@@ -389,6 +390,25 @@ async def get_preferences():
             "upi": "UPI / Net Banking"
         }
     }
+
+
+@app.get("/api/autocomplete", response_model=AutocompleteResponse)
+async def api_autocomplete_get(
+    q: Optional[str] = "",
+    country: Optional[str] = "IN",
+    currency: Optional[str] = "INR",
+    limit: Optional[int] = 8
+):
+    """
+    Browser-level & Amazon-grade autocomplete suggestion endpoint.
+    Returns live web completions, departmental scopes, and instant product spotlights.
+    """
+    return autocomplete_service.get_completions(
+        query=q or "",
+        country=country or "IN",
+        currency=currency or "INR",
+        limit=min(limit or 8, 15)
+    )
 
 
 @app.get("/api/search")

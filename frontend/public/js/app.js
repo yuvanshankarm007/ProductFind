@@ -16,7 +16,7 @@ import { renderPriceTrajectory } from './charts.js';
 import { escapeHtml, sanitizeUrl } from './security.js';
 import { initMultimodalSearch } from './multimodal_search.js';
 import { initConciergeBot } from './concierge_bot.js';
-import { initSearchAutocomplete } from './search_autocomplete.js';
+import { initSearchAutocomplete, saveRecentSearch } from './search_autocomplete.js';
 
 let currentSearchController = null;
 let currentSearchToken = 0;
@@ -518,6 +518,7 @@ function debounceReRank() {
 
 export function executeSearch(query, mode = null, itemsList = null) {
     if (!query) return;
+    saveRecentSearch(query);
 
     // 1. Cancel prior pending HTTP search if active
     if (currentSearchController) {
