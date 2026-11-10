@@ -1,6 +1,5 @@
 /**
  * AG Grid Cockpit Configuration & Custom Cell Renderers (Quartz Dark Theme).
- * Built for PayPal AI Hackathon Sponsor Category: Best Use of AG Grid.
  * Features Pinned Columns, Live Quick Search, Custom Cell Renderers, and Native CSV Export.
  */
 

@@ -1,6 +1,5 @@
 # ProductFind Sentinel 🛡️
 ### Autonomous Multi-Agent Commerce Engine with PayPal Dispute Protection & AG Grid Cockpit
-*Built for the [PayPal AI Hackathon on Devpost](https://paypalaihackathon.devpost.com/)*
 
 ---
 
@@ -138,7 +137,7 @@ flowchart TB
   - Standard **Credit Card Foreign Transaction Fee** (3.5% bank surcharge with zero cross-border dispute protection).
   - Versus **PayPal Native Currency Conversion**: Transparent exchange rate locked upfront with **180-Day Cross-Border PayPal Buyer Protection** covering lost overseas freight, customs seizures, and international seller dispute mediation.
 
-### 13. Native PayPal Integration (Hackathon Core)
+### 13. Native PayPal Integration & Dispute Escrow
 - **PayPal Buyer Protection Recommendation Engine:** Directly assesses seller risks (restocking fee, third-party seller, short return window, cross-border freight) and activates tailored protection shield alerts.
 - **PayPal Pay in 4 (BNPL):** Dynamically calculates bi-weekly split payments in the user's preferred currency.
 - **PayPal Orders v2 API:** Seamlessly creates (`/v2/checkout/orders`) and captures sandbox payments directly in the selected currency.

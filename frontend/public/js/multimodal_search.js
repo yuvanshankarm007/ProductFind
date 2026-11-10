@@ -612,7 +612,7 @@ export function loadDirectPresetSample(sampleKey, fallbackQuery) {
     if (previewPanel) previewPanel.style.display = 'flex';
     if (previewImg) previewImg.src = dataUri;
     if (titleEl) titleEl.textContent = query;
-    if (subEl) subEl.textContent = `✅ 99% Benchmark Image Match (${category}) — Transcribed into Search Box`;
+    if (subEl) subEl.textContent = `✅ Visual AI Match (${category}) — Transcribed into Search Box`;
 
     // Put product into search input box
     if (searchInput) {
@@ -629,7 +629,7 @@ export function loadDirectPresetSample(sampleKey, fallbackQuery) {
     };
 
     showVisualIndicatorBar(currentVisualMatch);
-    showToast(`🖼️ Benchmark image loaded: "${query}". Click 'Arbitrate Deals' or press Enter to search!`, "success");
+    showToast(`🖼️ Product image loaded: "${query}". Click 'Arbitrate Deals' or press Enter to search!`, "success");
 }
 
 function showVisualIndicatorBar(match) {
