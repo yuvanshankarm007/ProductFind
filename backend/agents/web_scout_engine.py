@@ -1356,12 +1356,12 @@ class LiveWebScoutEngine:
             return valid[len(valid) // 2]
         return None
 
-    def get_semantic_profile(self, query: str, dest_country: str = "IN") -> Dict[str, Any]:
+    def get_semantic_profile(self, query: str, dest_country: str = "IN", raw_query: Optional[str] = None) -> Dict[str, Any]:
         """
         Classifies product category, extracts hardware specs (storage, generation, variant),
         and dynamically maps authentic manufacturer MSRPs and boundaries across international markets.
         """
-        q = query.lower()
+        q = (raw_query or query).lower()
 
         # Parse condition intent (renewed, refurbished, open box, brand new)
         is_renewed = any(k in q for k in [
@@ -2132,7 +2132,7 @@ class LiveWebScoutEngine:
                 "ex_usd": 15.0, "ex_inr": 1200.0
             }
 
-    async def scout(self, query: str, dest_country: str = "IN", fx_svc=None) -> Dict[str, Any]:
+    async def scout(self, query: str, dest_country: str = "IN", fx_svc=None, raw_query: Optional[str] = None) -> Dict[str, Any]:
         """
         Orchestrates multi-source stealth web scraping (DuckDuckGo open web retail discovery,
         Flipkart real-time extraction, and live price calibration).
@@ -2142,6 +2142,7 @@ class LiveWebScoutEngine:
             query: Product search query.
             dest_country: ISO-2 destination country code.
             fx_svc: Optional FXService instance for live currency conversion (falls back to hardcoded rate).
+            raw_query: Optional raw user prompt containing budget or condition directives for semantic profiling.
         """
         def _inr_to_usd(inr: float) -> float:
             """Convert INR to USD using live FXService or fallback constant."""
@@ -2161,14 +2162,14 @@ class LiveWebScoutEngine:
                     pass
             return round(usd * _FALLBACK_INR_PER_USD, 2)
         dest = dest_country.upper()
-        cache_key = f"{query.strip().lower()}:{dest}"
+        cache_key = f"{query.strip().lower()}:{dest}:{str(raw_query).strip().lower()}"
         now = time.time()
         if cache_key in _SCOUT_PROFILE_CACHE:
             cached_time, cached_profile = _SCOUT_PROFILE_CACHE[cache_key]
             if (now - cached_time) < _SCOUT_CACHE_TTL:
                 return dict(cached_profile)
 
-        sem = self.get_semantic_profile(query, dest)
+        sem = self.get_semantic_profile(query, dest, raw_query=raw_query)
         is_renewed = sem.get("is_renewed", False)
         calibrated = False
         final_inr = sem["inr_baseline"]

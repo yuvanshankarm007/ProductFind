@@ -350,11 +350,13 @@ class ScoutSwarm:
         query: str,
         destination_country: str = "US",
         language: str = "en",
-        force_fallback: bool = False
+        force_fallback: bool = False,
+        raw_query: Optional[str] = None
     ) -> List[ScrapedListing]:
         """Dispatch search scouts to scrape live listings across domestic and international merchants for ANY product."""
         dest = destination_country.upper()
-        q_lower_check = query.lower()
+        effective_profile_query = raw_query or query
+        q_lower_check = effective_profile_query.lower()
         is_m1_max_pro = any(k in q_lower_check for k in ["m1 max", "m1 pro", "late 2021", "2021 macbook", "2021 apple macbook"]) or ("m1" in q_lower_check and any(m in q_lower_check for m in ["max", "pro", "64gb", "32gb"]))
         
         await self.bus.emit(
@@ -366,7 +368,7 @@ class ScoutSwarm:
 
         # 1. Live Web Scraping across real e-commerce stores & search index
         if force_fallback:
-            sem = self.web_engine.get_semantic_profile(query, dest)
+            sem = self.web_engine.get_semantic_profile(query, dest, raw_query=raw_query)
             profile = {
                 "title": sem["title"],
                 "category": sem["category"],
@@ -386,7 +388,7 @@ class ScoutSwarm:
                 "condition": sem.get("condition", "Brand New")
             }
         else:
-            profile = await self.web_engine.scout(query, dest, fx_svc=self.fx_svc)
+            profile = await self.web_engine.scout(query, dest, fx_svc=self.fx_svc, raw_query=raw_query)
         prod_title = profile["title"]
         base_msrp_usd = profile["base_msrp_usd"]
         regional_price = profile["regional_price"]

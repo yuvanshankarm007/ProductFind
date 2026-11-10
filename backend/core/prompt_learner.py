@@ -156,6 +156,9 @@ class PromptLearnerEngine:
                         max_budget_curr = "EUR"
                     elif any(c in prompt_lower for c in ["£", "gbp"]):
                         max_budget_curr = "GBP"
+                    elif val >= 5000:
+                        # Amounts like 50,000 / 50k in hardware queries default to INR
+                        max_budget_curr = "INR"
 
                     tags.append(f"BUDGET_CAP:{int(val)}")
                     cleaned = re.sub(b_pat, "", cleaned, flags=re.IGNORECASE)

@@ -231,10 +231,7 @@ export function initConciergeBot() {
             const data = await res.json();
             appendMessage('assistant', data.reply, data.suggestions);
 
-            // Voice speak
-            if (data.voice_text) {
-                speakText(data.voice_text);
-            }
+            // Voice narration permanently silenced per user policy
         } catch (err) {
             removeTypingIndicator(typingId);
             appendMessage('assistant', `I experienced a temporary communication glitch (${err.message}). You can ask about Open Box delivery, TCO calculations, or PayPal protection.`);

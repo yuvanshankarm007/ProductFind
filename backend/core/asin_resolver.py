@@ -248,7 +248,9 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # Tata CLiQ Domestic
     if "tatacliq" in domain and dest == "IN":
-        if any(k in q_low for k in ["sony", "xm5", "1000xm5", "headphone"]):
+        if any(k in q_low for k in ["camera", "a7", "mirrorless", "dslr"]):
+            return "https://www.tatacliq.com/sony-alpha-ilce-7m4-mirrorless-camera-body/p-mp000000013928122"
+        if any(k in q_low for k in ["xm5", "1000xm5", "headphone", "wh-1000"]):
             return "https://www.tatacliq.com/sony-wh-1000xm5-wireless-noise-cancelling-headphones-black/p-mp000000014768391"
         if is_m1_max_pro:
             if "64gb" in q_low or "64 gb" in q_low:
@@ -325,7 +327,13 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
             return "https://www.flipkart.com/cmf-nothing-buds-pro-2-50-db-anc-hi-res-ldac-smart-dial-spatial-audio-dual-drivers-bluetooth/p/itm30c0d780a4c6c"
         elif any(k in q_low for k in ["dell", "latitude", "inspiron", "5420"]):
             return "https://www.flipkart.com/dell-renewed-latitude-5420-14-fhd-laptop-quad-core-i5-1185g7-windows-11-pro-pro-intel-quad-core-i5-11th-generation-processor-type-1185g7-i5-1185g7e-530-mb-graphics-card-8-gb-ddr-4-ram-2600-mhz-256-ssd-m-2-mini-pc/p/itm1af14c1889b86"
-        elif any(k in q_low for k in ["sony", "xm5", "1000xm"]):
+        elif any(k in q_low for k in ["laptop", "vivobook", "asus", "ideapad", "lenovo", "acer", "aspire", "notebook"]):
+            return "https://www.flipkart.com/asus-vivobook-15-intel-core-i5-12th-gen-1235u-16-gb-512-gb-ssd-windows-11-home-x1502za-ej541ws-thin-light-laptop/p/itm5b014d4df0f7a"
+        elif any(k in q_low for k in ["camera", "a7", "mirrorless", "dslr"]):
+            return "https://www.flipkart.com/sony-alpha-ilce-7m4k-b-in5-mirrorless-camera-body-28-70-mm-zoom-lens/p/itm090e9643d9370"
+        elif any(k in q_low for k in ["xm5", "1000xm", "wh-1000", "headphone", "earphone", "headphones"]):
+            return "https://www.flipkart.com/sony-wh-1000xm5-wireless-noise-cancellation-ai-reduction-bluetooth/p/itmdec52bcb83eb9"
+        elif "sony" in q_low and not any(k in q_low for k in ["camera", "tv", "playstation", "ps5"]):
             return "https://www.flipkart.com/sony-wh-1000xm5-wireless-noise-cancellation-ai-reduction-bluetooth/p/itmdec52bcb83eb9"
         elif any(k in q_low for k in ["mouse", "mice", "keyboard", "logitech"]):
             if any(k in q_low for k in ["mx master", "master 3s"]):
@@ -352,7 +360,9 @@ def resolve_canonical_product_url(query: str, merchant_domain: str = "", dest_co
 
     # Tata CLiQ Luxury
     if "tatacliq" in domain and dest == "IN":
-        if any(k in q_low for k in ["sony", "xm5", "headphone"]):
+        if any(k in q_low for k in ["camera", "a7", "mirrorless", "dslr"]):
+            return "https://www.tatacliq.com/sony-alpha-ilce-7m4-mirrorless-camera-body/p-mp000000013928122"
+        if any(k in q_low for k in ["xm5", "1000xm", "headphone"]):
             return "https://luxury.tatacliq.com/sony-wh-1000xm5-wireless-industry-leading-active-noise-cancelling-headphones-black/p-mp000000014264629"
         return ""
 
