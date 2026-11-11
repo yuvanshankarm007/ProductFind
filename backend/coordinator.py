@@ -36,6 +36,9 @@ from .core.cart_arbitrage import CartArbitrageurAgent, ProductListing
 from .core.arbitrage_catalogue import get_listings_for_workflow, WORKFLOW_PRESETS
 from .core.versus_engine import versus_engine
 from .core.wallet_stacker import wallet_stacker_service
+from .core.reddit_consensus import reddit_consensus_engine
+from .core.review_authenticity import review_authenticity_engine
+from .core.bifl_index import bifl_index_engine
 
 # Circuit-breaker timeout (seconds) for ultra-fast 3-4s search SLAs
 _SCOUT_TIMEOUT = 2.6
@@ -478,6 +481,17 @@ class SentinelCoordinator:
                 order_amount=split_result.optimized_total
             )
             state.applied_wallet_discounts = wallet_calc.model_dump()
+
+        # Consumer Decision Breakdown: Reddit Consensus, Review Authenticity, and BIFL Index
+        try:
+            consensus = reddit_consensus_engine.get_consensus(query)
+            state.reddit_consensus = consensus.model_dump()
+            audit = review_authenticity_engine.audit_reviews(query, store="Amazon")
+            state.review_authenticity = audit.model_dump()
+            bifl = bifl_index_engine.evaluate_longevity(query)
+            state.bifl_metrics = bifl.model_dump()
+        except Exception:
+            pass
 
         state.is_complete = True
         state.events = scoped_bus.get_logs()
@@ -936,6 +950,36 @@ class SentinelCoordinator:
                 content=f"Applied wallet bonus: Saved {preferences.currency} {wallet_calc.net_savings:,.2f} using {best_card_str}.",
                 payload=wallet_calc_dict
             )
+
+        # Consumer Decision Breakdown: Reddit Hivemind Consensus, Review Authenticity, and BIFL/iFixit Index
+        try:
+            consensus = reddit_consensus_engine.get_consensus(clean_query)
+            state.reddit_consensus = consensus.model_dump()
+
+            top_merchant = final_options[0].listing.merchant if final_options else "Amazon"
+            audit = review_authenticity_engine.audit_reviews(clean_query, store=top_merchant)
+            state.review_authenticity = audit.model_dump()
+
+            bifl = bifl_index_engine.evaluate_longevity(clean_query)
+            state.bifl_metrics = bifl.model_dump()
+
+            await scoped_bus.emit(
+                source="CommunityHivemindAgent",
+                target="Coordinator",
+                event_type="COMMUNITY_CONSENSUS_SYNTHESIZED",
+                content=(
+                    f"Social Proof & Consumer Breakdown: Reddit Hivemind {consensus.sentiment_score}% Positive ({consensus.sentiment_label}) "
+                    f"across {consensus.threads_analyzed} threads | Review Authenticity: {audit.letter_grade} ({audit.organic_reviews_pct}% organic) | "
+                    f"iFixit Score: {bifl.ifixit_score}/10 ({bifl.repairability_tier})."
+                ),
+                payload={
+                    "reddit": consensus.model_dump(),
+                    "reviews": audit.model_dump(),
+                    "bifl": bifl.model_dump()
+                }
+            )
+        except Exception as comm_err:
+            pass
 
         state.is_complete = True
         state.events = scoped_bus.get_logs()

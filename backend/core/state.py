@@ -234,6 +234,9 @@ class BlackboardState(BaseModel):
     is_bundle: bool = False
     versus_result: Optional[Dict[str, Any]] = None
     applied_wallet_discounts: Optional[Dict[str, Any]] = None
+    reddit_consensus: Optional[Dict[str, Any]] = None
+    review_authenticity: Optional[Dict[str, Any]] = None
+    bifl_metrics: Optional[Dict[str, Any]] = None
     created_at: str = Field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
     @property

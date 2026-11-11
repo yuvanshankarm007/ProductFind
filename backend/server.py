@@ -1730,6 +1730,40 @@ async def share_deal(req: ShareDealRequest):
     }
 
 
+# ==========================================================================
+# CONSUMER DECISION BREAKDOWN & COMMUNITY PROOF APIS
+# ==========================================================================
+
+@app.get("/api/consensus")
+async def get_reddit_consensus(q: str):
+    """Fetches real unvarnished community consensus from authentic subreddits (r/BuyItForLife, r/gadgets, etc.)."""
+    from .core.reddit_consensus import reddit_consensus_engine
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
+    res = reddit_consensus_engine.get_consensus(q.strip())
+    return res.model_dump()
+
+
+@app.get("/api/review-audit")
+async def audit_reviews(q: str, store: Optional[str] = "Amazon"):
+    """ReviewRay / Fakespot-grade review authenticity audit, stripping bot & incentivized ratings."""
+    from .core.review_authenticity import review_authenticity_engine
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
+    res = review_authenticity_engine.audit_reviews(q.strip(), store=store or "Amazon")
+    return res.model_dump()
+
+
+@app.get("/api/bifl-score")
+async def get_bifl_score(q: str):
+    """iFixit teardown repairability and Buy It For Life (BIFL) longevity index."""
+    from .core.bifl_index import bifl_index_engine
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
+    res = bifl_index_engine.evaluate_longevity(q.strip())
+    return res.model_dump()
+
+
 # Mount frontend assets
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public")
 if os.path.exists(frontend_dir):

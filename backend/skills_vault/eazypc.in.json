@@ -6,7 +6,7 @@
   "currency": "INR",
   "is_auto_synthesized": true,
   "verification_score": 0.9,
-  "learned_at": "2026-11-07T13:37:15Z",
+  "learned_at": "2026-11-10T15:56:49Z",
   "success_count": 1,
   "policy_rules": {
     "return_window_days": 14,

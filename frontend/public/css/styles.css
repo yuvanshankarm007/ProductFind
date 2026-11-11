@@ -2177,6 +2177,27 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: transparent;
 }
 
+/* ==========================================================================
+   COMMUNITY CONSENSUS & 100-POINT CONSUMER DECISION DECK STYLES
+   ========================================================================== */
+
+.consensus-column {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.consensus-column:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.consensus-column a:hover {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+
 
 
 

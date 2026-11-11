@@ -142,6 +142,28 @@ flowchart TB
 - **PayPal Pay in 4 (BNPL):** Dynamically calculates bi-weekly split payments in the user's preferred currency.
 - **PayPal Orders v2 API:** Seamlessly creates (`/v2/checkout/orders`) and captures sandbox payments directly in the selected currency.
 
+### 14. Reddit Community Hivemind & Peer Consensus
+- **Unvarnished Peer Feedback:** Synthesizes multi-month user experiences from `r/BuyItForLife`, `r/gadgets`, `r/apple`, `r/headphones`, `r/pcmasterrace`, and `r/smartphones`.
+- **Top Verified Praises & Recurring Complaints:** Highlights authentic real-world pros and cons beyond marketing specs.
+- **12+ Month Failure Modes (What Breaks):** Uncovers real degradation patterns (battery capacity drop after heavy MagSafe charging, headband swivel fatigue, coating maintenance).
+- **Direct Thread Citations:** Live links to original community discussion threads with upvotes and comment volumes.
+
+### 15. ReviewRay / Fakespot-Grade Review Authenticity Filter
+- **Review Integrity Grades (Grade A to D):** Heuristically assesses overall reviewer trustworthiness.
+- **Adjusted Honest Star Rating:** Dynamically calculates true customer satisfaction after filtering out incentivized free-sample reviews (e.g. Amazon Vine), burst review campaigns, and unverified bot submissions.
+- **Organic vs Synthetic Meter:** Quantifies genuine organic buyer percentage vs bot / sample bias.
+- **Fraud Heuristic Telemetry:** Audits verified purchase ratios, review velocity bursts, AI syntax repetition, and star-vs-text sentiment alignment.
+
+### 16. iFixit Repairability & BIFL (Buy It For Life) Longevity Index
+- **iFixit Teardown Modularity Score (1–10):** Evaluates physical chassis serviceability and disassembly difficulty.
+- **Battery Replacement Feasibility:** Distinguishes user-accessible pull tabs and screw fasteners from permanent glue-in batteries.
+- **Expected Lifespan in Years:** Forecasts real-world product lifespan before functional obsolescence.
+- **Spare Parts Ecosystem:** Rates availability of OEM and third-party replacement screens, batteries, and switches.
+
+### 17. 7–14 Day Price Drop Probability Forecast
+- Statistically projects likelihood of a price reduction within 7–14 days.
+- Issues instant actionable guidance: `⚡ BUY NOW` vs `⏳ WAIT FOR DROP`.
+
 ---
 
 ## 🛠️ Quickstart & Local Installation
