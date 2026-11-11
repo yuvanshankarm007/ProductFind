@@ -4,10 +4,15 @@ Analyzes uploaded product images, packaging photos, brand logos, OCR metadata,
 and visual geometry to extract brand, model, and category cues for agent arbitration.
 """
 
+import os
 import io
 import re
+import sys
+import subprocess
+import tempfile
 import base64
 import hashlib
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 from pydantic import BaseModel, Field
 from PIL import Image, ImageStat
@@ -249,8 +254,22 @@ class VisualSearchEngine:
         # 3. Dominant Color & Brightness Analysis
         color_info = self._extract_color_metrics(img)
 
-        # 4. Text & Metadata Extraction (EXIF, PNG info, filename, hints, SVG tokens)
-        text_tokens = self._extract_text_tokens(img, filename=filename, query_hint=query_hint, extra_tokens=svg_tokens)
+        # 4. Text & Metadata Extraction (Native OCR, EXIF, PNG info, filename, hints, SVG tokens)
+        ocr_lines = []
+        if not is_svg and len(raw_bytes) > 0:
+            ocr_lines = self._run_ocr_extraction(raw_bytes)
+
+        ocr_tokens = []
+        for line in ocr_lines:
+            clean_l = re.sub(r"[^a-zA-Z0-9\-\s]", " ", line).lower()
+            ocr_tokens.extend([w for w in clean_l.split() if len(w) > 1])
+
+        text_tokens = self._extract_text_tokens(
+            img,
+            filename=filename,
+            query_hint=query_hint,
+            extra_tokens=svg_tokens + ocr_tokens
+        )
 
         # 5. Product & Brand Classification
         match = self._classify_product(
@@ -258,7 +277,8 @@ class VisualSearchEngine:
             color_info=color_info,
             aspect_ratio=aspect_ratio,
             filename=filename,
-            query_hint=query_hint
+            query_hint=query_hint,
+            ocr_lines=ocr_lines
         )
 
         # 6. Packaging & Seal Cue Detection
@@ -293,6 +313,42 @@ class VisualSearchEngine:
             features=features,
             suggested_queries=list(dict.fromkeys(suggested))
         )
+
+    def _run_ocr_extraction(self, raw_bytes: bytes) -> List[str]:
+        """Extracts text lines from image bytes using platform-native Windows.Media.Ocr."""
+        helper_path = Path(__file__).resolve().parent / "win_ocr_helper.ps1"
+        if sys.platform != "win32" or not helper_path.exists():
+            return []
+
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
+                tf.write(raw_bytes)
+                temp_path = tf.name
+
+            cmd = [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(helper_path),
+                "-ImagePath",
+                temp_path
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=4)
+            if proc.returncode == 0:
+                lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+                return lines
+        except Exception:
+            return []
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+        return []
 
     def _is_svg_bytes(self, raw_bytes: bytes) -> bool:
         """Determines if the raw byte sequence represents an SVG or vector graphic."""
@@ -484,7 +540,8 @@ class VisualSearchEngine:
         color_info: Dict[str, Any],
         aspect_ratio: float,
         filename: Optional[str] = None,
-        query_hint: Optional[str] = None
+        query_hint: Optional[str] = None,
+        ocr_lines: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Matches extracted visual cues and keywords against the known product ontology."""
         joined_text = " ".join(text_tokens).lower()
@@ -493,34 +550,51 @@ class VisualSearchEngine:
         if query_hint:
             joined_text += " " + query_hint.lower()
 
+        # Component sensor cues: if "sony imx..." or "samsung isocell" or "qualcomm" is detected,
+        # ensure component brands are not mistakenly treated as the device brand!
+        is_sony_sensor = bool(re.search(r'\b(?:sony\s+imx\d*|\d+mp\s+sony|sony\s+sensor)\b', joined_text, re.IGNORECASE))
+        is_samsung_sensor = bool(re.search(r'\b(?:samsung\s+isocell|\d+mp\s+samsung)\b', joined_text, re.IGNORECASE))
+
         best_product = None
         highest_score = 0
 
         category_stopwords = {"laptop", "phone", "headphones", "headphone", "earphone", "camera", "monitor", "chair", "nas", "storage", "edition"}
         for prod in self.known_products:
             score = 0
+            brand_lower = prod["brand"].lower()
+            model_lower = prod["model"].lower()
+
+            # Skip brand credit if it's purely a component sensor mention (e.g. Sony IMX on an Android phone)
+            if brand_lower == "sony" and is_sony_sensor and not any(w in joined_text for w in ["headphone", "wh-1000", "wh1000", "bravia", "playstation", "alpha", "walkman"]):
+                pass
+            elif brand_lower == "samsung" and is_samsung_sensor and "galaxy" not in joined_text:
+                pass
+            elif brand_lower in joined_text:
+                score += 2
+
             # Direct keyword match
+            has_model_match = False
             for kw in prod["keywords"]:
                 if kw in joined_text:
                     score += 4
-                elif any(part in joined_text for part in kw.split() if len(part) > 2 and part not in category_stopwords):
+                    has_model_match = True
+                elif any(part in joined_text for part in kw.split() if len(part) > 2 and part not in category_stopwords and part != brand_lower):
                     score += 1
-
-            # Brand match
-            if prod["brand"].lower() in joined_text:
-                score += 2
+                    has_model_match = True
 
             # Model match
-            if prod["model"].lower() in joined_text:
+            if model_lower in joined_text:
                 score += 3
+                has_model_match = True
 
-            if score > highest_score:
+            # Catalog products REQUIRE an actual model or model keyword match!
+            if has_model_match and score > highest_score:
                 highest_score = score
                 best_product = prod
 
-        # If high match found in curated knowledge base (requires strong model/brand correlation)
+        # Require a real model match to return a specific catalog product
         is_brand_matched = best_product and (best_product["brand"].lower() in joined_text)
-        if best_product and (highest_score >= 3 or (highest_score >= 2 and is_brand_matched)):
+        if best_product and (highest_score >= 4 or (highest_score >= 3 and is_brand_matched)):
             confidence = min(0.98, max(0.85, 0.85 + (highest_score * 0.02)))
             return {
                 "brand": best_product["brand"],
@@ -530,16 +604,45 @@ class VisualSearchEngine:
                 "confidence": round(confidence, 2),
                 "labels": best_product["labels"] + [color_info["name"]]
             }
-        elif best_product and is_brand_matched and highest_score > 0:
-            confidence = min(0.84, max(0.70, 0.70 + (highest_score * 0.03)))
-            return {
-                "brand": best_product["brand"],
-                "model": best_product["model"],
-                "category": best_product["category"],
-                "query": best_product["query"],
-                "confidence": round(confidence, 2),
-                "labels": best_product["labels"] + [color_info["name"]]
-            }
+
+        # OCR Headline Product Title Extraction (e.g. "Nova 2 Neo 5G")
+        if ocr_lines:
+            for raw_line in ocr_lines[:4]:
+                line = raw_line.strip()
+                clean_line = re.sub(r'[^a-zA-Z0-9\s\+\-\.]', ' ', line).strip()
+                tokens_in_line = clean_line.split()
+                if not tokens_in_line or len(clean_line) < 3:
+                    continue
+                lower_l = clean_line.lower()
+                if any(w in lower_l for w in ["massive", "battery", "rear camera", "front camera", "powered by", "discount", "sale", "special", "instant smart", "designed by"]):
+                    continue
+                if re.match(r'^\d+\s*(?:mp|mah|gb|tb|hz)\b', lower_l):
+                    continue
+
+                # Strong headline detected!
+                cat = "Consumer Electronics"
+                if any(w in joined_text for w in ["phone", "smartphone", "5g", "battery", "camera", "mah", "android", "rear camera", "front camera", "neo", "amoled", "oled", "nxtq"]):
+                    cat = "5G Smartphone"
+                elif any(w in joined_text for w in ["laptop", "notebook", "ultrabook", "processor", "intel", "amd", "ryzen", "core i"]):
+                    cat = "Laptop Computer"
+                elif any(w in joined_text for w in ["headphone", "earphone", "earbuds", "audio", "anc", "sound"]):
+                    cat = "Consumer Audio"
+                elif any(w in joined_text for w in ["printer", "ink", "ecotank", "toner"]):
+                    cat = "All-in-One Printer"
+                elif any(w in joined_text for w in ["keyboard", "keychron", "switches"]):
+                    cat = "Mechanical Keyboard"
+                elif any(w in joined_text for w in ["shoe", "sneaker", "footwear", "running", "jordan"]):
+                    cat = "Athletic Footwear"
+
+                brand = tokens_in_line[0].title()
+                return {
+                    "brand": brand,
+                    "model": clean_line,
+                    "category": cat,
+                    "query": clean_line,
+                    "confidence": 0.94,
+                    "labels": [clean_line, cat, color_info["name"]]
+                }
 
         # Dynamic brand and model extraction for broader product ecosystem
         popular_brands = [
@@ -553,7 +656,12 @@ class VisualSearchEngine:
 
         detected_brand = None
         for brand in popular_brands:
-            if re.search(rf"\b{re.escape(brand.lower())}\b", joined_text):
+            b_lower = brand.lower()
+            if b_lower == "sony" and is_sony_sensor and not any(w in joined_text for w in ["headphone", "wh-1000", "playstation", "bravia", "alpha"]):
+                continue
+            if b_lower == "samsung" and is_samsung_sensor and "galaxy" not in joined_text:
+                continue
+            if re.search(rf"\b{re.escape(b_lower)}\b", joined_text):
                 detected_brand = brand
                 break
 

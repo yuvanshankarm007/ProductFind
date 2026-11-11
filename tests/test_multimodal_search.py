@@ -424,3 +424,35 @@ def test_visual_search_filename_token_extraction_and_aspect_ratios():
     assert "Galaxy" in res_tall.extracted_query or res_tall.brand == "Samsung"
     assert "iPhone" not in res_tall.extracted_query
 
+
+def test_visual_search_ocr_headline_and_sensor_trap():
+    """Verify phone graphics with Sony IMX sensor specs are NOT misidentified as Sony headphones."""
+    ocr_lines = [
+        "Nova 2 Neo 5G",
+        "Massive 6000mAh",
+        "Battery",
+        "48MP Sony",
+        "IMX582 Rear Camera",
+        "8MP Clear Front Camera",
+        "Dedicated AI Key",
+        "For Instant Smart Access",
+        "Powered by Android 16"
+    ]
+    tokens = ["nova", "2", "neo", "5g", "massive", "6000mah", "battery", "48mp", "sony", "imx582", "rear", "camera", "8mp", "android", "16"]
+    color_info = {"name": "Sky Blue", "hex": "#a5c9ea"}
+
+    res = visual_search_engine._classify_product(
+        text_tokens=tokens,
+        color_info=color_info,
+        aspect_ratio=0.78,
+        filename="phone_graphic.jpg",
+        ocr_lines=ocr_lines
+    )
+
+    assert res["brand"] == "Nova"
+    assert res["query"] == "Nova 2 Neo 5G"
+    assert res["category"] == "5G Smartphone"
+    assert "Sony" not in res["brand"]
+    assert "WH-1000XM5" not in res["query"]
+
+
