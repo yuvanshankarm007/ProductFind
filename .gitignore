@@ -15,4 +15,7 @@ ENV/
 diagnostic.py
 DEMO_VIDEO_SCRIPT.txt
 *_SCRIPT.txt
+generate_*.py
+backend/data/dossiers/DISPUTE-*
+backend/data/dossiers/SECTION13_DOSSIER_DISPUTE-*
 
