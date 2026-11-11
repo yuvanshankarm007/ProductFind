@@ -146,6 +146,54 @@ KNOWN_PRODUCTS = [
         "query": "Logitech MX Master 3S Wireless Mouse",
         "keywords": ["mx master 3s", "mx master", "logitech mouse", "magseed wheel"],
         "labels": ["Logitech", "MX Master 3S", "Quiet Clicks", "8K DPI Sensor"]
+    },
+    {
+        "brand": "Epson",
+        "model": "EcoTank L3250",
+        "category": "All-in-One Ink Tank Printer",
+        "query": "Epson EcoTank L3250 Wi-Fi All-in-One Ink Tank Printer",
+        "keywords": ["epson", "l3250", "printer", "ecotank", "ink tank"],
+        "labels": ["Epson", "EcoTank L3250", "Wi-Fi All-in-One", "Ink Tank"]
+    },
+    {
+        "brand": "Dell",
+        "model": "Latitude 5511",
+        "category": "Business Workstation Laptop",
+        "query": "Dell Latitude 5511",
+        "keywords": ["dell latitude", "latitude 5511", "latitude", "dell business laptop"],
+        "labels": ["Dell", "Latitude 5511", "Core i7", "Enterprise Laptop"]
+    },
+    {
+        "brand": "Keychron",
+        "model": "K2 Wireless Mechanical Keyboard",
+        "category": "Mechanical Keyboard",
+        "query": "Keychron K2 Mechanical Keyboard",
+        "keywords": ["keychron", "mechanical keyboard", "keyboard", "k2"],
+        "labels": ["Keychron", "K2", "Mechanical Switches", "RGB Wireless"]
+    },
+    {
+        "brand": "Apple",
+        "model": "Apple Watch Ultra 2",
+        "category": "Rugged Smartwatch",
+        "query": "Apple Watch Ultra 2",
+        "keywords": ["apple watch", "watch ultra", "smartwatch", "smart watch"],
+        "labels": ["Apple", "Watch Ultra", "Titanium", "GPS + Cellular"]
+    },
+    {
+        "brand": "Nike",
+        "model": "Air Jordan 1",
+        "category": "Athletic Footwear",
+        "query": "Nike Air Jordan 1",
+        "keywords": ["nike", "air jordan", "jordan 1", "sneakers", "running shoes", "shoes"],
+        "labels": ["Nike", "Air Jordan", "High Top", "Leather Sneakers"]
+    },
+    {
+        "brand": "Bose",
+        "model": "QuietComfort 45",
+        "category": "Wireless Noise Cancelling Headphones",
+        "query": "Bose QuietComfort 45",
+        "keywords": ["bose", "quietcomfort", "qc45", "bose headphones"],
+        "labels": ["Bose", "QuietComfort 45", "Acoustic Noise Cancelling", "Over-Ear"]
     }
 ]
 
@@ -412,11 +460,16 @@ class VisualSearchEngine:
                     clean_v = re.sub(r"[^a-zA-Z0-9\-\s]", " ", v).lower()
                     tokens.extend([w for w in clean_v.split() if len(w) > 1])
 
-        # Check EXIF metadata
+        # Check EXIF metadata — specifically EXCLUDE camera hardware model/make tags
+        # (tag 271=Make, tag 272=Model, tag 305=Software, tag 316=HostComputer, 42035=LensMake, 42036=LensModel)
+        # to avoid misidentifying the camera that took the photo as the product in the photo!
+        CAMERA_EQUIPMENT_EXIF_TAGS = {271, 272, 305, 306, 316, 36867, 36868, 42035, 42036, 42037}
         try:
             exif = img._getexif() if hasattr(img, "_getexif") else None
             if exif and isinstance(exif, dict):
                 for tag_id, val in exif.items():
+                    if tag_id in CAMERA_EQUIPMENT_EXIF_TAGS:
+                        continue
                     if isinstance(val, str):
                         clean_val = re.sub(r"[^a-zA-Z0-9\-\s]", " ", val).lower()
                         tokens.extend([w for w in clean_val.split() if len(w) > 1])
@@ -494,7 +547,8 @@ class VisualSearchEngine:
             "Google", "Nintendo", "Logitech", "Razer", "Corsair", "SteelSeries", "Bose", "Sennheiser",
             "Audio-Technica", "JBL", "Anker", "Herman Miller", "Steelcase", "Synology", "QNAP",
             "Framework", "Nvidia", "AMD", "Intel", "Canon", "Nikon", "Fujifilm", "Panasonic", "DJI",
-            "GoPro", "Beats", "Marshall", "Garmin", "Fitbit", "Dyson", "Philips", "PlayStation", "Xbox"
+            "GoPro", "Beats", "Marshall", "Garmin", "Fitbit", "Dyson", "Philips", "PlayStation", "Xbox",
+            "Epson", "Brother", "Keychron", "Nike", "Adidas", "Puma", "OnePlus", "Xiaomi", "Motorola"
         ]
 
         detected_brand = None
@@ -530,6 +584,10 @@ class VisualSearchEngine:
                 cat = "Ergonomic Peripherals"
             elif any(w in joined_text for w in ["gpu", "graphics", "geforce", "radeon"]):
                 cat = "Graphics Card"
+            elif any(w in joined_text for w in ["printer", "ecotank", "inkjet", "laserjet"]):
+                cat = "All-in-One Printer"
+            elif any(w in joined_text for w in ["shoe", "shoes", "sneaker", "sneakers", "jordan"]):
+                cat = "Athletic Footwear"
 
             query = f"{detected_brand} {model_name}".strip()
             return {
@@ -539,6 +597,52 @@ class VisualSearchEngine:
                 "query": query,
                 "confidence": 0.86,
                 "labels": [detected_brand, model_name, cat, color_info["name"]]
+            }
+
+        # Meaningful token extraction from filename or query hint
+        GENERIC_STOPWORDS = {
+            "image", "photo", "screenshot", "img", "pic", "picture", "upload", "uploaded",
+            "clipboard", "clipboard_image", "blob", "file", "download", "unnamed", "captured",
+            "screen", "camera", "jpeg", "jpg", "png", "webp", "gif", "preview", "thumbnail",
+            "sample", "asset", "product", "item", "retail", "test", "demo", "box", "package",
+            "wide", "tall", "vertical", "horizontal", "square", "banner", "full", "small",
+            "large", "medium", "icon", "background", "copy", "temp", "final", "untitled",
+            "dsc", "dcim", "scan", "capture", "raw", "edit"
+        }
+        meaningful_tokens = [
+            w for w in text_tokens
+            if w.lower() not in GENERIC_STOPWORDS and not w.isdigit() and len(w) > 1
+        ]
+        if meaningful_tokens:
+            clean_title = " ".join(meaningful_tokens[:4]).title()
+            brand = meaningful_tokens[0].title()
+            model = " ".join(meaningful_tokens[1:4]).title() if len(meaningful_tokens) > 1 else brand
+            
+            cat = "Consumer Product"
+            if any(w in joined_text for w in ["shoe", "shoes", "sneaker", "sneakers", "jordan", "boots"]):
+                cat = "Athletic Footwear"
+            elif any(w in joined_text for w in ["printer", "ecotank", "laserjet", "inkjet"]):
+                cat = "All-in-One Printer"
+            elif any(w in joined_text for w in ["keyboard", "keychron", "mechanical"]):
+                cat = "Mechanical Keyboard"
+            elif any(w in joined_text for w in ["headphone", "audio", "earphone", "sound", "anc", "music"]):
+                cat = "Wireless Headphones"
+            elif any(w in joined_text for w in ["laptop", "macbook", "notebook", "ultrabook", "computer"]):
+                cat = "High-Performance Laptop"
+            elif any(w in joined_text for w in ["phone", "mobile", "galaxy", "iphone", "smartphone"]):
+                cat = "Flagship Smartphone"
+            elif any(w in joined_text for w in ["chair", "seating", "ergonomic", "mesh", "desk"]):
+                cat = "Ergonomic Office Furniture"
+            elif any(w in joined_text for w in ["camera", "dslr", "mirrorless"]):
+                cat = "Digital Camera"
+
+            return {
+                "brand": brand,
+                "model": model,
+                "category": cat,
+                "query": clean_title,
+                "confidence": 0.88,
+                "labels": [clean_title, cat, color_info["name"]]
             }
 
         # Fallback heuristic: check for general hardware categories
@@ -560,14 +664,23 @@ class VisualSearchEngine:
                 "confidence": 0.82,
                 "labels": ["Portable Computing", "Laptop", color_info["name"]]
             }
-        elif any(w in joined_text for w in ["phone", "mobile", "galaxy", "iphone", "smartphone"]):
+        elif any(w in joined_text for w in ["phone", "mobile", "galaxy", "smartphone"]):
+            return {
+                "brand": "Samsung",
+                "model": "Galaxy S24 Ultra",
+                "category": "Flagship Smartphone",
+                "query": "Samsung Galaxy S24 Ultra",
+                "confidence": 0.80,
+                "labels": ["Mobile Device", "Smartphone", color_info["name"]]
+            }
+        elif "iphone" in joined_text:
             return {
                 "brand": "Apple",
                 "model": "iPhone 16 Pro",
                 "category": "Flagship Smartphone",
                 "query": "iPhone 16 Pro",
-                "confidence": 0.80,
-                "labels": ["Mobile Device", "Smartphone", color_info["name"]]
+                "confidence": 0.82,
+                "labels": ["Apple", "iPhone 16 Pro", color_info["name"]]
             }
         elif any(w in joined_text for w in ["chair", "seating", "ergonomic", "mesh"]):
             return {
@@ -586,6 +699,26 @@ class VisualSearchEngine:
                 "query": "Synology DS923+ 4-Bay NAS DiskStation",
                 "confidence": 0.85,
                 "labels": ["Network Storage", "NAS Server", color_info["name"]]
+            }
+
+        # Geometry and aspect-ratio fallback when image has zero text cues
+        if aspect_ratio > 1.35:
+            return {
+                "brand": "Apple",
+                "model": "MacBook Pro",
+                "category": "High-Performance Laptop",
+                "query": "Apple MacBook Pro 16 M3 Max",
+                "confidence": 0.78,
+                "labels": ["Portable Computing", "Laptop", color_info["name"]]
+            }
+        elif aspect_ratio < 0.72:
+            return {
+                "brand": "Samsung",
+                "model": "Galaxy S24 Ultra",
+                "category": "Flagship Smartphone",
+                "query": "Samsung Galaxy S24 Ultra",
+                "confidence": 0.78,
+                "labels": ["Mobile Device", "Smartphone", color_info["name"]]
             }
 
         # Default fallback: Sony WH-1000XM5 flagship demo product

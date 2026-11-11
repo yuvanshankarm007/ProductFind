@@ -380,3 +380,47 @@ def test_api_voice_transcribe_bundle_mode_with_items():
     assert "search_state" in res_data
     # Check cart split / bundle execution
     assert "cart_split_result" in res_data or "final_options" in res_data
+
+
+def test_visual_search_exif_camera_hardware_ignored():
+    """Verify camera make/model in EXIF (e.g. photo taken with iPhone) does not override actual subject."""
+    img = Image.new("RGB", (300, 300), color=(120, 120, 120))
+    exif = img.getexif()
+    exif[271] = "Apple"
+    exif[272] = "iPhone 16 Pro"
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", exif=exif)
+    jpeg_bytes = buf.getvalue()
+
+    res = visual_search_engine.extract_visual_features(
+        jpeg_bytes,
+        filename="herman_miller_chair.jpg"
+    )
+    assert res.brand == "Herman Miller"
+    assert "iPhone" not in res.extracted_query
+
+
+def test_visual_search_filename_token_extraction_and_aspect_ratios():
+    """Verify various filenames (Nike, Keychron, Epson, Desk) and aspect ratios classify properly."""
+    img_sq = create_test_image(300, 300, color="gray", format="JPEG")
+    res_nike = visual_search_engine.extract_visual_features(img_sq, filename="nike_air_jordan.jpg")
+    assert res_nike.brand == "Nike"
+    assert "Jordan" in res_nike.model or "Air" in res_nike.model
+
+    res_keychron = visual_search_engine.extract_visual_features(img_sq, filename="keychron_k2_keyboard.png")
+    assert res_keychron.brand == "Keychron"
+
+    res_desk = visual_search_engine.extract_visual_features(img_sq, filename="standing_desk_ergonomic.jpg")
+    assert "Desk" in res_desk.extracted_query or "Standing" in res_desk.extracted_query
+
+    # Aspect ratio fallbacks for unnamed images: Wide -> MacBook, Tall -> Galaxy (Never iPhone default)
+    img_wide = create_test_image(600, 300, color="gray", format="JPEG")
+    res_wide = visual_search_engine.extract_visual_features(img_wide, filename="photo_123.jpg")
+    assert "MacBook" in res_wide.extracted_query or res_wide.brand == "Apple"
+    assert "iPhone" not in res_wide.extracted_query
+
+    img_tall = create_test_image(300, 600, color="gray", format="JPEG")
+    res_tall = visual_search_engine.extract_visual_features(img_tall, filename="photo_456.jpg")
+    assert "Galaxy" in res_tall.extracted_query or res_tall.brand == "Samsung"
+    assert "iPhone" not in res_tall.extracted_query
+

@@ -55,7 +55,8 @@ function initApp() {
         executeSearch: (query, mode, itemsList) => executeSearch(query, mode, itemsList),
         getSearchMode: () => currentSearchMode,
         getBundleItems: () => bundleItems,
-        addBundleItem: (item) => addBundleItem(item)
+        addBundleItem: (item) => addBundleItem(item),
+        applySearchResults: (state) => applySearchResults(state)
     });
 
     // 7. Wire Sentinel AI Concierge Chatbot — pass executeSearch so bot suggestions trigger real searches
@@ -1881,16 +1882,19 @@ function appendTerminalLog(source, content) {
 // ==========================================================================
 
 function seedDemoData() {
-    const searchInput = document.getElementById('search-input');
     const urlParams = new URLSearchParams(window.location.search);
-    const initialQuery = urlParams.get('q') || 'Apple iPhone 16 Pro';
-    if (searchInput && !searchInput.value) {
-        searchInput.value = initialQuery;
+    const initialQuery = urlParams.get('q');
+    if (initialQuery && initialQuery.trim()) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.value = initialQuery.trim();
+        }
+        setTimeout(() => {
+            executeSearch(initialQuery.trim(), 'single');
+        }, 400);
     }
-    // Auto-execute default query on load so dashboard and consensus are immediately populated
-    setTimeout(() => {
-        executeSearch(initialQuery, 'single');
-    }, 400);
+    // Clean initial state: do not autosearch on page load.
+    // Preserves rotating placeholder prompts and waits for explicit user search action.
 }
 
 function startPlaceholderRotation() {

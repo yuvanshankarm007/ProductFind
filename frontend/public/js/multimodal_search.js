@@ -22,7 +22,8 @@ let searchCallbacks = {
     executeSearch: null,
     getSearchMode: () => "single",
     getBundleItems: () => [],
-    addBundleItem: null
+    addBundleItem: null,
+    applySearchResults: null
 };
 
 // Benchmark catalog sample presets for 1-click test evaluation
@@ -563,10 +564,20 @@ export async function analyzeDirectImage(file, filename) {
         }
 
         if (titleEl) titleEl.textContent = query;
-        if (subEl) subEl.textContent = `✅ ${pct}% Match (${category}) — Transcribed into Search Box`;
+        if (subEl) subEl.textContent = `✅ ${pct}% Match (${category}) — Results Applied`;
 
         showVisualIndicatorBar(currentVisualMatch);
-        showToast(`🖼️ Product identified: "${query}". Click 'Arbitrate Deals' or press Enter to search!`, "success");
+
+        // Apply visual search results immediately to store & deal matrix
+        if (data.search_state && searchCallbacks.applySearchResults) {
+            searchCallbacks.applySearchResults(data.search_state);
+            showToast(`🖼️ Identified: "${query}". Live arbitrated deals updated!`, "success");
+        } else if (searchCallbacks.executeSearch) {
+            searchCallbacks.executeSearch(query, 'single');
+            showToast(`🖼️ Identified: "${query}". Arbitrating deals across retailers...`, "info");
+        } else {
+            showToast(`🖼️ Product identified: "${query}". Click 'Arbitrate Deals' or press Enter to search!`, "success");
+        }
 
     } catch (err) {
         console.warn("[Image Search] Backend extraction fallback:", err);
@@ -577,7 +588,12 @@ export async function analyzeDirectImage(file, filename) {
         }
         if (titleEl) titleEl.textContent = cleanName;
         if (subEl) subEl.textContent = `✅ Image loaded — Transcribed into Search Box`;
-        showToast(`🖼️ Image loaded for: "${cleanName}". Click 'Arbitrate Deals' or press Enter.`, "info");
+        if (searchCallbacks.executeSearch) {
+            searchCallbacks.executeSearch(cleanName, 'single');
+            showToast(`🖼️ Image loaded for: "${cleanName}". Arbitrating deals...`, "info");
+        } else {
+            showToast(`🖼️ Image loaded for: "${cleanName}". Click 'Arbitrate Deals' or press Enter.`, "info");
+        }
     }
 }
 
@@ -612,7 +628,7 @@ export function loadDirectPresetSample(sampleKey, fallbackQuery) {
     if (previewPanel) previewPanel.style.display = 'flex';
     if (previewImg) previewImg.src = dataUri;
     if (titleEl) titleEl.textContent = query;
-    if (subEl) subEl.textContent = `✅ Visual AI Match (${category}) — Transcribed into Search Box`;
+    if (subEl) subEl.textContent = `✅ Visual AI Match (${category}) — Results Applied`;
 
     // Put product into search input box
     if (searchInput) {
@@ -629,7 +645,12 @@ export function loadDirectPresetSample(sampleKey, fallbackQuery) {
     };
 
     showVisualIndicatorBar(currentVisualMatch);
-    showToast(`🖼️ Product image loaded: "${query}". Click 'Arbitrate Deals' or press Enter to search!`, "success");
+    if (searchCallbacks.executeSearch) {
+        searchCallbacks.executeSearch(query, 'single');
+        showToast(`🖼️ Preset loaded: "${query}". Arbitrated live deals displayed!`, "success");
+    } else {
+        showToast(`🖼️ Product image loaded: "${query}". Click 'Arbitrate Deals' or press Enter to search!`, "success");
+    }
 }
 
 function showVisualIndicatorBar(match) {
