@@ -731,23 +731,27 @@ class ScoutSwarm:
                 if dest == "IN":
                     if valid_p2 and valid_p2.get("merchant") and valid_p2.get("merchant") not in [store_0, store_1] and "ubuy" not in (valid_p2.get("domain") or ""):
                         store_2 = valid_p2["merchant"]
-                        domain_2 = valid_p2.get("domain", "dell.com")
+                        domain_2 = valid_p2.get("domain", "croma.com")
                         title_2 = valid_p2.get("title", f"{prod_title} ({store_2})")
                         price_2 = valid_p2.get("price") or round(regional_price * 0.92, 2)
                         p2_raw_url = valid_p2.get("url", "")
                         url_2 = p2_raw_url if (p2_raw_url and "/s?" not in p2_raw_url and "/s/" not in p2_raw_url) else resolve_canonical_product_url(query, merchant_domain=domain_2, dest_country=dest)
-                    elif store_0 != "IndiaMART Certified Supplier" and store_1 != "IndiaMART Certified Supplier":
+                        if not url_2:
+                            url_2 = resolve_secondary_canonical_url(query, dest) or (valid_p0.get("url") if valid_p0 else "")
+                    elif store_0 != "IndiaMART Certified Supplier" and store_1 != "IndiaMART Certified Supplier" and resolve_canonical_product_url(query, merchant_domain="indiamart.com", dest_country=dest):
                         store_2 = "IndiaMART Certified Supplier"
                         domain_2 = "indiamart.com"
                         title_2 = f"{prod_title} (IndiaMART Certified Supplier)"
-                        price_2 = valid_p2.get("price") or round(regional_price * 0.88, 2)
+                        price_2 = (valid_p2.get("price") if valid_p2 else None) or round(regional_price * 0.88, 2)
                         url_2 = resolve_canonical_product_url(query, merchant_domain="indiamart.com", dest_country=dest)
                     else:
-                        store_2 = "Dell Official Outlet"
-                        domain_2 = "dell.com"
-                        title_2 = f"{prod_title} (Dell Certified Partner)"
+                        brand_word = "Logitech" if "logitech" in query.lower() else ("Samsung" if "samsung" in query.lower() else ("Apple" if "apple" in query.lower() else ("Sony" if "sony" in query.lower() else ("Campus" if "campus" in query.lower() else ("Dell" if "dell" in query.lower() else "Certified")))))
+                        store_2 = f"{brand_word} Direct Outlet" if brand_word != "Certified" else "Croma Electronics"
+                        domain_2 = "croma.com" if brand_word == "Certified" else f"{brand_word.lower()}.com"
+                        title_2 = f"{prod_title} ({store_2})"
                         price_2 = round(regional_price * 0.94, 2)
-                        url_2 = resolve_canonical_product_url(query, merchant_domain="dell.com", dest_country=dest)
+                        sec_url = resolve_secondary_canonical_url(query, dest)
+                        url_2 = sec_url or resolve_canonical_product_url(query, merchant_domain=domain_2, dest_country=dest) or (valid_p0.get("url") if valid_p0 else "")
                 else:
                     store_2 = valid_p2.get("merchant", "Amazon US (Global Direct Import)") if valid_p2 else "Amazon US (Global Direct Import)"
                     domain_2 = valid_p2.get("domain", "amazon.com") if valid_p2 else "amazon.com"

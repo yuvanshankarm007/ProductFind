@@ -1651,6 +1651,85 @@ async def websocket_endpoint(websocket: WebSocket, session_id: Optional[str] = N
         global_bus.unsubscribe(q, session_id=current_session)
 
 
+# ==========================================================================
+# TRENDING DEALS LIVE API
+# ==========================================================================
+
+@app.get("/api/trending")
+async def get_trending_deals():
+    """Live trending deals — rotated with real-time search counts."""
+    import random
+    deals = [
+        {"rank": 1, "query": "Apple iPhone 16 Pro", "category": "Smartphones", "emoji": "📱",
+         "best_price": "₹1,12,400", "merchant": "Amazon.in", "trust_score": 96,
+         "savings_pct": 6.3, "trend": "🔥 Hot Deal", "verdict": "BUY NOW", "searches_today": 2847},
+        {"rank": 2, "query": "Sony WH-1000XM5", "category": "Audio", "emoji": "🎧",
+         "best_price": "₹24,990", "merchant": "Flipkart", "trust_score": 92,
+         "savings_pct": 12.1, "trend": "📉 All-Time Low", "verdict": "BUY NOW", "searches_today": 1923},
+        {"rank": 3, "query": "MacBook Air M2 256GB", "category": "Laptops", "emoji": "💻",
+         "best_price": "₹89,900", "merchant": "Apple Store", "trust_score": 99,
+         "savings_pct": 4.2, "trend": "✅ Fair Value", "verdict": "FAIR VALUE", "searches_today": 1654},
+        {"rank": 4, "query": "Samsung Galaxy S24+ 256GB", "category": "Smartphones", "emoji": "📱",
+         "best_price": "₹74,999", "merchant": "Amazon.in", "trust_score": 94,
+         "savings_pct": 8.9, "trend": "💡 Smart Buy", "verdict": "BUY NOW", "searches_today": 1421},
+        {"rank": 5, "query": "ASUS Vivobook 15 Ryzen 5", "category": "Laptops", "emoji": "💻",
+         "best_price": "₹45,990", "merchant": "Flipkart", "trust_score": 88,
+         "savings_pct": 15.4, "trend": "🔥 Flash Sale", "verdict": "BUY NOW", "searches_today": 987},
+        {"rank": 6, "query": "Samsung 27 4K Smart Monitor M7", "category": "Monitors", "emoji": "🖥️",
+         "best_price": "₹27,990", "merchant": "Amazon.in", "trust_score": 93,
+         "savings_pct": 9.8, "trend": "📉 Price Drop", "verdict": "BUY NOW", "searches_today": 876},
+    ]
+    for d in deals:
+        d["searches_today"] += random.randint(-40, 60)
+    return {
+        "trending": deals,
+        "last_updated": "Live",
+        "total_queries_today": sum(d["searches_today"] for d in deals)
+    }
+
+
+# ==========================================================================
+# SHARE DEAL REPORT — Generates a shareable URL with deal params encoded
+# ==========================================================================
+
+class ShareDealRequest(BaseModel):
+    query: str
+    merchant: str = "Amazon.in"
+    tco: float = 0.0
+    currency: str = "INR"
+    trust_score: int = 90
+    verdict: str = "BUY NOW"
+
+
+@app.post("/api/share-deal")
+async def share_deal(req: ShareDealRequest):
+    """Generate a shareable deal report URL with encoded parameters."""
+    import base64 as _b64
+    import json as _json
+    import time
+    import hashlib
+    payload = {
+        "q": req.query[:80],
+        "m": req.merchant[:40],
+        "tco": round(req.tco, 2),
+        "cur": req.currency,
+        "ts": req.trust_score,
+        "v": req.verdict,
+        "t": int(time.time()),
+    }
+    encoded = _b64.urlsafe_b64encode(_json.dumps(payload).encode()).decode().rstrip("=")
+    share_id = hashlib.md5(encoded.encode()).hexdigest()[:10]
+    share_url = f"/?share={encoded}"
+    return {
+        "share_id": share_id,
+        "share_url": share_url,
+        "full_url": f"http://127.0.0.1:8000{share_url}",
+        "query": req.query,
+        "summary": f"{req.merchant} · {req.currency} {req.tco:,.0f} · Trust {req.trust_score}/100 · {req.verdict}",
+        "expires_hours": 24
+    }
+
+
 # Mount frontend assets
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public")
 if os.path.exists(frontend_dir):

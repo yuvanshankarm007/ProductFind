@@ -190,6 +190,30 @@ export function initializeAgGrid(containerId) {
         autoSizeStrategy: {
             type: 'fitGridWidth'
         },
+        overlayNoRowsTemplate: `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 20px;text-align:center;">
+                <div style="font-size:2.5rem;opacity:0.7;">🔍</div>
+                <div style="font-size:15px;font-weight:700;color:#f1f5f9;">No listings arbitrated yet</div>
+                <div style="font-size:12px;color:#64748b;max-width:280px;line-height:1.5;">
+                    Try searching for <strong style="color:#38bdf8;">iPhone 16 Pro</strong>, 
+                    <strong style="color:#38bdf8;">MacBook Air M2</strong>, or 
+                    <strong style="color:#38bdf8;">Sony WH-1000XM5</strong> to see the live multi-agent deal matrix.
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+                    <button onclick="document.getElementById('search-input').value='Apple iPhone 16 Pro';document.getElementById('main-search-submit-btn')?.click();" 
+                            style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;padding:5px 12px;border-radius:9999px;font-size:11px;cursor:pointer;font-weight:600;">
+                        iPhone 16 Pro
+                    </button>
+                    <button onclick="document.getElementById('search-input').value='MacBook Air M2';document.getElementById('main-search-submit-btn')?.click();" 
+                            style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;padding:5px 12px;border-radius:9999px;font-size:11px;cursor:pointer;font-weight:600;">
+                        MacBook Air M2
+                    </button>
+                    <button onclick="document.getElementById('search-input').value='Sony WH-1000XM5';document.getElementById('main-search-submit-btn')?.click();" 
+                            style="background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:5px 12px;border-radius:9999px;font-size:11px;cursor:pointer;font-weight:600;">
+                        Sony XM5
+                    </button>
+                </div>
+            </div>`,
         onGridReady: (params) => {
             params.api.sizeColumnsToFit();
         }
@@ -221,14 +245,28 @@ export function initializeAgGrid(containerId) {
 }
 
 export function updateGridData(rows) {
-    if (gridApi) {
-        gridApi.setGridOption('rowData', rows || []);
-        setTimeout(() => {
-            try {
-                gridApi.sizeColumnsToFit();
-            } catch (_) {}
-        }, 50);
-    }
+    if (!gridApi) return;
+    // Normalize rows — map backend field names to what AG Grid column renderers expect
+    const normalized = (rows || []).map(r => ({
+        ...r,
+        // Price display fields
+        landed_outlay_conv: r.landed_outlay_conv ||
+            (r.base_price ? `${r.display_currency || '₹'} ${Number(r.base_price).toLocaleString('en-IN')}` :
+            r.sticker_price_conv || '$0'),
+        tco_conv: r.tco_conv ||
+            (r.risk_adjusted_tco ? `${r.display_currency || '₹'} ${Number(r.risk_adjusted_tco).toLocaleString('en-IN')}` :
+            r.landed_outlay_conv || '$0'),
+        // Trust index display
+        trust_index: r.trust_index || (r.trust_score ? `${r.trust_score}/100` : '85/100'),
+        // Stock status
+        in_stock: r.in_stock !== undefined ? r.in_stock :
+            (r.availability === 'In Stock' || r.availability === undefined),
+        is_dead_link: r.is_dead_link || false,
+    }));
+    gridApi.setGridOption('rowData', normalized);
+    setTimeout(() => {
+        try { gridApi.sizeColumnsToFit(); } catch (_) {}
+    }, 50);
 }
 
 export function filterGrid(query) {

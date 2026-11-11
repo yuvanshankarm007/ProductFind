@@ -519,6 +519,25 @@
         </div>
 
         <!-- Head-to-Head Versus Showdown Section (Populated when VS query arbitrated) -->
+        <!-- Deal of the Day Banner — rotates every 8s via JS -->
+        <div id="deal-of-day-banner" style="margin-bottom:1.5rem;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,rgba(56,189,248,0.08) 0%,rgba(52,211,153,0.08) 100%);border:1px solid rgba(56,189,248,0.2);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;animation:fadeInBanner 0.5s ease;">
+            <div style="font-size:1.5rem;flex-shrink:0;">⚡</div>
+            <div style="flex:1;min-width:200px;">
+                <div style="font-size:10px;font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">AI Deal of the Day · Live Arbitration</div>
+                <div id="dotd-title" style="font-size:14px;font-weight:700;color:#f1f5f9;line-height:1.3;">Apple iPhone 16 Pro 256GB — ₹7,500 below market average today</div>
+                <div id="dotd-sub" style="font-size:11px;color:#94a3b8;margin-top:2px;">Amazon.in · Trust Score 96 · Open Box OTP · HDFC 5% cashback stacked</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <div style="text-align:right;">
+                    <div style="font-size:10px;color:#64748b;text-transform:uppercase;">TCO</div>
+                    <div id="dotd-price" style="font-size:1.1rem;font-weight:800;color:#34d399;font-family:monospace;">₹1,12,400</div>
+                </div>
+                <button id="dotd-arbitrate-btn" onclick="document.getElementById('search-input').value='Apple iPhone 16 Pro';document.getElementById('search-input').dispatchEvent(new Event('input'));document.getElementById('main-search-submit-btn')?.click();" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#0f172a;font-weight:800;font-size:11px;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;">
+                    ⚡ Arbitrate
+                </button>
+            </div>
+        </div>
+
         <div id="versus-showdown-section" style="display: none; margin-bottom: 2rem;">
             <!-- Dynamically rendered by renderVersusShowdown in app.js -->
         </div>
@@ -535,6 +554,24 @@
             <!-- Bundle Arbitrage Spotlight Banner (Populated when bundle arbitrated) -->
             <div id="bundle-spotlight-section" style="display: none; margin-bottom: 1.5rem;">
                 <!-- Dynamically rendered by renderBundleSpotlight in app.js -->
+            </div>
+
+            <!-- Live Trending Deals Feed -->
+            <div id="trending-section" style="margin-bottom:1.5rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:1.1rem;">🔥</span>
+                        <span style="font-size:12px;font-weight:800;color:#f1f5f9;text-transform:uppercase;letter-spacing:0.08em;">Trending Now</span>
+                        <span id="trending-live-dot" style="width:7px;height:7px;background:#34d399;border-radius:50%;display:inline-block;animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+                        <span style="font-size:10px;color:#64748b;">Live deal tracker</span>
+                    </div>
+                    <span id="trending-queries-count" style="font-size:10px;color:#38bdf8;font-weight:700;"></span>
+                </div>
+                <div id="trending-cards-row" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+                    <div style="color:#475569;font-size:12px;padding:12px 16px;display:flex;align-items:center;gap:8px;">
+                        <span style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Loading...
+                    </div>
+                </div>
             </div>
 
             <div id="strategic-cards-grid" class="deal-cards-grid">

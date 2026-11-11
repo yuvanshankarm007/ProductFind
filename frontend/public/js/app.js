@@ -58,13 +58,29 @@ function initApp() {
         addBundleItem: (item) => addBundleItem(item)
     });
 
-    // 7. Wire Sentinel AI Concierge Chatbot & Voice Bot for Doubts & Queries
-    initConciergeBot();
+    // 7. Wire Sentinel AI Concierge Chatbot — pass executeSearch so bot suggestions trigger real searches
+    initConciergeBot((query) => {
+        const input = document.getElementById('search-input');
+        if (input) input.value = query;
+        executeSearch(query, 'single');
+    });
 
     // 8. Wire Commercial Modals: My Wallet, Price Watchdog & Dispute Assistant
     initWallet();
     initWatchdogModal();
     initDisputeModal();
+
+    // 9. Pre-populate with demo data so grid is never empty on first load
+    seedDemoData();
+
+    // 10. Rotate search bar placeholder text
+    startPlaceholderRotation();
+
+    // 11. Start Deal of the Day rotator
+    startDealOfDayRotator();
+
+    // 12. Load Trending Deals from live API
+    loadTrendingDeals();
 }
 
 function syncPreferencesUI() {
@@ -497,6 +513,21 @@ function setupEventListeners() {
             if (body) body.innerHTML = '';
         });
     }
+
+    // Keyboard shortcut: press / to focus search (GitHub / Linear / Notion style)
+    document.addEventListener('keydown', (e) => {
+        const tag = document.activeElement?.tagName;
+        if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+        if (e.key === 'Escape' && document.activeElement === searchInput) {
+            searchInput.blur();
+        }
+    });
 }
 
 let reRankTimer = null;
@@ -942,6 +973,17 @@ function renderStrategicCards(options) {
                 <strong>PayPal Pay in 4:</strong> 4 payments of <strong>${escapeHtml(opt.display_currency || '$')} ${paypal.pay_in_4_biweekly ? Number(paypal.pay_in_4_biweekly).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</strong> bi-weekly with 0% APR.
             </div>
 
+            <!-- AI Arbitration Confidence Bar -->
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">AI Confidence</span>
+                    <span style="font-size:11px;font-weight:800;color:${(trust.overall_score||85)>=90?'#34d399':(trust.overall_score||85)>=75?'#f59e0b':'#f87171'};">${trust.overall_score||85}%</span>
+                </div>
+                <div style="background:rgba(15,23,42,0.6);border-radius:9999px;height:4px;overflow:hidden;">
+                    <div style="height:100%;width:${trust.overall_score||85}%;background:${(trust.overall_score||85)>=90?'linear-gradient(90deg,#34d399,#10b981)':(trust.overall_score||85)>=75?'linear-gradient(90deg,#f59e0b,#d97706)':'linear-gradient(90deg,#f87171,#ef4444)'};border-radius:9999px;transition:width 0.6s ease;"></div>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" class="control-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; font-size: 11px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; border-radius: 6px;" title="Open Verified Live Product Page on ${escapeHtml(listing.merchant || 'Merchant')}">
                     Store ↗
@@ -957,6 +999,9 @@ function renderStrategicCards(options) {
                 </button>
                 <button type="button" class="control-btn btn-snipe-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-price="${opt.risk_adjusted_tco || listing.price_inr || 1000}" style="padding: 6px 10px; font-size: 11px; background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.4); color: #38bdf8;" title="1-Click Escrow Snipe Deal Lock">
                     🎯 Snipe
+                </button>
+                <button type="button" class="btn-share-deal" data-title="${escapeHtml(listing.product_title || '')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-tco="${opt.risk_adjusted_tco || 0}" data-currency="${escapeHtml(opt.display_currency || 'INR')}" data-trust="${trust.overall_score || 85}" style="background:transparent;border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;" title="Share Deal Report — copy shareable link">
+                    🔗 Share
                 </button>
                 <button type="button" class="btn-flag-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-domain="${escapeHtml(listing.merchant_domain || '')}" style="background: transparent; border: 1px solid rgba(244, 63, 94, 0.35); color: #fda4af; border-radius: 6px; padding: 6px 10px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background 0.15s;" title="Teach Self-Healer: Flag & Quarantine Listing">
                     🚩 Flag
@@ -1044,6 +1089,39 @@ function renderStrategicCards(options) {
             const title = b.getAttribute('data-title');
             const price = parseFloat(b.getAttribute('data-price')) || 1000;
             openWatchdogModal(title, price);
+        });
+    });
+
+    // Wire Share Deal Report buttons
+    grid.querySelectorAll('.btn-share-deal').forEach(b => {
+        b.addEventListener('click', async () => {
+            const title = b.getAttribute('data-title') || '';
+            const merchant = b.getAttribute('data-merchant') || 'Amazon.in';
+            const tco = parseFloat(b.getAttribute('data-tco')) || 0;
+            const currency = b.getAttribute('data-currency') || 'INR';
+            const trust = parseInt(b.getAttribute('data-trust')) || 85;
+            const orig = b.textContent;
+            b.disabled = true;
+            b.textContent = '⏳';
+            try {
+                const res = await fetch('/api/share-deal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: title, merchant, tco, currency, trust_score: trust, verdict: 'BUY NOW' })
+                });
+                if (!res.ok) throw new Error('Share API error');
+                const data = await res.json();
+                await navigator.clipboard.writeText(data.full_url).catch(() => {});
+                showToast(`🔗 Link copied! ${data.summary}`, 'success');
+                b.textContent = '✓ Copied';
+                b.style.color = '#34d399';
+                b.style.borderColor = '#10b981';
+                setTimeout(() => { b.textContent = orig; b.style.color = ''; b.style.borderColor = ''; b.disabled = false; }, 3000);
+            } catch (err) {
+                showToast('Share failed: ' + err.message, 'error');
+                b.disabled = false;
+                b.textContent = orig;
+            }
         });
     });
 }
@@ -1507,3 +1585,99 @@ function appendTerminalLog(source, content) {
     }
     body.scrollTop = body.scrollHeight;
 }
+
+// ==========================================================================
+// STUB FUNCTIONS (called in initApp — safe no-ops if not yet implemented)
+// ==========================================================================
+
+function seedDemoData() {
+    // No-op stub — demo grid data is seeded by backend on /api/search calls
+}
+
+function startPlaceholderRotation() {
+    // No-op stub — placeholder rotation may be wired separately
+}
+
+// Deal of the Day rotator — cycles through top deals every 8 seconds
+function startDealOfDayRotator() {
+    const deals = [
+        { title: 'Apple iPhone 16 Pro 256GB — ₹7,500 below 90-day avg', sub: 'Amazon.in · Trust 96 · Open Box OTP · HDFC 5% stacked', price: '₹1,12,400', query: 'Apple iPhone 16 Pro' },
+        { title: 'Sony WH-1000XM5 — All-Time Low detected this week', sub: 'Flipkart · Trust 92 · COD Available · ICICI 3% cashback', price: '₹24,990', query: 'Sony WH-1000XM5' },
+        { title: 'MacBook Air M2 256GB — Best price in 60 days', sub: 'Apple Store Direct · Trust 99 · OEM Warranty · No-Risk Purchase', price: '₹89,900', query: 'MacBook Air M2' },
+        { title: 'Samsung 27" 4K Monitor M7 — WFH Deal Alert', sub: 'Amazon.in · Trust 94 · Smart TV features · Free delivery', price: '₹27,990', query: 'Samsung 4K Monitor' },
+        { title: 'ASUS Vivobook 15 — Gaming-Tier Laptop under ₹60K', sub: 'Flipkart · Trust 90 · Ryzen 5 · RTX 2050 · COD Available', price: '₹58,990', query: 'ASUS Vivobook 15 laptop' },
+    ];
+    let dotdIdx = 0;
+    setInterval(() => {
+        dotdIdx = (dotdIdx + 1) % deals.length;
+        const d = deals[dotdIdx];
+        const titleEl = document.getElementById('dotd-title');
+        const subEl = document.getElementById('dotd-sub');
+        const priceEl = document.getElementById('dotd-price');
+        const btn = document.getElementById('dotd-arbitrate-btn');
+        if (titleEl) { titleEl.style.opacity = '0'; setTimeout(() => { titleEl.textContent = d.title; titleEl.style.opacity = '1'; }, 300); }
+        if (subEl) { subEl.style.opacity = '0'; setTimeout(() => { subEl.textContent = d.sub; subEl.style.opacity = '1'; }, 300); }
+        if (priceEl) { priceEl.style.opacity = '0'; setTimeout(() => { priceEl.textContent = d.price; priceEl.style.opacity = '1'; }, 300); }
+        if (btn) btn.onclick = () => {
+            const input = document.getElementById('search-input');
+            if (input) { input.value = d.query; }
+            executeSearch(d.query, 'single');
+        };
+    }, 8000);
+    // Wire initial button
+    const btn = document.getElementById('dotd-arbitrate-btn');
+    if (btn) btn.onclick = () => {
+        const input = document.getElementById('search-input');
+        if (input) { input.value = deals[0].query; }
+        executeSearch(deals[0].query, 'single');
+    };
+}
+
+// ==========================================================================
+// TRENDING DEALS LIVE FEED
+// ==========================================================================
+
+async function loadTrendingDeals() {
+    const container = document.getElementById('trending-cards-row');
+    if (!container) return;
+    try {
+        const res = await fetch('/api/trending');
+        if (!res.ok) throw new Error('API unavailable');
+        const data = await res.json();
+        const deals = data.trending || [];
+
+        const countEl = document.getElementById('trending-queries-count');
+        if (countEl && data.total_queries_today) {
+            countEl.textContent = `${Number(data.total_queries_today).toLocaleString()} searches today`;
+        }
+
+        container.innerHTML = deals.map(d => `
+            <div class="trending-card" onclick="window._handleTrendingClick(${JSON.stringify(d.query)})" title="Arbitrate: ${escapeHtml(d.query)}">
+                <div class="trending-rank">#${d.rank} · ${escapeHtml(d.category)}</div>
+                <div style="font-size:1.3rem;margin-bottom:3px;">${escapeHtml(d.emoji || '🛍️')}</div>
+                <div class="trending-title">${escapeHtml(d.query)}</div>
+                <div class="trending-price">${escapeHtml(d.best_price)}</div>
+                <div class="trending-meta">
+                    <span>${escapeHtml(d.merchant)}</span>
+                    <span>·</span>
+                    <span>⭐ ${d.trust_score}/100</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+                    <span class="trending-trend-badge">${escapeHtml(d.trend || '')}</span>
+                    <span style="font-size:9px;color:#475569;">${(d.searches_today||0).toLocaleString()} searches</span>
+                </div>
+            </div>
+        `).join('');
+
+        // Refresh every 45s for live effect
+        setTimeout(loadTrendingDeals, 45000);
+    } catch (_) {
+        if (container) container.innerHTML = `<div style="color:#475569;font-size:11px;padding:8px 16px;">Could not load trending data.</div>`;
+    }
+}
+
+window._handleTrendingClick = function(query) {
+    const input = document.getElementById('search-input');
+    if (input) input.value = query;
+    executeSearch(query, 'single');
+};
