@@ -1,5 +1,24 @@
 # ProductFind Sentinel 🛡️
-### Autonomous Multi-Agent Commerce Engine with PayPal Dispute Protection & AG Grid Cockpit
+### Autonomous Multi-Agent Commerce Engine with PayPal Dispute Protection, AG Grid Cockpit & MCP Server
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
+---
+
+## 🏆 Hackathon Technology Integration (PayPal + AI + Sponsors)
+
+* **PayPal Developer Platform (Sandbox REST APIs):**
+  * **OAuth 2.0 (`/v1/oauth2/token`) & Orders v2 API (`/v2/checkout/orders`):** Multi-currency `createOrder` and `captureOrder` execution (`backend/paypal_service.py`) embedded directly in AG Grid rows and checkout flows, with resilient Sandbox Demo Fallback when credentials are omitted.
+  * **PayPal Pay in 4 / Pay Later & Cross-Border FX Shield:** Bi-weekly financing calculation + Smart Wallet Stacker comparison eliminating 3.5% foreign card surcharges.
+  * **PayPal Section 13 Buyer Protection & Forensic Dispute Guard:** Seals checkout terms (`checkout_snapshot`) and SHA-256 Merkle proofs into pure-Python **Section 13 Chargeback PDF Dossiers** (`backend/core/pdf_generator.py`, `backend/core/dispute_assistant.py`).
+* **AI Tools, Models & Services:**
+  * **Autonomous Multi-Agent Blackboard Swarm (`SentinelCoordinator`)** & Voyager/Reflexion-inspired `AdaptiveSkillLearner` for test-time policy auditing and invariant verification.
+  * **Gemini / OpenAI Vision-LLM + Cross-Platform OCR (`visual_search.py`)** for product packaging recognition.
+  * **Gemini / OpenAI Community Consensus & Interactive Concierge** (`reddit_consensus.py`, `concierge_bot.py`) backed by live **iFixit Suggest 2.0**, **Hacker News Algolia**, and **DuckDuckGo Reddit** lookups.
+  * **Econometric Multi-Timeframe Predictor & 0/1 Knapsack Cart-Splitter** + **Native MCP JSON-RPC 2.0 Server (`/mcp`)** exposing 4 tools for external AI agents.
+* **Sponsor Integrations:**
+  * **AG Grid Community (`v31.0.3`, Quartz Dark Theme):** Pinned left merchant metadata, pinned right 1-click PayPal checkout triggers, custom trust/COD/Open-Box/FX renderers, live quick-filter search, and native CSV export (`gridApi.exportDataAsCsv()`).
+  * **Google Cloud Platform:** Optional Firestore Native Mode & Memorystore Redis persistence + Terraform IaC (`deploy/terraform`), with local SQLite/JSON zero-crash fallback.
 
 ---
 
@@ -119,17 +138,13 @@ flowchart TB
   - **One-Click Native CSV Export:** Download full comparison audits locally using AG Grid's native `gridApi.exportDataAsCsv()`.
   - **KPI Summary Ribbon:** Real-time statistics on total listings audited, lowest TCO, and COD/Open Box availability counts.
 
-### 10. 90-Day Price History Trajectory
-- Tracks historical price movements across 90-day intervals.
-- Computes **All-Time Low (ATL)**, **All-Time High (ATH)**, and **90-Day Moving Average** with an interactive SVG chart.
+### 10. Stock-Style Multi-Timeframe Price Trajectory & Timing Terminal
+- Tracks historical price movements across **`1D · Hourly` (25 ticks)**, **`7D`**, **`1M` (30D)**, **`90D`**, and **`1Y`** intervals alongside a toggleable **`+14D Forecast`** zone.
+- Features interactive crosshair scrubbing, live quote delta header updates, volume-impulse bars, period `LOW`/`HIGH` pins, Fair-Value baseline, and **All-Time Low (ATL)** / **All-Time High (ATH)** telemetry.
 
-### 11. AI Price Prediction Engine
-- Statistical & market cycle forecasting for 14-day price movements.
-- Delivers an actionable **Buy Verdict**:
-  - 🟢 **BUY NOW (Near All-Time Low)**
-  - 🟡 **WAIT (Flash Sale / Cyclical Drop Expected)**
-  - 🔵 **FAIR VALUE**
-- Provides prediction confidence score (e.g. 88%) and detailed market explanation.
+### 11. AI Price Prediction & Watchdog Webhook Engine
+- Statistical & market cycle forecasting for 14-day price movements with actionable Buy Verdicts (**BUY NOW**, **WAIT FOR DIP**, **FAIR VALUE**) and confidence scores.
+- **Price Watchdog (`🎯 Price Alerts`):** Supports currency-aware target price subscriptions with real-time **Discord & Slack webhook** dispatch (`backend/core/price_watchdog.py`).
 
 ### 12. Cross-Border FX, Import Duties & Bank Card Fee vs PayPal Native Conversion
 - For international merchants, checks live FX rates and calculates:
@@ -183,15 +198,17 @@ cd ProductFind
 pip install -r requirements.txt
 ```
 
-### 3. (Optional) Configure PayPal Sandbox & Google Cloud
-Create a `.env` file or export your credentials:
+### 3. (Optional) Configure PayPal Sandbox, AI Keys & Google Cloud
+Copy `.env.example` to `.env` or export credentials:
 ```bash
 export PAYPAL_CLIENT_ID="your-paypal-sandbox-client-id"
 export PAYPAL_CLIENT_SECRET="your-paypal-sandbox-client-secret"
+export GEMINI_API_KEY="optional-gemini-key"
+export OPENAI_API_KEY="optional-openai-key"
 export GCP_PROJECT_ID="your-gcp-project-id"
 export FIRESTORE_DATABASE_ID="(default)"
 ```
-*(If omitted, ProductFind operates in zero-crash local fallback mode with local disk and memory mirroring, requiring no cloud account for instant evaluation)*.
+*(All integrations feature zero-crash local fallbacks, requiring no API keys for instant local evaluation.)*
 
 ### 4. (Optional) Provision Cloud Infrastructure with Terraform
 ```bash
@@ -203,80 +220,48 @@ terraform apply
 
 ### 5. Run the Full-Stack Application
 ```bash
-python -m uvicorn backend.server:app --port 8000 --reload
+python -m uvicorn backend.server:app --host 127.0.0.1 --port 8000
 ```
-Open your browser to: **http://localhost:8000**
+Open your browser to: **http://127.0.0.1:8000**
+
+---
+
+## 🤖 Native MCP JSON-RPC 2.0 Server & Savings Ledger
+- **MCP Endpoint (`POST /mcp`, Manifest `GET /api/mcp/manifest`):** Exposes `arbitrate_deal`, `audit_consumer_proof`, `verify_listing_safety`, and `compile_dispute_dossier` for external AI agents.
+- **Persistent Savings Ledger (`GET /api/ledger/stats`):** Tracks cumulative arbitrage savings, customs traps flagged, low-trust listings filtered, verified links, and dispute dossiers compiled.
+- **SSRF-Safe Pre-Click Link Verifier (`POST /api/verify-link`):** Probes outbound merchant URLs safely before checkout.
 
 ---
 
 ## 🌟 Interactive Live Experience
-When you launch `http://localhost:8000`, you can explore:
-1. **Intelligent Autocomplete & Multi-Agent Swarm**: Click into the search bar to reveal trending deals, budget brackets (under ₹50k laptops, under 1 lakh iPhones), and head-to-head showdowns (`iPhone 16 vs Galaxy S24`).
-2. **Strategic TCO Champions & AG Grid Cockpit**: Real-time comparison grid with sparklines, risk badges, OEM warranty evaluation, and native CSV export.
-3. **Head-to-Head Versus Showdown**: Compare competing flagship hardware side-by-side with swarm arbitration rationale and full specification comparison tables.
-4. **Smart Wallet Stacker (`💳 My Wallet`)**: Dynamically stacks credit card cashback (HDFC, ICICI, Axis, SBI, Amex) and PayPal Pay Later to maximize savings.
-5. **Real-Time Price Watchdog (`🎯 Price Alerts`)**: Set target thresholds with automated simulated flash-drop alerts via Email, Telegram, or Webhooks.
-6. **Section 13 Cryptographic Dispute Guard (`⚖️ Dispute Guard`)**: 1-Click Merkle proof and statutory PDF chargeback evidentiary dossier generation.
-7. **Multimodal Visual & Voice Studio**: Drag-and-drop packaging photos with Google Lens-style feature extraction and zero-crash fallback.
+When you launch `http://127.0.0.1:8000`, you can explore:
+1. **Intelligent Autocomplete & Multi-Agent Swarm**: Click into the search bar to reveal trending deals, budget brackets, and head-to-head showdowns (`iPhone 16 vs Galaxy S24`).
+2. **Stock-Style Market Timing Terminal & AG Grid Cockpit**: Switch between `1D · Hourly`, `7D`, `1M`, `90D`, `1Y`, and `+14D Forecast` with crosshair scrubbing, plus live CSV export and pinned PayPal Checkout in AG Grid.
+3. **Live Consumer Proof Deck**: Inspect live iFixit 2.0 repairability scores, HN/Reddit discussions, and ReviewRay authenticity grades.
+4. **Combinatorial 0/1 Knapsack Bundle Split & Smart Wallet (`💳 My Wallet`)**: Optimize multi-store baskets and stack bank cards + PayPal Pay Later.
+5. **Section 13 Cryptographic Dispute Guard (`⚖️ Dispute Guard`)**: Compiles `checkout_snapshot` SHA-256 + Merkle proof pure-Python Section 13 chargeback PDF dossiers.
+6. **Multimodal Visual & Voice Studio**: Drag-and-drop packaging photos into Vision-LLM/OCR extraction or dictate via Web Speech voice search.
 
 ---
 
 ## 🔌 Manifest V3 Chrome Extension
 Sentinel includes a full Chrome Extension located in `extension/`:
-1. Open Chrome/Brave and navigate to `chrome://extensions/`.
+1. Open Chrome/Brave and navigate to `chrome://extensions/` (`brave://extensions/`).
 2. Enable **Developer mode** (top-right toggle).
 3. Click **Load unpacked** and select the `extension/` folder in this repository.
-4. Navigate to any Amazon, Flipkart, or Best Buy product page — Sentinel automatically activates in-page with real-time price arbitrage and OEM warranty verification!
+4. Navigate to any Amazon (`amazon.in` / `amazon.com`), Flipkart, or Best Buy search or product page — Sentinel automatically activates in-page with live TCO arbitration, ReviewRay grade, and iFixit telemetry!
 
 ---
 
-## 🧪 Comprehensive Test Suite (120/120 Passing)
+## 🧪 Comprehensive Test Suite
 
-Run the full pytest suite:
+Run the automated test suite (non-Playwright suite):
 ```bash
-pytest
+python -m pytest tests/ -k "not test_playwright" -q
 ```
-*Output: `120 passed in 77.72s (100% passing rate across all model fidelity, stealth browsing, session isolation, and commercial expansion tests)`.*
-
-Run individual targeted tests:
-```bash
-pytest tests/test_commercial_expansions.py -v
-pytest tests/test_multimodal_search.py -v
-pytest tests/test_accuracy.py -v
-```
-
----
-
-## 🧪 Running Automated Swarm Tests
-
-Run the built-in end-to-end verification suite:
-```bash
-python test_sentinel.py
-```
-
-Run the server endpoint tests:
-```bash
-python test_server_routes.py
-```
-
-Expected output:
-```
-=== STARTING PRODUCTFIND SENTINEL VERIFICATION TEST ===
- [x] EventBus Pub/Sub operational.
- [x] Tier 1 Scouts collected 4 merchant listings.
- [x] Bidirectional Feedback Loops triggered: 1 back-propagation queries resolved.
- [x] Tier 2 Merchant Audit (Trust, Delivery, COD & Open Box) verified.
- [x] Cross-Border FX & Import Duty Inspector: FX rate, duties, and card 3.5% fee vs PayPal shield.
- [x] Price History & AI Prediction Agent: ATL, ATH, 90d Avg, and 14d Forecast verdict verified.
- [x] Tier 3 Strategy Options Curated: Optimal Value, Max Protection, Budget Sticker.
- [x] Comparison Matrix Generated with 4 rows.
- [x] Localized Hindi events generated: 12 events matched.
- [x] PayPal Orders API v2 createOrder successful for INR.
- [x] PayPal Orders API v2 captureOrder successful for INR.
-=== ALL SYSTEMS OPERATIONAL AND VERIFIED ===
-```
+> All **146 collected tests** cover model fidelity, stealth browsing, session isolation, consumer proof, stock-style multi-timeframe trajectories, SSRF link verification, MCP JSON-RPC, and PayPal Section 13 snapshot integrity.
 
 ---
 
 ## 📄 License
-PolyForm Noncommercial License 1.0.0. Free for noncommercial and educational use; commercial use requires permission from Yuvan Shankar.
+MIT License — see [LICENSE](./LICENSE). Free to use, modify, and distribute under standard OSI-approved MIT terms.

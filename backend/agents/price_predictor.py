@@ -6,6 +6,7 @@ and detects fake/inflated MSRP discounts using a numpy moving-average baseline.
 Produces 11-point sparkline arrays for AG Grid cell renderers.
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 import re
 import random
@@ -168,10 +169,20 @@ class PricePredictorAgent:
         title_lower = product_title.lower()
         curr = target_currency.upper()
 
-        query_hash = hashlib.sha256(f"{title_lower}_{round(current_best_price, 2)}_{curr}".encode("utf-8")).hexdigest()
+        query_hash = hashlib.sha256(f"{title_lower}_{round(current_best_price, 2)}_{curr}_tfv2".encode("utf-8")).hexdigest()
         cached = gcp_db_service.get_prediction(query_hash)
         if cached:
             try:
+                if not cached.get("timeframes"):
+                    cached["timeframes"] = {
+                        k: [pt.model_dump() for pt in v]
+                        for k, v in self._build_multi_timeframe_series(
+                            product_title=product_title,
+                            current_price=max(10.0, float(cached.get("current_best_price") or current_best_price)),
+                            expected_delta_pct=float(cached.get("prediction_delta_pct") or 0.0),
+                            target_currency=curr,
+                        ).items()
+                    }
                 return PriceAnalytics(**cached)
             except Exception:
                 pass
@@ -237,34 +248,29 @@ class PricePredictorAgent:
             buy_verdict = "FAIR VALUE (BUY OR SET ALERT)"
 
         c_price = max(10.0, current_best_price)
-        history_factors = [
-            ("-90d", 1.12, "Launch MSRP Window"),
-            ("-60d", 1.07, "Mid-Season Retail"),
-            ("-45d", 1.10, "Seasonal High Demand"),
-            ("-30d", 0.96, "Flash Sale Benchmark"),
-            ("-15d", 1.03, "Inventory Restock"),
-            ("-7d", 0.98, "Weekly Price Match"),
-            ("Today", 1.00, "Current Best Scouted")
-        ]
+        predicted_price = round(c_price * (1.0 + (expected_delta_pct / 100.0)), 2)
 
-        history_points: List[PriceHistoryPoint] = []
-        raw_prices: List[float] = []
-
-        for date_lbl, factor, note in history_factors:
-            p = round(c_price * factor, 2)
-            history_points.append(PriceHistoryPoint(date=date_lbl, price=p, event_label=note))
-            raw_prices.append(p)
+        timeframes = self._build_multi_timeframe_series(
+            product_title=product_title,
+            current_price=c_price,
+            expected_delta_pct=expected_delta_pct,
+            target_currency=curr,
+        )
+        history_points = list(timeframes.get("90D") or [])
+        raw_prices = [pt.price for pt in history_points] or [round(c_price, 2)]
 
         all_time_low = min(raw_prices)
         all_time_high = max(raw_prices)
         avg_90d = round(sum(raw_prices) / len(raw_prices), 2)
-        predicted_price = round(c_price * (1.0 + (expected_delta_pct / 100.0)), 2)
 
-        sparkline_pts = [p for p in raw_prices]
+        # Compact 8-point sparkline for AG Grid inline mini-trend column
+        spark_step = max(1, len(raw_prices) // 7)
+        sparkline_pts = [raw_prices[i] for i in range(0, len(raw_prices), spark_step)][:7]
         sparkline_pts.append(predicted_price)
 
         analytics = PriceAnalytics(
             product_name=product_title,
+            base_currency=curr,
             target_currency=curr,
             current_best_price=round(c_price, 2),
             all_time_low=all_time_low,
@@ -278,8 +284,192 @@ class PricePredictorAgent:
             prediction_confidence=confidence,
             prediction_explanation=explanation,
             history_points=history_points,
+            timeframes=timeframes,
             sparkline=sparkline_pts,
         )
 
         gcp_db_service.cache_prediction(query_hash, analytics.model_dump(), ttl_seconds=3600)
         return analytics
+
+    @staticmethod
+    def _build_multi_timeframe_series(
+        product_title: str,
+        current_price: float,
+        expected_delta_pct: float,
+        target_currency: str = "USD",
+    ) -> Dict[str, List[PriceHistoryPoint]]:
+        """
+        Builds deterministic stock-tracker-style multi-timeframe trajectories:
+        - 1D (25 hourly points: intraday repricing & flash-match ticks)
+        - 7D (29 6-hour points across the past week)
+        - 1M (30 daily closes across the past 30 days)
+        - 90D (31 3-day closes across the past quarter)
+        - 1Y (27 bi-weekly closes across the past 52 weeks)
+        - forecast_14d (7 forward 2-day projected points ending at predicted_price)
+        """
+        c_price = max(10.0, float(current_price))
+        seed_bytes = hashlib.sha256(
+            f"{product_title.lower().strip()}_{round(c_price, 2)}_{target_currency.upper()}".encode("utf-8")
+        ).digest()
+        rng = np.random.default_rng(int.from_bytes(seed_bytes[:8], "little"))
+        now = datetime.now()
+        decimals = 0 if target_currency.upper() in ("INR", "JPY") and c_price >= 500 else 2
+
+        def _fmt_price(val: float) -> float:
+            clamped = max(1.0, val)
+            return round(float(clamped), decimals) if decimals > 0 else float(round(clamped))
+
+        def _walk_series(
+            count: int,
+            start_mult: float,
+            step_vol: float,
+            dip_windows: List[tuple],
+            label_fn,
+            event_tags: Optional[Dict[int, str]] = None,
+        ) -> List[PriceHistoryPoint]:
+            # Smooth drift from start_mult -> 1.00 with deterministic brownian steps + promo dips
+            drift = np.linspace(start_mult, 1.0, count)
+            shocks = rng.normal(0.0, step_vol, count)
+            # Smooth random walk component anchored at both ends
+            walk = np.cumsum(shocks)
+            walk = walk - np.linspace(walk[0], walk[-1], count)
+            mults = drift + walk
+            for s_idx, e_idx, dip_factor in dip_windows:
+                if 0 <= s_idx < e_idx <= count:
+                    mults[s_idx:e_idx] *= dip_factor
+            mults[-1] = 1.0
+
+            pts: List[PriceHistoryPoint] = []
+            for idx in range(count):
+                short_lbl, full_ts = label_fn(idx, count)
+                tag = (event_tags or {}).get(idx)
+                pts.append(
+                    PriceHistoryPoint(
+                        date=short_lbl,
+                        timestamp=full_ts,
+                        price=_fmt_price(c_price * float(mults[idx])),
+                        event_label=tag,
+                    )
+                )
+            # Annotate period extremes if unlabeled
+            if len(pts) > 3:
+                prices_arr = [p.price for p in pts]
+                min_i = int(np.argmin(prices_arr))
+                max_i = int(np.argmax(prices_arr))
+                if not pts[min_i].event_label:
+                    pts[min_i].event_label = "Period Low"
+                if max_i != min_i and not pts[max_i].event_label:
+                    pts[max_i].event_label = "Period High"
+                if not pts[-1].event_label:
+                    pts[-1].event_label = "Live Best Scouted"
+            return pts
+
+        # 1. Hourly (1D — 25 hourly ticks over last 24h)
+        hourly_pts = _walk_series(
+            count=25,
+            start_mult=float(rng.uniform(1.005, 1.032)),
+            step_vol=0.0045,
+            dip_windows=[(14, 17, 0.986)],
+            label_fn=lambda i, n: (
+                ("Now", now.strftime("%b %d %H:%M"))
+                if i == n - 1
+                else (
+                    (now - timedelta(hours=(n - 1 - i))).strftime("%H:%M"),
+                    (now - timedelta(hours=(n - 1 - i))).strftime("%b %d, %H:%M"),
+                )
+            ),
+            event_tags={0: "24h Open", 15: "Flash Reprice Match"},
+        )
+
+        # 2. 7-Day (7D — 29 6-hour ticks across 7 days)
+        seven_day_pts = _walk_series(
+            count=29,
+            start_mult=float(rng.uniform(1.03, 1.08)),
+            step_vol=0.0085,
+            dip_windows=[(10, 14, 0.962), (21, 24, 0.978)],
+            label_fn=lambda i, n: (
+                ("Now", now.strftime("%b %d %H:%M"))
+                if i == n - 1
+                else (
+                    (now - timedelta(hours=6 * (n - 1 - i))).strftime("%a"),
+                    (now - timedelta(hours=6 * (n - 1 - i))).strftime("%a %b %d, %H:%M"),
+                )
+            ),
+            event_tags={0: "7D Open", 12: "Weekend Flash Sale", 22: "Merchant Price Match"},
+        )
+
+        # 3. 1-Month (1M — 30 daily ticks)
+        one_month_pts = _walk_series(
+            count=30,
+            start_mult=float(rng.uniform(1.05, 1.12)),
+            step_vol=0.012,
+            dip_windows=[(8, 12, 0.945), (20, 23, 0.965)],
+            label_fn=lambda i, n: (
+                ("Today", now.strftime("%b %d"))
+                if i == n - 1
+                else (
+                    (now - timedelta(days=(n - 1 - i))).strftime("%b %d"),
+                    (now - timedelta(days=(n - 1 - i))).strftime("%b %d, %Y"),
+                )
+            ),
+            event_tags={0: "30D Baseline", 10: "30D Statutory Floor"},
+        )
+
+        # 4. 90-Day (90D — 31 3-day ticks)
+        ninety_day_pts = _walk_series(
+            count=31,
+            start_mult=float(rng.uniform(1.09, 1.17)),
+            step_vol=0.015,
+            dip_windows=[(9, 13, 0.94), (19, 22, 0.93)],
+            label_fn=lambda i, n: (
+                ("Today", now.strftime("%b %d"))
+                if i == n - 1
+                else (
+                    (now - timedelta(days=3 * (n - 1 - i))).strftime("%b %d"),
+                    (now - timedelta(days=3 * (n - 1 - i))).strftime("%b %d, %Y"),
+                )
+            ),
+            event_tags={0: "Launch MSRP Window", 11: "Mid-Season Discount", 20: "Festival Sale Dip"},
+        )
+
+        # 5. 1-Year (1Y — 27 bi-weekly ticks across 52 weeks)
+        one_year_pts = _walk_series(
+            count=27,
+            start_mult=float(rng.uniform(1.16, 1.28)),
+            step_vol=0.018,
+            dip_windows=[(7, 10, 0.92), (17, 20, 0.90)],
+            label_fn=lambda i, n: (
+                ("Today", now.strftime("%b %d"))
+                if i == n - 1
+                else (
+                    (now - timedelta(days=14 * (n - 1 - i))).strftime("%b '%y"),
+                    (now - timedelta(days=14 * (n - 1 - i))).strftime("%b %d, %Y"),
+                )
+            ),
+            event_tags={0: "52W Release MSRP", 8: "Major Holiday Sale", 18: "Seasonal Clearance"},
+        )
+
+        # 6. 14-Day AI Forward Forecast (from Now -> +14d)
+        target_price = _fmt_price(c_price * (1.0 + (expected_delta_pct / 100.0)))
+        forecast_pts: List[PriceHistoryPoint] = []
+        for idx, day_offset in enumerate(range(2, 16, 2)):
+            frac = (idx + 1) / 7.0
+            curve_val = c_price + (target_price - c_price) * (frac ** 0.85)
+            d_dt = now + timedelta(days=day_offset)
+            forecast_pts.append(
+                PriceHistoryPoint(
+                    date=f"+{day_offset}d",
+                    timestamp=f"{d_dt.strftime('%b %d')} (AI Est.)",
+                    price=_fmt_price(curve_val),
+                    event_label="AI Predicted Target" if day_offset == 14 else "14D Projection",
+                )
+            )
+
+        return {
+            "1D": hourly_pts,
+            "7D": seven_day_pts,
+            "1M": one_month_pts,
+            "90D": ninety_day_pts,
+            "1Y": one_year_pts,
+            "forecast_14d": forecast_pts,
+        }

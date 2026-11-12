@@ -1,67 +1,63 @@
 # 🎬 ProductFind Sentinel — 2-Minute Grand-Prize Pitch Video Script
-### *Autonomous Multi-Agent Commerce Swarm with PayPal Buyer Protection & AG Grid Intelligence*
+### *Autonomous Multi-Agent Commerce Swarm with PayPal Buyer Protection, AG Grid Intelligence & MCP Server*
 
-> **Target Duration**: Exactly 120 Seconds (2:00)  
-> **Speaker Format**: Fast, authoritative, punchy, confident  
-> **Demo URL**: `http://localhost:8000` + Manifest V3 Chrome Extension
+> **Target Duration:** 120 Seconds (2:00)  
+> **Resolution:** 1920x1080 (16:9 Dark Mode)  
+> **Live App URL:** `http://127.0.0.1:8000` + Manifest V3 Chrome Extension (`extension/`)
 
 ---
 
 ## ⏱️ Second-by-Second Video Breakdown
 
-### `0:00 - 0:25` — The Hook (The Hidden Cost Trap)
-- **Visual**: Camera starts on the user browsing an e-commerce website showing a seemingly cheap laptop or headphones listing. 
-- **Voiceover**: 
-  > *"Every day, millions of shoppers fall into the 'Sticker Price Trap'. You find headphones for $299 on a third-party seller instead of $399 on Amazon. You hit buy. But three days later: it's an unverified grey-market import with **zero factory warranty**. The seller charges a **20% restocking fee** if you return it. If it arrives damaged, you're on the hook. And with international customs and bank FX surcharges, your 'cheap deal' just cost you **$80 more** than the official store.*
-  > 
-  > *What if an autonomous AI swarm audited the fine print before you spent a single dollar?"*
+### `0:00 – 0:18` — Hook: The Sticker Price Trap
+- **Visual:** Start briefly on an Amazon/Flipkart tab showing a cheap suspicious listing or accessory clutter, then cut smoothly to `http://127.0.0.1:8000`.
+- **Voiceover:**
+  > *"Every day, shoppers fall into the sticker-price trap. You spot a $299 deal—only to get hit later with grey-market warranty voids, 20% restocking fees, surprise customs duties, and fake 5-star reviews. And when a package arrives damaged, buyers spend hours scrambling for proof. Meet **ProductFind Sentinel**—an autonomous multi-agent commerce swarm that audits the fine print before you pay, and seals cryptographic buyer protection right at checkout."*
 
 ---
 
-### `0:25 - 0:50` — The Live Swarm in Action (Search & Multimodal)
-- **Visual**: Switch directly to `http://localhost:8000/`. Show the sleek Google Gemini-style search pill bar. Click the **Voice Search 🎙️** button, speak: *"Sony WH-1000XM5"*, or click the **Google Lens 📷** button showing instant packaging image recognition. Click **✦ AI Mode**.
-- **Voiceover**: 
-  > *"Meet **ProductFind Sentinel**. In seconds, our autonomous multi-agent swarm fans out across 23 global merchant channels. Look at the live agent telemetry HUD: Tier 1 scouts gather live inventory. Tier 2 specialists audit manufacturer warranties, parse doorstep Open-Box inspection policies, evaluate import duties, and run Prophet-inspired 90-day price trajectories.*
-  > 
-  > *Notice that we don't just dump a list: we compute the true **Risk-Adjusted Total Cost of Ownership (TCO)**."*
+### `0:18 – 0:38` — Multimodal Entry + 3-Tier Swarm Arbitration
+- **Visual:** Show the search capsule on `http://127.0.0.1:8000`. Briefly click **`Image Search`** to show Vision-LLM/OCR packaging extraction (or switch back to **`⚡ Single Deal`**), enter **`Sony WH-1000XM5`**, and run the search. Let the **Live Multi-Agent Negotiation Stream** finish (~2 seconds).
+- **Voiceover:**
+  > *"Whether you type, speak by voice, or drop a photo of a product box into our Vision-LLM extractor, Sentinel fans out across 23 global merchant channels in under two seconds. Tier 1 scouts pull live inventory while stripping dead 404s and accessory hijacks via an SSRF-safe link verifier. Tier 2 specialists audit OEM warranties, customs and FX fees, and merchant trust—ranking offers not by sticker price, but by actuarial Risk-Adjusted Total Cost of Ownership."*
 
 ---
 
-### `0:50 - 1:15` — The Magic Moments (TCO Cards, AG Grid, & Knapsack Split)
-- **Visual**: Scroll to the **3 Strategic Deal Cards** (`Optimal Value Champion`, `Maximum Peace-of-Mind`, and `Budget Sticker`). Then scroll into the high-performance **AG Grid Quartz Dark Matrix**, sorting by Restocking Fee and Doorstep Open-Box Inspection. Then click the **Knapsack Bundle Split** (`WFH Setup under ₹50,000`).
-- **Voiceover**: 
-  > *"The swarm curates three strategic options: the Optimal Value Champion, the Maximum Peace-of-Mind package, and the Budget Sticker with active risk mitigations.*
-  > 
-  > *Down in our enterprise AG Grid matrix, shoppers get real-time sorting across OEM warranty duration, return windows, and counterfeit risk scores.*
-  > 
-  > *And with our combinatorial **Knapsack Cart-Splitter**, buying a multi-item developer workstation splits across Amazon and Flipkart, instantly saving **₹8,200** over buying from a single merchant!"*
+### `0:38 – 0:55` — Live Consumer Proof Deck & Strategic Recommendations
+- **Visual:** Scroll down past **Curated Strategic Recommendations** into the 3-column **Consumer Proof Deck** (Reddit/HN Consensus, **ReviewRay Authenticity**, and **iFixit Repairability**). Point to the **Adjusted Honest Rating** and iFixit repairability score/guide link.
+- **Voiceover:**
+  > *"Unlike affiliate plugins, Sentinel refuses synthetic hype. Right beside our top recommendations, our Consumer Proof Engine pulls live iFixit Suggest 2.0 repairability scores, discovers real Hacker News and Reddit teardown threads, and runs ReviewRay telemetry audits to flag bot spikes—showing you the Adjusted Honest Rating alongside the sticker stars."*
 
 ---
 
-### `1:15 - 1:35` — Head-to-Head Versus & Smart Wallet Stacking
-- **Visual**: Show the **Head-to-Head Versus Showdown** comparing the Sony WH-1000XM5 against the Bose QuietComfort Ultra with benchmark radar and Swarm AI verdict. Click **💳 My Wallet** in the header to reveal credit card stacking + PayPal Pay Later with an extra ₹1,500 instant discount.
-- **Voiceover**: 
-  > *"Undecided between two flagships? Our Head-to-Head Versus Engine pits them against each other with spec radar and real-world durability benchmarks.*
-  > 
-  > *And right at checkout, **My Wallet Stacker** evaluates your active credit cards alongside **PayPal Pay Later**, double-dipping cashback and bank partner discounts with zero manual voucher hunting."*
+### `0:55 – 1:15` — Stock-Style Price Trajectory Terminal & AG Grid Cockpit
+- **Visual:**
+  1. Pause on the **AG Grid Quartz Dark** matrix: sort a column or type in Quick Filter, point to the pinned merchant column (left) and pinned **PayPal Checkout / Pay in 4** action column (right).
+  2. Scroll to **`Price Trajectory & Market Timing Terminal`**. Click **`1D · Hourly`**, click **`7D`**, toggle **`✦ +14D Forecast`**, and scrub the cursor smoothly across the chart so the crosshair, live header quote price, and tooltip animate.
+- **Voiceover:**
+  > *"Power users get an institutional-grade AG Grid Quartz Dark cockpit to filter by Cash on Delivery, Open-Box OTP verification, and FX fees—plus one-click CSV export. Below it, our Market Timing Terminal works just like a stock tracker: inspect 24-hour hourly repricing, 7-day dips, 90-day macro lows, and 14-day AI forecasts with live crosshair scrubbing so you know whether to buy now or set a Discord or Slack Price Alert."*
 
 ---
 
-### `1:35 - 1:55` — The Ultimate Safety Net: 1-Click Cryptographic Section 13 Dispute Guard
-- **Visual**: Click **⚖️ Dispute Guard** in the top navigation bar. Fill out a sample courier open-box incident and click **Compile Section 13 Legal Dossier**. Show the instant unforgeable **SHA-256 Merkle root hash** and open the downloaded Section 13 PDF chargeback dossier.
-- **Voiceover**: 
-  > *"And what if a courier delivers a damaged box or refuses doorstep inspection? Sentinel activates our **Section 13 Dispute Guard**. With one click, it seals the merchant audit trail into a cryptographic SHA-256 Merkle tree and compiles a legally-admissible Section 13 Chargeback Dossier citing PayPal User Agreement statutory clauses for instant claims resolution."*
+### `1:15 – 1:32` — Knapsack Bundle Split + Smart Wallet Stacking
+- **Visual:** Scroll back up, switch to **`📦 Bundle / Bulk Discount (Knapsack Split)`**, run a preset (e.g., `WFH Setup`), show the multi-store cart split spotlight, then click **`💳 My Wallet`** in the top bar to show credit card + **PayPal Pay Later** stacking.
+- **Voiceover:**
+  > *"Buying a full desk setup? Our combinatorial 0/1 Knapsack Cart-Splitter automatically splits multi-item baskets across Amazon, Flipkart, and OEM stores to minimize total outlay including shipping. At checkout, My Wallet Stacker double-dips your bank card rewards with PayPal Pay in 4 installment modeling."*
 
 ---
 
-### `1:55 - 2:00` — Vision & Close
-- **Visual**: Bring up the architecture diagram and Chrome Extension popping up directly over Amazon and Flipkart.
-- **Voiceover**: 
-  > *"With full browser extension support, voice AI concierge, and zero-hallucination fine-print arbitration, ProductFind Sentinel protects shoppers at every step of modern commerce. Thank you!"*
+### `1:32 – 1:50` — Cryptographic Section 13 Dispute Guard & Savings Ledger
+- **Visual:** Click **`⚖️ Dispute Guard`** in the top nav. Submit a sample courier open-box/counterfeit case, click **Compile Section 13 Legal Dossier**, show the **SHA-256 Checkout Snapshot** and **Merkle Root** hash, and open the generated **Section 13 PDF**. Briefly click **`📈 Saved`** in the top header to show cumulative savings stats.
+- **Voiceover:**
+  > *"And if a shipment goes wrong, clicking Dispute Guard seals the exact checkout URL, UTC timestamp, and merchant terms into a SHA-256 Checkout Snapshot and Merkle tree—compiling a pure-Python Section 13 Chargeback PDF Dossier ready for PayPal buyer protection adjudication in one click."*
 
 ---
 
-## 💡 Pitch Recording Tips for the Team
-1. **Resolution**: Record at 1920x1080 (16:9) in dark mode for maximum contrast and elegance.
-2. **Audio**: Use a clear USB microphone; keep audio level around -6 dB with crisp delivery.
-3. **Pacing**: Use the **🌟 60s Judge Tour** button if you want the app to automatically glide through all key sections during video capture!
+### `1:50 – 2:00` — Ecosystem Close: Chrome Extension + MCP Server
+- **Visual:** Switch briefly to the live Amazon/Flipkart tab showing the **Manifest V3 Chrome Extension** overlay (or flash a quick `POST /mcp` `tools/list` JSON response), then return to Sentinel's dashboard.
+- **Voiceover:**
+  > *"Finally, Sentinel travels everywhere: our Manifest V3 Chrome Extension overlays live TCO arbitration right inside Amazon, Flipkart, and Best Buy—and our native MCP JSON-RPC 2.0 server lets external AI agents call Sentinel directly. With full automated test coverage and zero-crash resilience, ProductFind Sentinel makes every checkout verifiable, transparent, and PayPal-protected. Thank you!"*
+
+---
+
+> Plain-text teleprompter edition available in [PITCH_SCRIPT.txt](./PITCH_SCRIPT.txt).

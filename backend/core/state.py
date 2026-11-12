@@ -126,6 +126,7 @@ class PriceHistoryPoint(BaseModel):
     date: str
     price: float
     event_label: Optional[str] = None
+    timestamp: Optional[str] = None
 
 
 class PricePredictionSparkline(BaseModel):
@@ -149,6 +150,7 @@ class PriceAnalytics(BaseModel):
     prediction_confidence: int = 85
     prediction_explanation: str = ""
     history_points: List[PriceHistoryPoint] = Field(default_factory=list)
+    timeframes: Dict[str, List[PriceHistoryPoint]] = Field(default_factory=dict)
     sparkline: Union[List[float], PricePredictionSparkline] = Field(default_factory=list)
     is_fake_discount: bool = False
     claimed_msrp: Optional[float] = None

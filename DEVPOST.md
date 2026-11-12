@@ -101,16 +101,16 @@ Sentinel extends beyond the web application with a complete Chrome Extension (`e
 ---
 
 ## 🛠️ Tech Stack & Architecture
-- **Backend:** Python 3.11, FastAPI, Asynchronous Event Bus (Blackboard Pattern), WebSockets, ReportLab (PDF Engine).
-- **Frontend:** Responsive HTML5 / CSS3 (Quartz Dark Glassmorphism), AG Grid Community, Lucide Icons, Web Speech API, Canvas API.
-- **Data & Caching:** Google Cloud Firestore (Native Mode), Google Cloud Memorystore (Redis), SQLite fallback.
-- **Payments & Dispute Security:** PayPal Orders API v2, PayPal Pay in 4, PayPal User Agreement § 13 statutory engine, SHA-256 Merkle Proofs.
-- **Testing:** Pytest test suite with **120 passing automated tests**.
+- **Backend:** Python 3.11, FastAPI, Asynchronous Event Bus (`EventBus`), WebSockets, Pure-Python Zero-Dependency PDF/1.4 Generator (`Section13PDFGenerator`), Native **MCP JSON-RPC 2.0 Server (`/mcp`)**.
+- **Frontend:** Custom Pre-Composed CSS Glassmorphism (`styles.css`), **AG Grid Community (`v31.0.3`, Quartz Dark)**, Interactive SVG Stock-Style Multi-Timeframe Charts (`charts.js`), Web Speech API.
+- **Data & Caching:** Google Cloud Firestore (Native Mode), Memorystore (Redis), JSON Persistent Savings Ledger (`/api/ledger/stats`), SQLite local fallback.
+- **Payments & Dispute Security:** PayPal Orders API v2, PayPal Pay in 4, PayPal User Agreement § 13 statutory engine, Forensic `checkout_snapshot` + SHA-256 Merkle Proofs.
+- **Testing:** Automated `pytest` test suite (**146 tests collected** covering consumer proof, multi-timeframe trajectories, SSRF verification, MCP JSON-RPC, and PayPal snapshot integrity).
 
 ---
 
 ## 📈 Accomplishments We're Proud Of
-- **100% Zero-Crash Live Demo Resilience:** Tested against live and simulated network environments with graceful mock fallbacks and zero unhandled exceptions.
-- **Solving the TCO Dilemma:** Mathematically proved that the lowest sticker price often has the highest Total Cost of Ownership.
+- **100% Zero-Crash Live Demo Resilience:** Tested against live and simulated network environments with graceful fallbacks and zero unhandled exceptions.
+- **Real Consumer Proof + Agent Interoperability:** Live iFixit 2.0 repairability, HN/Reddit thread discovery, scraped ReviewRay grading, Stock-Style Market Timing Terminal (`1D Hourly`, `7D`, `1M`, `90D`, `1Y`, `+14D Forecast`), and external agent **MCP `/mcp`** access.
 - **Deep PayPal Synergy:** Integrated PayPal as an active risk-mitigation shield throughout the entire shopping lifecycle.
-- **120 Passing Tests:** Robust test coverage across model fidelity, session isolation, stealth browsing, and commercial expansions.
+- **146 Automated Tests:** Expanded verification suite across model fidelity, session isolation, stealth browsing, consumer proof, and enterprise upgrades.

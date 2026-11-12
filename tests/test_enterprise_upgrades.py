@@ -305,3 +305,32 @@ def test_server_routes_no_duplicates_and_mcp_endpoints():
     v_resp = client.post("/api/verify-link", json={"url": "http://127.0.0.1:8000/secret"})
     assert v_resp.status_code == 200
     assert v_resp.json()["verified"] is False
+
+
+def test_multi_timeframe_stock_trajectory():
+    from backend.agents.fx_service import FXService
+    from backend.agents.price_predictor import PricePredictorAgent
+
+    predictor = PricePredictorAgent(FXService())
+    analytics = predictor.analyze_price_history_and_predict(
+        product_title="Sony WH-1000XM5 Headphones",
+        current_best_price=26990.0,
+        target_currency="INR",
+    )
+    assert analytics.current_best_price == 26990.0
+    assert {"1D", "7D", "1M", "90D", "1Y", "forecast_14d"} <= set(analytics.timeframes.keys())
+    assert len(analytics.timeframes["1D"]) == 25  # 24h hourly ticks ending at Now
+    assert len(analytics.timeframes["7D"]) == 29  # 7-day 6h ticks
+    assert len(analytics.timeframes["1M"]) == 30  # 30-day daily closes
+    assert len(analytics.timeframes["90D"]) == 31
+    assert len(analytics.timeframes["1Y"]) == 27
+    assert len(analytics.timeframes["forecast_14d"]) == 7
+
+    for key in ("1D", "7D", "1M", "90D", "1Y"):
+        series = analytics.timeframes[key]
+        assert series[-1].price == 26990.0
+        assert series[-1].timestamp
+
+    # Forecast tail aligns cleanly with predicted_price
+    assert analytics.timeframes["forecast_14d"][-1].price == pytest.approx(analytics.predicted_price, rel=1e-2)
+
