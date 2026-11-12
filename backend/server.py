@@ -55,6 +55,9 @@ from .core.versus_engine import versus_engine, VersusArbitrationResult
 from .core.wallet_stacker import wallet_stacker_service, SUPPORTED_WALLET_CARDS, CardOffer
 from .core.dispute_assistant import dispute_assistant_service, DisputeFilingRequest, DisputeCase
 from .core.autocomplete_service import autocomplete_service, AutocompleteResponse
+from .core.savings_ledger import savings_ledger
+from .core.link_verifier import verify_url_live
+from .core.mcp_server import handle_mcp_jsonrpc, get_mcp_manifest
 
 _relay_server = None
 
@@ -108,12 +111,34 @@ async def run_ipv6_relay(port: int = 8000):
         return None
 
 
+_watchdog_task: Optional[asyncio.Task] = None
+
+
+async def _watchdog_background_loop(interval_s: float = 180.0):
+    """Autonomous background watchdog sweep evaluating active price drop alerts."""
+    while True:
+        try:
+            await asyncio.sleep(interval_s)
+            await watchdog_service.evaluate_all_active_alerts()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _relay_server
+    global _relay_server, _watchdog_task
     port = int(os.getenv("PORT", 8000))
     _relay_server = await run_ipv6_relay(port)
+    _watchdog_task = asyncio.create_task(_watchdog_background_loop())
     yield
+    if _watchdog_task:
+        _watchdog_task.cancel()
+        try:
+            await _watchdog_task
+        except asyncio.CancelledError:
+            pass
     if _relay_server:
         try:
             _relay_server.close()
@@ -191,6 +216,7 @@ class PriceAlertSubscribeRequest(BaseModel):
     currency: Optional[str] = "INR"
     user_contact: Optional[str] = "user@example.com"
     channel: Optional[str] = "email"
+    webhook_url: Optional[str] = None
 
 
 class PriceAlertSimulateRequest(BaseModel):
@@ -945,117 +971,6 @@ async def api_voice_transcribe(request: Request):
     return response_payload
 
 
-@app.get("/api/chat")
-async def api_chat_get():
-    """Diagnostic check for Concierge Chatbot & Voice Assistant."""
-    return {
-        "status": "online",
-        "service": "Sentinel AI Concierge & Voice Assistant",
-        "capabilities": [
-            "Deal Comparisons & Hardware Arbitration",
-            "Doorstep Open-Box OTP Inspection Guidance",
-            "Risk-Adjusted Total Cost of Ownership (TCO) Breakdown",
-            "PayPal Section 13 Dispute Escrow & PDF Generation",
-            "Cash on Delivery (COD) Safety Protocols",
-            "Neural Price Volatility & Flash-Dip Predictions",
-            "Combinatorial Knapsack Cart-Split Arbitrage",
-            "Voice Speech-to-Text & Text-to-Speech Narration"
-        ]
-    }
-
-
-@app.post("/api/chat", response_model=ChatResponse)
-async def api_chat_post(req: ChatRequest):
-    """
-    Submits user doubt or query to Sentinel AI Concierge.
-    Contextually references active search results, TCO metrics, and consumer protection policies.
-    """
-    if not req.message or not req.message.strip():
-        raise HTTPException(status_code=400, detail="Chat message cannot be empty.")
-    
-    response = SentinelConciergeBot.answer_query(
-        query=req.message.strip(),
-        active_product=req.active_query,
-        state_context=req.context_data
-    )
-    return response
-
-
-@app.post("/api/chat/voice")
-async def api_chat_voice(
-    file: Optional[UploadFile] = File(None),
-    audio_base64: Optional[str] = Form(None),
-    active_query: Optional[str] = Form(None),
-    session_id: Optional[str] = Form("default"),
-    query_hint: Optional[str] = Form(None)
-):
-    """
-    Accepts voice audio from microphone or uploaded recording,
-    transcribes query, and returns authoritative doubt resolution with voice narration text.
-    """
-    audio_bytes = b""
-    filename = ""
-
-    if file:
-        filename = file.filename or "voice_doubt.webm"
-        audio_bytes = await file.read()
-    elif audio_base64:
-        b64_clean = re.sub(r"^data:audio/[a-zA-Z0-9]+;base64,", "", audio_base64.strip())
-        try:
-            audio_bytes = base64.b64decode(b64_clean)
-            filename = "voice_doubt.webm"
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to decode base64 audio: {e}")
-    elif query_hint and query_hint.strip():
-        # Pre-transcribed speech from Web Speech API client
-        response = SentinelConciergeBot.answer_query(
-            query=query_hint.strip(),
-            active_product=active_query
-        )
-        return {
-            "status": "success",
-            "transcript": query_hint.strip(),
-            "chat_response": response.model_dump()
-        }
-    else:
-        raise HTTPException(status_code=400, detail="No audio file or voice payload provided.")
-
-    if not audio_bytes or len(audio_bytes) < 8:
-        raise HTTPException(status_code=400, detail="Audio file is empty or corrupted.")
-
-    if not is_valid_audio_bytes(audio_bytes):
-        raise HTTPException(status_code=400, detail="Invalid audio format. Expected WAV, WebM, OGG, MP3, or FLAC.")
-
-    # Determine transcript
-    transcript = query_hint.strip() if query_hint and query_hint.strip() else ""
-    if not transcript and filename:
-        clean_fn = re.sub(r"[_\-\.]+", " ", filename).lower()
-        if "open box" in clean_fn or "otp" in clean_fn:
-            transcript = "Is Open Box delivery safe?"
-        elif "paypal" in clean_fn or "dispute" in clean_fn:
-            transcript = "How does PayPal protection work?"
-        elif "tco" in clean_fn or "cost" in clean_fn:
-            transcript = "Explain TCO calculation"
-        elif "cod" in clean_fn:
-            transcript = "Is Cash on Delivery safe?"
-        elif "price" in clean_fn or "drop" in clean_fn:
-            transcript = "Will prices drop soon?"
-        else:
-            words = [w for w in clean_fn.split() if w not in ["wav", "mp3", "webm", "ogg", "flac", "audio", "recording", "voice", "file"]]
-            transcript = " ".join(words).capitalize() if words else "Explain the best deal"
-
-    response = SentinelConciergeBot.answer_query(
-        query=transcript,
-        active_product=active_query
-    )
-
-    return {
-        "status": "success",
-        "transcript": transcript,
-        "chat_response": response.model_dump()
-    }
-
-
 @app.get("/api/skills")
 async def list_skills():
     skills = skill_vault.list_skills()
@@ -1400,7 +1315,8 @@ async def api_subscribe_price_alert(req: PriceAlertSubscribeRequest):
         current_price=req.current_price,
         currency=req.currency or "INR",
         user_contact=req.user_contact or "user@example.com",
-        channel=req.channel or "email"
+        channel=req.channel or "email",
+        webhook_url=req.webhook_url,
     )
 
 
@@ -1421,10 +1337,11 @@ async def api_delete_price_alert(alert_id: str):
 
 @app.post("/api/alerts/simulate-trigger")
 async def api_simulate_price_alert_trigger(req: PriceAlertSimulateRequest):
-    """Simulates a flash price dip triggering automated alert dispatch (Email/Telegram/Push)."""
+    """Simulates a flash price dip triggering automated alert dispatch (Email/Telegram/Webhook/Push)."""
     alert = watchdog_service.simulate_price_drop(req.alert_id, simulated_price=req.simulated_price)
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
+    await watchdog_service.dispatch_webhook_async(alert)
     return alert
 
 
@@ -1492,8 +1409,13 @@ async def api_calculate_wallet_discounts(req: WalletCalculateRequest):
 
 @app.post("/api/dispute/file", response_model=DisputeCase)
 async def api_file_dispute(req: DisputeFilingRequest):
-    """Files a dispute case, seals cryptographic Merkle hash, and compiles legal PDF dossier."""
-    return dispute_assistant_service.file_dispute(req)
+    """Files a dispute case, seals cryptographic Merkle hash + checkout snapshot, and compiles legal PDF dossier."""
+    case = dispute_assistant_service.file_dispute(req)
+    try:
+        savings_ledger.record_dispute_compiled()
+    except Exception:
+        pass
+    return case
 
 
 @app.get("/api/dispute/cases")
@@ -1736,11 +1658,11 @@ async def share_deal(req: ShareDealRequest):
 
 @app.get("/api/consensus")
 async def get_reddit_consensus(q: str):
-    """Fetches real unvarnished community consensus from authentic subreddits (r/BuyItForLife, r/gadgets, etc.)."""
+    """Fetches unvarnished community consensus (live Reddit/HN discussions + curated hardware index)."""
     from .core.reddit_consensus import reddit_consensus_engine
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
-    res = reddit_consensus_engine.get_consensus(q.strip())
+    res = await reddit_consensus_engine.analyze_community_consensus_async(q.strip())
     return res.model_dump()
 
 
@@ -1756,12 +1678,51 @@ async def audit_reviews(q: str, store: Optional[str] = "Amazon"):
 
 @app.get("/api/bifl-score")
 async def get_bifl_score(q: str):
-    """iFixit teardown repairability and Buy It For Life (BIFL) longevity index."""
+    """iFixit Suggest 2.0 API & Buy It For Life (BIFL) longevity index."""
     from .core.bifl_index import bifl_index_engine
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required.")
-    res = bifl_index_engine.evaluate_longevity(q.strip())
+    res = await bifl_index_engine.evaluate_longevity_async(q.strip())
     return res.model_dump()
+
+
+# ==========================================================================
+# ENTERPRISE LEDGER, PRE-CLICK LINK VERIFICATION & MCP SERVER GATEWAY
+# ==========================================================================
+
+class VerifyLinkRequest(BaseModel):
+    url: str
+
+
+@app.get("/api/ledger/stats")
+async def api_ledger_stats():
+    """Returns persistent cumulative savings, customs flags, and link verification telemetry."""
+    return savings_ledger.get_stats()
+
+
+@app.post("/api/verify-link")
+async def api_verify_link(req: VerifyLinkRequest):
+    """Runs live SSRF-safe HTTP pre-click link verification on a merchant or citation URL."""
+    if not req.url or not req.url.strip():
+        raise HTTPException(status_code=400, detail="URL is required.")
+    return await verify_url_live(req.url.strip())
+
+
+@app.get("/api/mcp/manifest")
+async def api_mcp_manifest(request: Request):
+    """Returns the MCP Agent-Commerce tool catalog and endpoint metadata."""
+    base_url = str(request.base_url).rstrip("/")
+    return get_mcp_manifest(base_url=base_url)
+
+
+@app.post("/mcp")
+async def api_mcp_rpc(request: Request):
+    """Model Context Protocol (MCP) JSON-RPC 2.0 streamable HTTP endpoint for AI agents."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
+    return await handle_mcp_jsonrpc(payload)
 
 
 # Mount frontend assets

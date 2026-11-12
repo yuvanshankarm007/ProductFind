@@ -1,82 +1,132 @@
 // ProductFind Sentinel Extension Popup Controller
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const titleEl = document.getElementById('detected-product-title');
-  const merchEl = document.getElementById('detected-merchant');
-  const currentPriceEl = document.getElementById('current-price');
-  const sentinelPriceEl = document.getElementById('sentinel-price');
-  const savingsEl = document.getElementById('deal-savings');
-  const btnCockpit = document.getElementById('btn-open-cockpit');
-  const btnTrack = document.getElementById('btn-track-price');
+function formatCurrency(amount, currency) {
+  if (amount == null || !Number.isFinite(Number(amount))) return "--";
+  const sym = currency === "INR" ? "₹" : "$";
+  const locale = currency === "INR" ? "en-IN" : "en-US";
+  return `${sym}${Math.round(Number(amount)).toLocaleString(locale)}`;
+}
 
-  // Query active tab
+document.addEventListener("DOMContentLoaded", async () => {
+  const titleEl = document.getElementById("detected-product-title");
+  const merchEl = document.getElementById("detected-merchant");
+  const currentPriceEl = document.getElementById("current-price");
+  const sentinelPriceEl = document.getElementById("sentinel-price");
+  const savingsEl = document.getElementById("deal-savings");
+  const btnCockpit = document.getElementById("btn-open-cockpit");
+  const btnTrack = document.getElementById("btn-track-price");
+
+  let activeQuery = "";
+  let activeCurrency = "INR";
+  let activeBestPrice = 0;
+
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab && tab.url) {
-      if (tab.url.includes('amazon.')) {
-        merchEl.textContent = 'Amazon Direct Store';
-      } else if (tab.url.includes('flipkart.')) {
-        merchEl.textContent = 'Flipkart Marketplace';
-      } else if (tab.url.includes('bestbuy.')) {
-        merchEl.textContent = 'Best Buy US';
+      if (tab.url.includes("amazon.in")) {
+        merchEl.textContent = "Amazon.in Direct";
+        activeCurrency = "INR";
+      } else if (tab.url.includes("amazon.")) {
+        merchEl.textContent = "Amazon Global";
+        activeCurrency = "USD";
+      } else if (tab.url.includes("flipkart.")) {
+        merchEl.textContent = "Flipkart Marketplace";
+        activeCurrency = "INR";
+      } else if (tab.url.includes("bestbuy.")) {
+        merchEl.textContent = "Best Buy US";
+        activeCurrency = "USD";
       } else {
-        merchEl.textContent = 'Web Retailer';
+        merchEl.textContent = "Web Retailer";
       }
 
-      // Try communicating with content script
-      chrome.tabs.sendMessage(tab.id, { action: 'GET_PAGE_PRODUCT' }, (response) => {
-        if (response && response.title) {
-          titleEl.textContent = response.title;
-          if (response.price) {
-            currentPriceEl.textContent = response.price;
-            const numPrice = parseFloat(response.price.replace(/[^0-9.]/g, '')) || 29990;
-            const bestPrice = Math.round(numPrice * 0.9);
-            sentinelPriceEl.textContent = `₹${bestPrice.toLocaleString('en-IN')}`;
-            savingsEl.textContent = `-₹${(numPrice - bestPrice).toLocaleString('en-IN')} Saved`;
-          }
-        } else {
-          // Default demo benchmark
-          titleEl.textContent = 'Sony WH-1000XM5 Wireless Headphones';
-          currentPriceEl.textContent = '₹29,990';
-          sentinelPriceEl.textContent = '₹26,990';
-          savingsEl.textContent = '-₹3,000 Saved';
+      chrome.tabs.sendMessage(tab.id, { action: "GET_PAGE_PRODUCT" }, (response) => {
+        if (!response || !response.title) {
+          titleEl.textContent = "Open any Amazon, Flipkart, or Best Buy product page to audit.";
+          currentPriceEl.textContent = "--";
+          sentinelPriceEl.textContent = "--";
+          savingsEl.textContent = "Ready";
+          return;
         }
+
+        titleEl.textContent = response.title;
+        activeQuery = response.title.split(/\s+/).slice(0, 7).join(" ");
+        activeCurrency = response.currency || activeCurrency;
+        currentPriceEl.textContent = response.price || "--";
+        sentinelPriceEl.textContent = "Auditing...";
+        savingsEl.textContent = "Scanning...";
+
+        chrome.runtime.sendMessage(
+          {
+            action: "SENTINEL_AUDIT_PRODUCT",
+            payload: {
+              title: response.title,
+              pagePrice: response.numericPrice,
+              currency: activeCurrency,
+              country: response.country,
+              merchant: response.merchant,
+            },
+          },
+          (audit) => {
+            if (!audit || !audit.backend_online) {
+              sentinelPriceEl.textContent = "Offline";
+              savingsEl.textContent = "Start Sentinel Server";
+              return;
+            }
+            if (audit.best_price) {
+              activeBestPrice = audit.best_price;
+              sentinelPriceEl.textContent = `${formatCurrency(audit.best_price, audit.currency)} (${audit.best_merchant})`;
+            } else {
+              sentinelPriceEl.textContent = "See Cockpit";
+            }
+            if (audit.savings_vs_page && audit.savings_vs_page > 0) {
+              savingsEl.textContent = `-${formatCurrency(audit.savings_vs_page, audit.currency)} Saved`;
+            } else if (audit.review_grade || audit.ifixit_score) {
+              savingsEl.textContent = `${audit.review_grade || ""} · iFixit ${audit.ifixit_score || "-"}/10`.trim();
+            } else {
+              savingsEl.textContent = "Verified";
+            }
+          }
+        );
       });
     }
   } catch (e) {
-    titleEl.textContent = 'Sony WH-1000XM5 Wireless Headphones';
-    merchEl.textContent = 'Amazon Direct Store';
+    titleEl.textContent = "Open a supported retailer tab to inspect deals.";
   }
 
-  // Open Cockpit
   if (btnCockpit) {
-    btnCockpit.addEventListener('click', () => {
-      chrome.tabs.create({ url: 'http://127.0.0.1:8000/' });
+    btnCockpit.addEventListener("click", () => {
+      const target = activeQuery
+        ? `http://127.0.0.1:8000/?q=${encodeURIComponent(activeQuery)}`
+        : "http://127.0.0.1:8000/";
+      chrome.tabs.create({ url: target });
     });
   }
 
-  // Track Price
   if (btnTrack) {
-    btnTrack.addEventListener('click', async () => {
-      btnTrack.textContent = '✓ Alert Active';
-      btnTrack.style.color = '#34d399';
-      btnTrack.style.borderColor = '#10b981';
+    btnTrack.addEventListener("click", async () => {
+      const targetProduct = activeQuery || titleEl.textContent || "";
+      if (!targetProduct || targetProduct.startsWith("Open ")) return;
 
+      btnTrack.textContent = "✓ Alert Active";
+      btnTrack.style.color = "#34d399";
+      btnTrack.style.borderColor = "#10b981";
+
+      const baseline = activeBestPrice > 0 ? activeBestPrice : 1000;
       try {
-        await fetch('http://127.0.0.1:8000/api/alerts/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch("http://127.0.0.1:8000/api/alerts/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            product_title: titleEl.textContent || 'Sony WH-1000XM5',
-            target_price: 24000.0,
-            current_price: 26990.0,
-            currency: 'INR',
-            user_contact: 'extension_user@sentinel.ai',
-            channel: 'browser'
-          })
+            product_title: targetProduct,
+            target_price: Math.round(baseline * 0.94),
+            current_price: Math.round(baseline),
+            currency: activeCurrency,
+            user_contact: "extension_user@sentinel.ai",
+            channel: "browser",
+          }),
         });
       } catch (err) {
-        console.warn('Backend alert subscribe failed, saved locally');
+        console.warn("Backend alert subscribe failed", err);
       }
     });
   }

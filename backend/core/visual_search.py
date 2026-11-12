@@ -8,14 +8,19 @@ import os
 import io
 import re
 import sys
+import json
 import subprocess
 import tempfile
 import base64
 import hashlib
+import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 from pydantic import BaseModel, Field
 from PIL import Image, ImageStat
+import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class VisualAnalysisResult(BaseModel):
@@ -271,15 +276,33 @@ class VisualSearchEngine:
             extra_tokens=svg_tokens + ocr_tokens
         )
 
-        # 5. Product & Brand Classification
-        match = self._classify_product(
-            text_tokens=text_tokens,
-            color_info=color_info,
-            aspect_ratio=aspect_ratio,
-            filename=filename,
-            query_hint=query_hint,
-            ocr_lines=ocr_lines
-        )
+        # 5. Product & Brand Classification (Vision-LLM primary on real photos when key configured, else OCR/metadata/geometry)
+        vlm_match = None
+        if not is_svg and width >= 80 and height >= 80:
+            vlm_match = self._classify_via_vlm(
+                raw_bytes=raw_bytes,
+                mime_type=mime_type or f"image/{format_name.lower()}",
+                query_hint=query_hint,
+            )
+
+        if vlm_match:
+            match = vlm_match
+            identification_method = vlm_match.pop("_method", "vision_llm")
+        else:
+            match = self._classify_product(
+                text_tokens=text_tokens,
+                color_info=color_info,
+                aspect_ratio=aspect_ratio,
+                filename=filename,
+                query_hint=query_hint,
+                ocr_lines=ocr_lines
+            )
+            if ocr_lines:
+                identification_method = "native_ocr"
+            elif filename or query_hint or svg_tokens:
+                identification_method = "metadata_filename"
+            else:
+                identification_method = "aspect_geometry_heuristic"
 
         # 6. Packaging & Seal Cue Detection
         packaging_cues = self._detect_packaging_cues(img, text_tokens, width, height)
@@ -294,7 +317,9 @@ class VisualSearchEngine:
             "dominant_color_name": color_info["name"],
             "perceptual_hash": perceptual_hash,
             "has_exif": bool(getattr(img, "_getexif", None) and img._getexif()),
-            "detected_keywords": text_tokens
+            "detected_keywords": text_tokens,
+            "identification_method": identification_method,
+            "ocr_lines_count": len(ocr_lines),
         }
 
         suggested = [match["query"]]
@@ -314,41 +339,154 @@ class VisualSearchEngine:
             suggested_queries=list(dict.fromkeys(suggested))
         )
 
-    def _run_ocr_extraction(self, raw_bytes: bytes) -> List[str]:
-        """Extracts text lines from image bytes using platform-native Windows.Media.Ocr."""
-        helper_path = Path(__file__).resolve().parent / "win_ocr_helper.ps1"
-        if sys.platform != "win32" or not helper_path.exists():
-            return []
+    def _classify_via_vlm(
+        self,
+        raw_bytes: bytes,
+        mime_type: str = "image/jpeg",
+        query_hint: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Multimodal Vision-LLM identification via Gemini or OpenAI when API keys are set.
+        Fails gracefully to None on timeout or missing credentials.
+        """
+        gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if not gemini_key and not openai_key:
+            return None
 
-        temp_path = None
+        b64 = base64.b64encode(raw_bytes).decode("ascii")
+        safe_mime = mime_type if mime_type in ("image/jpeg", "image/png", "image/webp") else "image/jpeg"
+        hint_text = f" Optional user hint: {query_hint}." if query_hint else ""
+        prompt = (
+            "Identify the exact consumer product shown in this image (read model text/logos carefully)."
+            f"{hint_text} Return strict JSON with keys: "
+            '{"brand": str, "model": str, "category": str, "query": str, "confidence": float (0.7..0.99), "labels": [str]}.'
+        )
+
         try:
-            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
-                tf.write(raw_bytes)
-                temp_path = tf.name
+            with httpx.Client(timeout=httpx.Timeout(4.0)) as client:
+                if gemini_key:
+                    model = os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [
+                            {
+                                "parts": [
+                                    {"text": prompt},
+                                    {"inline_data": {"mime_type": safe_mime, "data": b64}},
+                                ]
+                            }
+                        ],
+                        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1},
+                    }
+                    resp = client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        txt = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        parsed = json.loads(txt)
+                        if isinstance(parsed, dict) and parsed.get("query"):
+                            return self._normalize_vlm_payload(parsed, "vlm_gemini")
 
-            cmd = [
-                "powershell",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(helper_path),
-                "-ImagePath",
-                temp_path
-            ]
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=4)
-            if proc.returncode == 0:
-                lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-                return lines
+                if openai_key:
+                    model = os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini")
+                    resp = client.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {openai_key}"},
+                        json={
+                            "model": model,
+                            "response_format": {"type": "json_object"},
+                            "temperature": 0.1,
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {"type": "image_url", "image_url": {"url": f"data:{safe_mime};base64,{b64}"}},
+                                    ],
+                                }
+                            ],
+                        },
+                    )
+                    if resp.status_code == 200:
+                        txt = resp.json()["choices"][0]["message"]["content"]
+                        parsed = json.loads(txt)
+                        if isinstance(parsed, dict) and parsed.get("query"):
+                            return self._normalize_vlm_payload(parsed, "vlm_openai")
+        except Exception as exc:
+            logger.debug("Vision LLM classification skipped cleanly: %s", exc)
+        return None
+
+    @staticmethod
+    def _normalize_vlm_payload(parsed: Dict[str, Any], method: str) -> Dict[str, Any]:
+        brand = str(parsed.get("brand") or "Detected").strip()
+        model = str(parsed.get("model") or parsed.get("query") or "Product").strip()
+        category = str(parsed.get("category") or "Consumer Electronics").strip()
+        query = str(parsed.get("query") or f"{brand} {model}").strip()
+        conf = max(0.70, min(0.99, float(parsed.get("confidence", 0.92))))
+        labels = [str(x) for x in (parsed.get("labels") or [brand, model, category])[:6]]
+        return {
+            "brand": brand,
+            "model": model,
+            "category": category,
+            "query": query,
+            "confidence": round(conf, 2),
+            "labels": labels,
+            "_method": method,
+        }
+
+    def _run_ocr_extraction(self, raw_bytes: bytes) -> List[str]:
+        """
+        Extracts text lines from image bytes using platform-native Windows.Media.Ocr on Windows,
+        or optional cross-platform OCR backends (`rapidocr_onnxruntime` / `pytesseract`) elsewhere.
+        """
+        helper_path = Path(__file__).resolve().parent / "win_ocr_helper.ps1"
+        if sys.platform == "win32" and helper_path.exists():
+            temp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
+                    tf.write(raw_bytes)
+                    temp_path = tf.name
+
+                cmd = [
+                    "powershell",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(helper_path),
+                    "-ImagePath",
+                    temp_path
+                ]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=4)
+                if proc.returncode == 0:
+                    lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+                    if lines:
+                        return lines
+            except Exception:
+                pass
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except Exception:
+                        pass
+
+        # Cross-platform optional OCR fallback (Linux/macOS Docker deployments)
+        try:
+            from rapidocr_onnxruntime import RapidOCR  # type: ignore
+            ocr = RapidOCR()
+            res, _ = ocr(raw_bytes)
+            if res:
+                return [str(entry[1]).strip() for entry in res if len(entry) >= 2 and str(entry[1]).strip()]
+        except Exception:
+            pass
+
+        try:
+            import pytesseract  # type: ignore
+            img = Image.open(io.BytesIO(raw_bytes))
+            txt = pytesseract.image_to_string(img)
+            return [line.strip() for line in txt.splitlines() if line.strip()]
         except Exception:
             return []
-        finally:
-            if temp_path and os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except Exception:
-                    pass
-        return []
 
     def _is_svg_bytes(self, raw_bytes: bytes) -> bool:
         """Determines if the raw byte sequence represents an SVG or vector graphic."""

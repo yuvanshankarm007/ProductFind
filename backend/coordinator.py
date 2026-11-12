@@ -39,9 +39,10 @@ from .core.wallet_stacker import wallet_stacker_service
 from .core.reddit_consensus import reddit_consensus_engine
 from .core.review_authenticity import review_authenticity_engine
 from .core.bifl_index import bifl_index_engine
+from .core.savings_ledger import savings_ledger
 
 # Circuit-breaker timeout (seconds) for ultra-fast 3-4s search SLAs
-_SCOUT_TIMEOUT = 2.6
+_SCOUT_TIMEOUT = 1.65
 
 
 def is_bundle_or_workflow_query(query: str, mode: Optional[str] = None, items_list: Optional[List[str]] = None) -> bool:
@@ -93,6 +94,89 @@ class SentinelCoordinator:
         hooks = SwarmLifecycleHooks(bus=scoped_bus)
         return scoped_bus, scouts, processors, compiler, hooks
 
+    async def _finalize_consumer_proof_and_telemetry(
+        self,
+        state: BlackboardState,
+        proof_query: str,
+        top_merchant: str,
+        scoped_bus: Optional[Any] = None,
+        prefetched_tasks: Optional[tuple] = None,
+    ) -> None:
+        """
+        Populate live Reddit/HN consensus, iFixit repairability, review audit grounded
+        in scraped listings, and record savings ledger stats.
+        Uses bounded asyncio.wait so search SLA stays strictly under 3.5s.
+        """
+        try:
+            if prefetched_tasks:
+                t_cons, t_bifl = prefetched_tasks
+            else:
+                t_cons = asyncio.create_task(
+                    reddit_consensus_engine.analyze_community_consensus_async(proof_query)
+                )
+                t_bifl = asyncio.create_task(
+                    bifl_index_engine.evaluate_longevity_async(proof_query)
+                )
+
+            # Bounded non-blocking wait; if started before scouts, tasks are typically already done!
+            pending = {t for t in (t_cons, t_bifl) if not t.done()}
+            if pending:
+                await asyncio.wait(pending, timeout=0.05)
+                for t in pending:
+                    if not t.done():
+                        t.cancel()
+
+            consensus_res = (
+                t_cons.result()
+                if (t_cons.done() and not t_cons.cancelled() and t_cons.exception() is None)
+                else reddit_consensus_engine.get_consensus(proof_query)
+            )
+            bifl_res = (
+                t_bifl.result()
+                if (t_bifl.done() and not t_bifl.cancelled() and t_bifl.exception() is None)
+                else bifl_index_engine.evaluate_longevity(proof_query)
+            )
+
+            state.reddit_consensus = consensus_res.model_dump()
+            state.bifl_metrics = bifl_res.model_dump()
+
+            audit = review_authenticity_engine.audit_reviews(
+                proof_query,
+                store=top_merchant,
+                scraped_listings=state.raw_listings,
+            )
+            state.review_authenticity = audit.model_dump()
+
+            for opt in state.final_options or []:
+                status_val = getattr(opt.listing, "http_status", None)
+                if status_val == 200 and not getattr(opt.listing, "is_mock", False) and opt.listing.listing_url.startswith("https://"):
+                    opt.http_status = 200
+
+            if scoped_bus:
+                await scoped_bus.emit(
+                    source="CommunityHivemindAgent",
+                    target="Coordinator",
+                    event_type="COMMUNITY_CONSENSUS_SYNTHESIZED",
+                    content=(
+                        f"Social Proof & Consumer Breakdown ({consensus_res.source_mode}): "
+                        f"Community {consensus_res.sentiment_score}% Positive ({consensus_res.sentiment_label}) | "
+                        f"Review Authenticity: {audit.letter_grade} ({audit.organic_reviews_pct}% organic) | "
+                        f"iFixit Score: {bifl_res.ifixit_score}/10 ({bifl_res.repairability_tier})."
+                    ),
+                    payload={
+                        "reddit": consensus_res.model_dump(),
+                        "reviews": audit.model_dump(),
+                        "bifl": bifl_res.model_dump(),
+                    },
+                )
+        except Exception:
+            pass
+
+        try:
+            savings_ledger.record_search(state)
+        except Exception:
+            pass
+
     async def _run_scouts_with_circuit_breaker(
         self,
         query: str,
@@ -112,18 +196,27 @@ class SentinelCoordinator:
         active_scouts = scouts or self.scouts
         active_bus = bus or self.bus
 
-        try:
-            listings = await asyncio.wait_for(
-                active_scouts.search(
-                    query=query,
-                    destination_country=destination_country,
-                    language=language,
-                    raw_query=raw_query,
-                ),
-                timeout=_SCOUT_TIMEOUT,
+        scout_task = asyncio.create_task(
+            active_scouts.search(
+                query=query,
+                destination_country=destination_country,
+                language=language,
+                raw_query=raw_query,
             )
-            return listings
-        except asyncio.TimeoutError:
+        )
+        done, _ = await asyncio.wait({scout_task}, timeout=_SCOUT_TIMEOUT)
+        if scout_task in done:
+            try:
+                return scout_task.result()
+            except Exception as exc:
+                await active_bus.emit(
+                    source="CircuitBreaker",
+                    target="Coordinator",
+                    event_type="CIRCUIT_BREAKER",
+                    content=f"Scout error: {exc!r} — activating synthetic fallback listings.",
+                )
+        else:
+            scout_task.cancel()
             await active_bus.emit(
                 source="CircuitBreaker",
                 target="Coordinator",
@@ -132,13 +225,6 @@ class SentinelCoordinator:
                     f"Scout timeout after {_SCOUT_TIMEOUT}s — "
                     "activating synthetic fallback listings (is_mock=True)."
                 ),
-            )
-        except Exception as exc:
-            await active_bus.emit(
-                source="CircuitBreaker",
-                target="Coordinator",
-                event_type="CIRCUIT_BREAKER",
-                content=f"Scout error: {exc!r} — activating synthetic fallback listings.",
             )
 
         # Fallback: re-run with the scout's instant cached semantic data path
@@ -482,16 +568,13 @@ class SentinelCoordinator:
             )
             state.applied_wallet_discounts = wallet_calc.model_dump()
 
-        # Consumer Decision Breakdown: Reddit Consensus, Review Authenticity, and BIFL Index
-        try:
-            consensus = reddit_consensus_engine.get_consensus(query)
-            state.reddit_consensus = consensus.model_dump()
-            audit = review_authenticity_engine.audit_reviews(query, store="Amazon")
-            state.review_authenticity = audit.model_dump()
-            bifl = bifl_index_engine.evaluate_longevity(query)
-            state.bifl_metrics = bifl.model_dump()
-        except Exception:
-            pass
+        # Consumer Decision Breakdown + Link Verification Telemetry + Verified Savings Ledger
+        await self._finalize_consumer_proof_and_telemetry(
+            state=state,
+            proof_query=query,
+            top_merchant="Amazon",
+            scoped_bus=None,
+        )
 
         state.is_complete = True
         state.events = scoped_bus.get_logs()
@@ -614,6 +697,12 @@ class SentinelCoordinator:
                 f"NegativeConstraints: in_stock_only={prompt_constraints.in_stock_only}, "
                 f"no_404s={prompt_constraints.no_404_dead_links}, anti_scam={prompt_constraints.anti_scam}."
             )
+        )
+
+        # Launch live Reddit/HN + iFixit enrichment in parallel BEFORE scouts so zero SLA overhead!
+        prefetched_proof = (
+            asyncio.create_task(reddit_consensus_engine.analyze_community_consensus_async(clean_query)),
+            asyncio.create_task(bifl_index_engine.evaluate_longevity_async(clean_query)),
         )
 
         # 1. Tier 1: Scout Swarm with circuit-breaker
@@ -951,35 +1040,15 @@ class SentinelCoordinator:
                 payload=wallet_calc_dict
             )
 
-        # Consumer Decision Breakdown: Reddit Hivemind Consensus, Review Authenticity, and BIFL/iFixit Index
-        try:
-            consensus = reddit_consensus_engine.get_consensus(clean_query)
-            state.reddit_consensus = consensus.model_dump()
-
-            top_merchant = final_options[0].listing.merchant if final_options else "Amazon"
-            audit = review_authenticity_engine.audit_reviews(clean_query, store=top_merchant)
-            state.review_authenticity = audit.model_dump()
-
-            bifl = bifl_index_engine.evaluate_longevity(clean_query)
-            state.bifl_metrics = bifl.model_dump()
-
-            await scoped_bus.emit(
-                source="CommunityHivemindAgent",
-                target="Coordinator",
-                event_type="COMMUNITY_CONSENSUS_SYNTHESIZED",
-                content=(
-                    f"Social Proof & Consumer Breakdown: Reddit Hivemind {consensus.sentiment_score}% Positive ({consensus.sentiment_label}) "
-                    f"across {consensus.threads_analyzed} threads | Review Authenticity: {audit.letter_grade} ({audit.organic_reviews_pct}% organic) | "
-                    f"iFixit Score: {bifl.ifixit_score}/10 ({bifl.repairability_tier})."
-                ),
-                payload={
-                    "reddit": consensus.model_dump(),
-                    "reviews": audit.model_dump(),
-                    "bifl": bifl.model_dump()
-                }
-            )
-        except Exception as comm_err:
-            pass
+        # Consumer Decision Breakdown + Link Verification Telemetry + Verified Savings Ledger
+        top_merchant = final_options[0].listing.merchant if final_options else "Amazon"
+        await self._finalize_consumer_proof_and_telemetry(
+            state=state,
+            proof_query=clean_query,
+            top_merchant=top_merchant,
+            scoped_bus=scoped_bus,
+            prefetched_tasks=prefetched_proof,
+        )
 
         state.is_complete = True
         state.events = scoped_bus.get_logs()

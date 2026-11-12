@@ -130,6 +130,7 @@ class DisputeDossier(BaseModel):
     merkle_terms_hash: Optional[str] = None
     merkle_pricing_hash: Optional[str] = None
     cryptographic_hash: str
+    checkout_snapshot: Optional[Dict[str, Any]] = None
     evidence_status: str = "SEALED_AND_READY_FOR_DISPUTE"
     resolution_instructions: str = (
         "Submit this cryptographic dossier in the PayPal Resolution Center as "

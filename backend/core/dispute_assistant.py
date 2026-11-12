@@ -26,6 +26,8 @@ class DisputeFilingRequest(BaseModel):
     evidence_photo_filename: Optional[str] = None
     buyer_name: str = "Authorized Consumer"
     buyer_email: str = "consumer@sentinel.ai"
+    merchant_url: Optional[str] = None
+    captured_terms: Optional[Dict[str, Any]] = None
 
 
 class DisputeCase(BaseModel):
@@ -42,6 +44,7 @@ class DisputeCase(BaseModel):
     statutory_citations: List[str]
     demands: List[str]
     evidence_hash: str
+    checkout_snapshot: Dict[str, Any] = Field(default_factory=dict)
     pdf_filename: Optional[str] = None
 
 
@@ -128,7 +131,27 @@ class DisputeAssistantService:
         issue_key = req.issue_type if req.issue_type in DISPUTE_LEGAL_TEMPLATES else "OPEN_BOX_VIOLATION"
         template = DISPUTE_LEGAL_TEMPLATES[issue_key]
 
-        raw_evidence = f"{req.order_id}|{req.merchant}|{req.product_title}|{req.amount}|{req.incident_description}|{time.time()}"
+        utc_ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        captured_terms = {
+            "order_id": req.order_id,
+            "merchant": req.merchant,
+            "product_title": req.product_title,
+            "amount": req.amount,
+            "currency": req.currency,
+            "issue_type": issue_key,
+            **(req.captured_terms or {}),
+        }
+        snapshot_payload = {
+            "merchant_url": req.merchant_url or f"https://checkout.sentinel.local/{req.merchant.lower().replace(' ', '-')}/{req.order_id}",
+            "utc_timestamp": utc_ts,
+            "captured_terms": captured_terms,
+        }
+        snapshot_sha256 = hashlib.sha256(
+            json.dumps(snapshot_payload, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        checkout_snapshot = {**snapshot_payload, "snapshot_sha256": snapshot_sha256}
+
+        raw_evidence = f"{req.order_id}|{req.merchant}|{req.product_title}|{req.amount}|{req.incident_description}|{snapshot_sha256}|{time.time()}"
         evidence_hash = hashlib.sha256(raw_evidence.encode("utf-8")).hexdigest()
 
         case = DisputeCase(
@@ -147,7 +170,8 @@ class DisputeAssistantService:
             ),
             statutory_citations=template["citations"],
             demands=template["demands"],
-            evidence_hash=evidence_hash
+            evidence_hash=evidence_hash,
+            checkout_snapshot=checkout_snapshot,
         )
 
         # Generate formal Section 13 PDF file
@@ -169,6 +193,7 @@ class DisputeAssistantService:
             "tamper_evident_seal": evidence_hash,
             "audit_trail": [
                 f"Merchant {req.merchant} order confirmation verified",
+                f"Forensic checkout snapshot captured at {utc_ts} (SHA-256: {snapshot_sha256[:16]}...)",
                 f"Carrier custody breach logged: {template['title']}",
                 f"Cryptographic SHA-256 seal generated: {evidence_hash[:16]}..."
             ]

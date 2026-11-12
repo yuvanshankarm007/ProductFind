@@ -74,6 +74,24 @@ function initApp() {
     // 9. Pre-populate with demo data so grid is never empty on first load
     seedDemoData();
 
+    // 10. Hydrate Verified Savings Ledger badge & MCP quick status
+    refreshLedgerStats();
+    const ledgerBtn = document.getElementById('btn-ledger-stats');
+    if (ledgerBtn) {
+        ledgerBtn.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/ledger/stats');
+                const stats = await res.json();
+                showToast(
+                    `Verified Ledger: ${stats.total_arbitrages_completed || 0} arbitrations · $${Number(stats.total_arbitrage_saved_usd || 0).toLocaleString()} saved · ${stats.total_links_verified || 0} live links verified · MCP ready at POST /mcp`,
+                    "success"
+                );
+            } catch (_) {
+                showToast("Ledger active · MCP endpoint at POST /mcp", "info");
+            }
+        });
+    }
+
     // 10. Rotate search bar placeholder text
     startPlaceholderRotation();
 
@@ -849,6 +867,19 @@ export function renderCommunityConsensus(state) {
 
     container.style.display = 'block';
 
+    const formatSourcePill = (mode) => {
+        if (mode === 'live_api' || mode === 'live_web_llm' || mode === 'live_ifixit_api') {
+            return `<span style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 9999px;">🌐 Live API</span>`;
+        }
+        if (mode === 'live_scraped_telemetry') {
+            return `<span style="background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8; font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 9999px;">📡 Live Telemetry</span>`;
+        }
+        if (mode === 'curated_cache') {
+            return `<span style="background: rgba(99, 102, 241, 0.18); border: 1px solid rgba(99, 102, 241, 0.45); color: #a5b4fc; font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 9999px;">📚 Verified Cache</span>`;
+        }
+        return `<span style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.35); color: #cbd5e1; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 9999px;">🔍 Search Index</span>`;
+    };
+
     // 1. Reddit Hivemind Column
     let redditHtml = '';
     if (reddit) {
@@ -896,7 +927,8 @@ export function renderCommunityConsensus(state) {
                     </span>
                 </div>
 
-                <div style="margin-bottom: 10px; display: flex; gap: 4px; flex-wrap: wrap;">
+                <div style="margin-bottom: 10px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+                    ${formatSourcePill(reddit.source_mode)}
                     ${subsPills}
                 </div>
 
@@ -1063,6 +1095,10 @@ export function renderCommunityConsensus(state) {
                 </ul>
 
                 <div style="margin-top: auto; font-size: 10.5px; color: #94a3b8; background: rgba(0,0,0,0.25); border-radius: 6px; padding: 6px 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 6px; flex-wrap: wrap;">
+                        ${formatSourcePill(bifl.source_mode)}
+                        ${bifl.ifixit_url ? `<a href="${escapeHtml(bifl.ifixit_url)}" target="_blank" rel="noopener noreferrer" style="color: #34d399; font-weight: 700; text-decoration: none;">🔧 iFixit Teardown Guide ↗</a>` : ''}
+                    </div>
                     <span style="color: #e2e8f0; font-weight: 600;">Teardown Modularity:</span> ${escapeHtml(bifl.modularity_notes)}
                 </div>
             </div>
@@ -1094,9 +1130,24 @@ export function renderCommunityConsensus(state) {
 }
 
 
+async function refreshLedgerStats() {
+    const badge = document.getElementById('ledger-saved-badge');
+    if (!badge) return;
+    try {
+        const res = await fetch('/api/ledger/stats');
+        if (!res.ok) return;
+        const stats = await res.json();
+        const savedUsd = Number(stats.total_arbitrage_saved_usd || 0);
+        badge.textContent = savedUsd >= 1000 ? `$${(savedUsd / 1000).toFixed(1)}k` : `$${Math.round(savedUsd)}`;
+    } catch (_) {
+        // Ignore offline ledger polling failures
+    }
+}
+
 function applySearchResults(state) {
     if (!state) return;
     store.setLastState(state);
+    refreshLedgerStats();
 
     const statusText = document.getElementById('search-status-text');
     const retailerCount = (state.raw_listings && state.raw_listings.length) || (state.comparison_matrix && state.comparison_matrix.length) || (state.is_bundle ? 12 : 3);
@@ -1189,7 +1240,7 @@ function renderStrategicCards(options) {
             <div class="tier-badge ${badgeClass}">${tierTitle}</div>
 
             <div class="deal-title">
-                <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" style="color: #ffffff; text-decoration: none; display: inline-flex; align-items: flex-start; gap: 6px;" title="Open live verified listing on ${escapeHtml(listing.merchant || 'Store')} (200 OK Guaranteed)">
+                <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" style="color: #ffffff; text-decoration: none; display: inline-flex; align-items: flex-start; gap: 6px;" title="${opt.url_verified ? `Pre-Click Verified Live on ${escapeHtml(listing.merchant || 'Store')} (HTTP ${opt.http_status || 200})` : `Open listing on ${escapeHtml(listing.merchant || 'Store')}`}">
                     <span>${escapeHtml(listing.product_title || 'Certified Item')}</span>
                     <span style="color: #60a5fa; font-size: 12px;">↗</span>
                 </a>
@@ -1276,8 +1327,8 @@ function renderStrategicCards(options) {
             </div>
 
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" class="control-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; font-size: 11px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; border-radius: 6px;" title="Open Verified Live Product Page on ${escapeHtml(listing.merchant || 'Merchant')}">
-                    Store ↗
+                <a href="${escapeHtml(listing.listing_url || '#')}" target="_blank" rel="noopener noreferrer" class="control-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; font-size: 11px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; border-radius: 6px;" title="${opt.url_verified ? `Pre-Click Verified Live (HTTP ${opt.http_status || 200})` : `Open Product Page on ${escapeHtml(listing.merchant || 'Merchant')}`}">
+                    ${opt.url_verified ? '✓ Live Store ↗' : 'Store ↗'}
                 </a>
                 <button type="button" class="control-btn btn-primary btn-checkout-deal" data-order-id="${escapeHtml(listing.id || 'ORDER')}" data-merchant="${escapeHtml(listing.merchant || '')}" data-price="${escapeHtml(opt.display_currency || '$')} ${opt.risk_adjusted_tco ? Number(opt.risk_adjusted_tco).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}" data-title="${escapeHtml(listing.product_title || '')}" style="flex: 1; justify-content: center;">
                     Pay with PayPal

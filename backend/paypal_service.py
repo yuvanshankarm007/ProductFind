@@ -245,8 +245,35 @@ class PayPalEvidenceSentinel:
         seller_rating: float,
         warranty_claims: str,
         display_currency: str = "USD",
+        merchant_url: Optional[str] = None,
+        captured_terms: Optional[Dict[str, Any]] = None,
     ) -> DisputeDossier:
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+        canonical_terms = {
+            "item_title": item_title,
+            "platform": platform,
+            "agreed_tco": round(float(agreed_tco), 2),
+            "display_currency": display_currency,
+            "advertised_condition": condition,
+            "open_box_verified": open_box_verified,
+            "seller_name": seller_name,
+            "warranty_claims": warranty_claims,
+            **(captured_terms or {}),
+        }
+        snapshot_payload = {
+            "order_id": order_id,
+            "merchant_url": merchant_url or f"https://merchant.local/order/{order_id}",
+            "utc_timestamp": timestamp,
+            "captured_terms": canonical_terms,
+        }
+        snapshot_sha256 = hashlib.sha256(
+            json.dumps(snapshot_payload, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        checkout_snapshot = {
+            **snapshot_payload,
+            "snapshot_sha256": snapshot_sha256,
+        }
 
         # 1. Spec Leaf Hash
         spec_leaf = {
@@ -301,6 +328,7 @@ class PayPalEvidenceSentinel:
             merkle_terms_hash=terms_hash,
             merkle_pricing_hash=pricing_hash,
             cryptographic_hash=sig_hash,
+            checkout_snapshot=checkout_snapshot,
         )
 
     @staticmethod

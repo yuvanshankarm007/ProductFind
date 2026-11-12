@@ -5,11 +5,15 @@ and simulates/dispatches real-time alerts via Email, Telegram, Webhooks, or Brow
 """
 
 import json
+import logging
 import os
 import time
 import uuid
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable, Awaitable
 from pydantic import BaseModel, Field
+import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class PriceAlertSubscription(BaseModel):
@@ -19,7 +23,9 @@ class PriceAlertSubscription(BaseModel):
     current_price: float
     currency: str = "INR"
     user_contact: str = "user@example.com"
-    channel: str = "email"  # 'email', 'telegram', 'webhook', 'browser'
+    channel: str = "email"  # 'email', 'telegram', 'webhook', 'discord', 'slack', 'browser'
+    webhook_url: Optional[str] = None
+    webhook_status: Optional[str] = None
     status: str = "ACTIVE"  # 'ACTIVE', 'TRIGGERED', 'EXPIRED'
     created_at: float = Field(default_factory=time.time)
     triggered_at: Optional[float] = None
@@ -90,8 +96,12 @@ class PriceWatchdogService:
         current_price: float,
         currency: str = "INR",
         user_contact: str = "user@example.com",
-        channel: str = "email"
+        channel: str = "email",
+        webhook_url: Optional[str] = None,
     ) -> PriceAlertSubscription:
+        resolved_webhook = webhook_url
+        if not resolved_webhook and user_contact and user_contact.startswith(("http://", "https://")):
+            resolved_webhook = user_contact
         alert = PriceAlertSubscription(
             product_title=product_title,
             target_price=target_price,
@@ -99,11 +109,82 @@ class PriceWatchdogService:
             currency=currency,
             user_contact=user_contact,
             channel=channel,
+            webhook_url=resolved_webhook,
             status="ACTIVE"
         )
         self._alerts[alert.id] = alert
         self._save()
         return alert
+
+    async def dispatch_webhook_async(
+        self, alert: PriceAlertSubscription, merchant: str = "Amazon"
+    ) -> bool:
+        """Dispatch a real Discord/Slack/HTTP JSON webhook notification when a target price triggers."""
+        target_url = alert.webhook_url or (
+            alert.user_contact if alert.user_contact.startswith(("http://", "https://")) else None
+        )
+        if not target_url:
+            return False
+
+        msg = (
+            alert.notification_log
+            or f"🎯 ProductFind Sentinel Alert: '{alert.product_title}' reached {alert.currency} {alert.last_scouted_price or alert.target_price:,.2f} on {merchant}"
+        )
+        payload = {
+            "event": "sentinel_price_drop",
+            "alert_id": alert.id,
+            "product_title": alert.product_title,
+            "target_price": alert.target_price,
+            "triggered_price": alert.last_scouted_price,
+            "currency": alert.currency,
+            "merchant": merchant,
+            # Discord + Slack standard keys
+            "content": msg,
+            "text": msg,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(3.0)) as client:
+                resp = await client.post(target_url, json=payload)
+            if 200 <= resp.status_code < 300:
+                alert.webhook_status = f"DISPATCHED_{resp.status_code}"
+                self._save()
+                return True
+            alert.webhook_status = f"HTTP_{resp.status_code}"
+        except Exception as exc:
+            logger.debug("Webhook dispatch failed for %s: %s", alert.id, exc)
+            alert.webhook_status = "DISPATCH_ERROR"
+        self._save()
+        return False
+
+    async def evaluate_all_active_alerts(
+        self,
+        price_lookup_fn: Optional[Callable[[str, str], Awaitable[Optional[Dict[str, Any]]]]] = None,
+    ) -> List[PriceAlertSubscription]:
+        """Sweep ACTIVE watchlist items and dispatch webhook notifications when threshold is met."""
+        active = [a for a in self._alerts.values() if a.status == "ACTIVE"]
+        if not active or price_lookup_fn is None:
+            return []
+
+        triggered: List[PriceAlertSubscription] = []
+        for alert in active:
+            try:
+                quote = await price_lookup_fn(alert.product_title, alert.currency)
+                if not quote or "price" not in quote:
+                    continue
+                price_val = float(quote["price"])
+                merchant = str(quote.get("merchant") or "Scouted Retailer")
+                hits = self.check_and_evaluate_price(
+                    alert.product_title,
+                    price_val,
+                    merchant=merchant,
+                    currency=str(quote.get("currency") or alert.currency),
+                )
+                for hit in hits:
+                    triggered.append(hit)
+                    await self.dispatch_webhook_async(hit, merchant=merchant)
+            except Exception as exc:
+                logger.debug("Watchdog background sweep error for %s: %s", alert.id, exc)
+        return triggered
 
     def list_alerts(self, user_contact: Optional[str] = None) -> List[PriceAlertSubscription]:
         if user_contact:
@@ -117,10 +198,18 @@ class PriceWatchdogService:
             return True
         return False
 
-    def check_and_evaluate_price(self, product_title: str, new_price: float, merchant: str = "Amazon") -> List[PriceAlertSubscription]:
+    def check_and_evaluate_price(
+        self,
+        product_title: str,
+        new_price: float,
+        merchant: str = "Amazon",
+        currency: Optional[str] = None,
+    ) -> List[PriceAlertSubscription]:
         triggered = []
         p_title_low = product_title.lower()
         for alert in self._alerts.values():
+            if currency and alert.currency.upper() != currency.upper():
+                continue
             if alert.status == "ACTIVE" and (alert.product_title.lower() in p_title_low or p_title_low in alert.product_title.lower()):
                 alert.last_scouted_price = new_price
                 if new_price <= alert.target_price:

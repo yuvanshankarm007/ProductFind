@@ -4,9 +4,24 @@ Analyzes product engineering modularity, teardown repairability scores,
 battery swap feasibility, spare parts availability, and real-world expected lifespans.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
+from urllib.parse import quote, quote_plus
 import hashlib
+import logging
+import re
+import time
+
+import httpx
+import ssl
+
+try:
+    import certifi
+    _FAST_SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    _FAST_SSL_CTX = True
+
+logger = logging.getLogger(__name__)
 
 
 class BiflIndexResult(BaseModel):
@@ -22,6 +37,9 @@ class BiflIndexResult(BaseModel):
     bifl_badge: str = ""
     diy_repair_cost_risk: str = "Moderate"  # "Low Cost DIY", "Moderate", "High / Expensive"
     key_longevity_drivers: List[str] = Field(default_factory=list)
+    ifixit_url: str = ""
+    ifixit_guide_summary: str = ""
+    source_mode: str = "curated_cache"  # "live_ifixit_api", "curated_cache", "synthetic_fallback"
 
 
 CURATED_BIFL_METRICS: Dict[str, Dict[str, Any]] = {
@@ -136,13 +154,80 @@ CURATED_BIFL_METRICS: Dict[str, Dict[str, Any]] = {
 }
 
 
+# TTL cache: normalized query -> (timestamp, {"url": ..., "title": ..., "summary": ...})
+_IFIXIT_CACHE: Dict[str, Tuple[float, Optional[Dict[str, str]]]] = {}
+_IFIXIT_CACHE_TTL = 3600
+
+
+def _norm_ifixit_query(query: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", query.lower()))
+
+
+async def fetch_ifixit_device_async(query: str, timeout_s: float = 2.5) -> Optional[Dict[str, str]]:
+    """Query the public keyless iFixit Suggest 2.0 API for live device repair wikis & summaries."""
+    norm = _norm_ifixit_query(query)
+    now = time.time()
+    if norm in _IFIXIT_CACHE:
+        ts, cached = _IFIXIT_CACHE[norm]
+        if now - ts < _IFIXIT_CACHE_TTL:
+            return cached
+
+    cleaned = re.sub(r"\s+", " ", query).strip()
+    if not cleaned:
+        return None
+
+    encoded = quote(cleaned, safe="")
+    url = f"https://www.ifixit.com/api/2.0/suggest/{encoded}?doctypes=device,wiki"
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout_s), verify=_FAST_SSL_CTX) as client:
+            resp = await client.get(url, headers={"Accept": "application/json", "User-Agent": "ProductFindSentinel/2.0"})
+            if resp.status_code == 200:
+                results = resp.json().get("results") or []
+                tokens = [t for t in _norm_ifixit_query(cleaned).split() if len(t) >= 2]
+                for item in results:
+                    title = str(item.get("title") or "").strip()
+                    item_url = str(item.get("url") or "").strip()
+                    summary = str(item.get("summary") or "").strip()
+                    if not title or not item_url:
+                        continue
+                    t_low = title.lower()
+                    if not tokens or any(tok in t_low for tok in tokens[:3]):
+                        match = {"title": title, "url": item_url, "summary": summary}
+                        _IFIXIT_CACHE[norm] = (now, match)
+                        return match
+    except Exception as exc:
+        logger.debug("iFixit API lookup skipped for %r: %s", query, exc)
+
+    _IFIXIT_CACHE[norm] = (now, None)
+    return None
+
+
 class BiflIndexEngine:
     """
     Computes iFixit repairability scores, modularity grades,
     and Buy It For Life longevity assessments.
     """
 
-    def evaluate_longevity(self, query: str) -> BiflIndexResult:
+    async def evaluate_longevity_async(self, query: str) -> BiflIndexResult:
+        """Async evaluation enriched with live iFixit 2.0 Suggest API device guides when available."""
+        live_hit = await fetch_ifixit_device_async(query)
+        result = self.evaluate_longevity(query, live_ifixit=live_hit)
+        return result
+
+    def evaluate_longevity(
+        self,
+        query: str,
+        live_ifixit: Optional[Dict[str, str]] = None,
+    ) -> BiflIndexResult:
+        if live_ifixit is None:
+            norm = _norm_ifixit_query(query)
+            if norm in _IFIXIT_CACHE:
+                ts, cached = _IFIXIT_CACHE[norm]
+                if time.time() - ts < _IFIXIT_CACHE_TTL and cached:
+                    live_ifixit = cached
+
+        fallback_search_url = f"https://www.ifixit.com/Search?query={quote_plus(query.strip() or 'repair')}"
+
         q_lower = query.lower()
         matched_key = None
         for key in CURATED_BIFL_METRICS:
@@ -152,6 +237,12 @@ class BiflIndexEngine:
 
         if matched_key:
             data = CURATED_BIFL_METRICS[matched_key]
+            drivers = list(data["longevity_drivers"])
+            ifixit_url = live_ifixit["url"] if live_ifixit else fallback_search_url
+            summary = live_ifixit.get("summary", "") if live_ifixit else ""
+            modularity_notes = data["modularity_notes"]
+            if summary:
+                drivers = [f"iFixit Device Guide ({live_ifixit['title']}): {summary[:140]}"] + drivers[:2]
             return BiflIndexResult(
                 query=query,
                 ifixit_score=data["ifixit_score"],
@@ -160,11 +251,14 @@ class BiflIndexEngine:
                 battery_replaceable=data["battery_replaceable"],
                 battery_replacement_ease=data["battery_replacement_ease"],
                 spare_parts_availability=data["spare_parts_availability"],
-                modularity_notes=data["modularity_notes"],
+                modularity_notes=modularity_notes,
                 bifl_certified=data["bifl_certified"],
                 bifl_badge=data["bifl_badge"],
                 diy_repair_cost_risk=data["diy_cost_risk"],
-                key_longevity_drivers=data["longevity_drivers"]
+                key_longevity_drivers=drivers,
+                ifixit_url=ifixit_url,
+                ifixit_guide_summary=summary or modularity_notes[:160],
+                source_mode="live_ifixit_api" if live_ifixit else "curated_cache",
             )
 
         # Dynamic heuristic generation for arbitrary products
@@ -197,9 +291,12 @@ class BiflIndexEngine:
 
         drivers = [
             f"Solid build chassis with expected continuous operating lifespan of ~{years} years",
-            f"Key functional components can be maintained with off-the-shelf fasteners",
-            f"Sufficient engineering tolerances to survive normal daily wear and tear"
+            "Key functional components can be maintained with off-the-shelf fasteners",
+            "Sufficient engineering tolerances to survive normal daily wear and tear"
         ]
+        summary = live_ifixit.get("summary", "") if live_ifixit else ""
+        if summary:
+            drivers[0] = f"iFixit Repair Wiki ({live_ifixit['title']}): {summary[:150]}"
 
         return BiflIndexResult(
             query=query,
@@ -209,11 +306,14 @@ class BiflIndexEngine:
             battery_replaceable=battery_ok,
             battery_replacement_ease=battery_note,
             spare_parts_availability="Available through authorized channels and certified suppliers",
-            modularity_notes=f"Engineered with {tier.lower()}. Screws and connectors accessible under normal servicing procedures.",
+            modularity_notes=summary or f"Engineered with {tier.lower()}. Screws and connectors accessible under normal servicing procedures.",
             bifl_certified=certified,
             bifl_badge=badge,
             diy_repair_cost_risk=cost_risk,
-            key_longevity_drivers=drivers
+            key_longevity_drivers=drivers,
+            ifixit_url=live_ifixit["url"] if live_ifixit else fallback_search_url,
+            ifixit_guide_summary=summary,
+            source_mode="live_ifixit_api" if live_ifixit else "synthetic_fallback",
         )
 
 

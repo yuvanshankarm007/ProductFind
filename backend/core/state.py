@@ -202,6 +202,11 @@ class AnalyzedDealOption(BaseModel):
     skill_id: Optional[str] = None
     skill_confidence: Optional[float] = None
 
+    # Pre-Click Live Link Verification Telemetry
+    url_verified: bool = False
+    verified_at: Optional[str] = None
+    http_status: Optional[int] = None
+
 
 class AgentNegotiationEvent(BaseModel):
     id: str = Field(default_factory=lambda: f"EVT-{int(time.time()*1000)}")
